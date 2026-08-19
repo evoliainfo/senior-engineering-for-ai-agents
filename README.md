@@ -4,13 +4,17 @@
 
 > You describe the software. Your coding agent writes the code. SEF governs the engineering.
 
+**Current beta:** `v1.3.0-beta`  
+**Runtime:** [`sef.py`](sef.py)  
+**Integrity:** [`SHA256SUMS`](SHA256SUMS)
+
 SEF (Senior Engineering Framework) is a project engineering layer for AI coding agents. It is designed for people who want to build serious software with Codex or Claude Code without having to know every senior-engineering requirement in advance.
 
 SEF does **not** claim to make an AI model infallible or to turn it literally into a human senior engineer. It gives the agent a structured engineering operating system: project framing, inferred professional requirements, risk classification, specialist playbooks, dynamic Definition of Done, verification evidence, and release gates.
 
 ## Quick start
 
-1. Download `sef.py` and put it at the root of your project.
+1. Download [`sef.py`](sef.py) and put it at the root of your project.
 2. Open the project in **Codex** or **Claude Code**.
 3. Describe the software you want to build.
 
@@ -123,6 +127,16 @@ The agent first checks for an existing compatible Python 3 interpreter (`python3
 
 The bootstrap rule is written directly at the top of `sef.py`, so an agent can read it before Python is available.
 
+## Verification model
+
+SEF does not allow a green build or an agent assertion to automatically become "done".
+
+Evidence states include:
+
+`PASS`, `FAIL`, `NOT_RUN`, `UNAVAILABLE`, `INCONCLUSIVE`, `FLAKY`, `N/A`, `WAIVED`, and `BLOCKED`.
+
+Delivery can therefore end as verified, verified with residual risk, not verified, or blocked depending on the evidence actually available.
+
 ## What SEF does not do
 
 SEF is not:
@@ -133,8 +147,6 @@ SEF is not:
 - a reason to ignore official framework, database or cloud documentation;
 - a giant universal checklist applied to every code change.
 
-The evidence model distinguishes `PASS`, `FAIL`, `NOT_RUN`, `UNAVAILABLE`, `INCONCLUSIVE`, `FLAKY`, `N/A`, `WAIVED`, and `BLOCKED` so that "the agent says it is done" is not treated as objective verification.
-
 ## Documentation
 
 - [Architecture](docs/ARCHITECTURE.md)
@@ -142,6 +154,8 @@ The evidence model distinguishes `PASS`, `FAIL`, `NOT_RUN`, `UNAVAILABLE`, `INCO
 - [Validation](docs/VALIDATION.md)
 - [Security model](SECURITY.md)
 - [Changelog](CHANGELOG.md)
+- [v1.3.0-beta release notes](RELEASES/v1.3.0-beta.md)
+- [Contributing / beta feedback](CONTRIBUTING.md)
 
 ## Status
 
@@ -149,6 +163,6 @@ The evidence model distinguishes `PASS`, `FAIL`, `NOT_RUN`, `UNAVAILABLE`, `INCO
 
 Feedback and reproducible failure cases are especially valuable: wrong risk classification, missing requirements, unnecessary friction, missing playbooks, false-positive routing, false-negative routing, or ways an agent can incorrectly claim completion.
 
-## License
+## Licensing during the beta
 
-No open-source license has been granted yet. A licensing decision will be made separately from the technical beta. Please do not assume MIT/Apache-style reuse rights merely because the repository is public.
+No open-source license is granted for this public beta. The repository is source-visible for evaluation and testing, but you should not assume MIT/Apache-style rights to reproduce, redistribute, modify, or commercialize the code outside the rights GitHub itself provides for viewing/forking on the service.
