@@ -127,16 +127,6 @@ The agent first checks for an existing compatible Python 3 interpreter (`python3
 
 The bootstrap rule is written directly at the top of `sef.py`, so an agent can read it before Python is available.
 
-## Verification model
-
-SEF does not allow a green build or an agent assertion to automatically become "done".
-
-Evidence states include:
-
-`PASS`, `FAIL`, `NOT_RUN`, `UNAVAILABLE`, `INCONCLUSIVE`, `FLAKY`, `N/A`, `WAIVED`, and `BLOCKED`.
-
-Delivery can therefore end as verified, verified with residual risk, not verified, or blocked depending on the evidence actually available.
-
 ## What SEF does not do
 
 SEF is not:
@@ -147,6 +137,8 @@ SEF is not:
 - a reason to ignore official framework, database or cloud documentation;
 - a giant universal checklist applied to every code change.
 
+The evidence model distinguishes `PASS`, `FAIL`, `NOT_RUN`, `UNAVAILABLE`, `INCONCLUSIVE`, `FLAKY`, `N/A`, `WAIVED`, and `BLOCKED` so that "the agent says it is done" is not treated as objective verification.
+
 ## Documentation
 
 - [Architecture](docs/ARCHITECTURE.md)
@@ -154,8 +146,6 @@ SEF is not:
 - [Validation](docs/VALIDATION.md)
 - [Security model](SECURITY.md)
 - [Changelog](CHANGELOG.md)
-- [v1.3.0-beta release notes](RELEASES/v1.3.0-beta.md)
-- [Contributing / beta feedback](CONTRIBUTING.md)
 
 ## Status
 
@@ -163,6 +153,6 @@ SEF is not:
 
 Feedback and reproducible failure cases are especially valuable: wrong risk classification, missing requirements, unnecessary friction, missing playbooks, false-positive routing, false-negative routing, or ways an agent can incorrectly claim completion.
 
-## Licensing during the beta
+## License
 
-No open-source license is granted for this public beta. The repository is source-visible for evaluation and testing, but you should not assume MIT/Apache-style rights to reproduce, redistribute, modify, or commercialize the code outside the rights GitHub itself provides for viewing/forking on the service.
+No open-source license has been granted yet. A licensing decision will be made separately from the technical beta. Please do not assume MIT/Apache-style reuse rights merely because the repository is public.
