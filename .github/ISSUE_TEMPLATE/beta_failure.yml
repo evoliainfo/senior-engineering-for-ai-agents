@@ -1,0 +1,67 @@
+name: Beta failure / wrong engineering behavior
+description: Report a reproducible SEF framing, routing, verification or release failure.
+title: "[Beta] "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for testing SEF. Please remove secrets, private customer data and exploitable security details before submitting.
+  - type: input
+    id: sef_version
+    attributes:
+      label: SEF version
+      placeholder: v1.3
+    validations:
+      required: true
+  - type: input
+    id: agent
+    attributes:
+      label: Coding agent
+      placeholder: Codex / Claude Code
+    validations:
+      required: true
+  - type: input
+    id: stack
+    attributes:
+      label: Project stack
+      placeholder: Next.js, FastAPI, PostgreSQL, etc.
+    validations:
+      required: true
+  - type: textarea
+    id: request
+    attributes:
+      label: Exact user request
+      description: Paste the task or project brief that triggered the behavior.
+    validations:
+      required: true
+  - type: textarea
+    id: context
+    attributes:
+      label: Relevant project context
+      description: Include only what is needed to reproduce the behavior. Do not include secrets.
+    validations:
+      required: true
+  - type: textarea
+    id: sef_output
+    attributes:
+      label: SEF output
+      description: Risk, packs, playbooks, plan, verification or release state that was relevant.
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: What actually happened?
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What should a senior engineering workflow have done instead?
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Minimal reproduction
+      description: Repository shape, files, commands or steps that reproduce the issue, when possible.
