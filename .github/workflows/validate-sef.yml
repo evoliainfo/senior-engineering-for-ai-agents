@@ -1,0 +1,45 @@
+name: Validate SEF runtime
+
+on:
+  push:
+    paths:
+      - "sef.py"
+      - "SHA256SUMS"
+      - ".github/workflows/validate-sef.yml"
+  pull_request:
+    paths:
+      - "sef.py"
+      - "SHA256SUMS"
+      - ".github/workflows/validate-sef.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout exact commit without third-party actions
+        shell: bash
+        run: |
+          set -euo pipefail
+          git init .
+          git remote add origin "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY.git"
+          git fetch --depth=1 origin "$GITHUB_SHA"
+          git checkout --detach FETCH_HEAD
+
+      - name: Require runtime
+        shell: bash
+        run: test -f sef.py
+
+      - name: Verify runtime checksum
+        shell: bash
+        run: sha256sum -c SHA256SUMS
+
+      - name: Check Python runtime
+        shell: bash
+        run: python3 --version
+
+      - name: Run embedded SEF self-test
+        shell: bash
+        run: python3 sef.py self-test
