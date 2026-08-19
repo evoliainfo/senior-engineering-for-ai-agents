@@ -5,12 +5,10 @@ on:
     paths:
       - "sef.py"
       - "SHA256SUMS"
-      - ".github/workflows/validate-sef.yml"
   pull_request:
     paths:
       - "sef.py"
       - "SHA256SUMS"
-      - ".github/workflows/validate-sef.yml"
 
 permissions:
   contents: read
