@@ -1,15 +1,15 @@
 # Capabilities
 
-SEF v1.3 combines a general engineering control layer with specialist governance packs and execution playbooks selected according to project context and task risk.
+SEF v1.4 combines a general engineering control layer with specialist governance packs and task-scoped execution playbooks selected according to project context, task scope and risk.
 
 ## Engineering coverage
 
 | Domain | Coverage | Mechanism |
 |---|---|---|
 | Product discovery / requirements | Strong | Project Engineering Baseline + requirements/risk planning |
-| Architecture / boundaries | Strong | Core architecture controls + full-stack integration playbook |
-| Frontend application engineering | Strong | Frontend execution playbook + accessibility/compatibility governance |
-| Backend / HTTP API | Strong | Backend/API execution playbook + auth/security/webhook governance |
+| Architecture / boundaries | Strong | Core architecture controls + architecture/integration playbook |
+| Frontend application engineering | Strong | Frontend playbook + accessibility/compatibility governance |
+| Backend / HTTP API | Strong | Backend/API playbook + auth/security/webhook governance |
 | Database design / SQL / ORM | Strong | Database design/query playbook + Core data controls |
 | Database migration / backfill / recovery | Strong | Database Migration & Recovery specialist pack |
 | Authentication / authorization | Strong | Dedicated specialist controls + backend integration |
@@ -25,83 +25,41 @@ SEF v1.3 combines a general engineering control layer with specialist governance
 | Maintenance / vulnerabilities / EOL | Strong | Maintenance/Vulnerability Lifecycle pack |
 | Privacy / PII | Strong with applicability gate | Privacy/Data Protection pack |
 | AI / agentic systems | Strong | AI/Agentic Systems pack |
+| Technical SEO / web discoverability | Task-scoped playbook | SEO & Web Discoverability Engineering |
+| GEO / AI-search discoverability | Task-scoped, provider evidence required | GEO / AI Discoverability Engineering |
+| Analytics / conversion measurement | Task-scoped, ingestion evidence required | Analytics & Conversion Instrumentation |
 | Regulated domains | Escalation, not simulated compliance | Qualified domain-specific review required |
 
-## Full-stack execution playbooks
+## Eight execution playbooks
 
-### Frontend Application Engineering
+1. **Frontend Application Engineering**
+2. **Backend / API Service Engineering**
+3. **Database Design & Query Engineering**
+4. **Application Architecture & Integration**
+5. **Reliability & Observability Engineering**
+6. **SEO & Web Discoverability Engineering**
+7. **GEO / AI Discoverability Engineering**
+8. **Analytics & Conversion Instrumentation**
 
-Covers:
+### SEO & Web Discoverability Engineering
 
-- user journeys and material UI states
-- component boundaries and reuse
-- server/client/local/URL state ownership
-- forms and validation
-- data fetching, mutation, stale/duplicate handling
-- accessibility and responsive behavior
-- browser compatibility
-- frontend performance
-- component/integration/browser/E2E verification
+Covers search outcome framing, indexability contracts, crawl/URL architecture, canonicalization, metadata, structured data, rendering/JavaScript, performance evidence, content/search architecture, migrations and post-deploy verification.
 
-### Backend / API Service Engineering
+It explicitly distinguishes `TECHNICALLY_DISCOVERABLE`, `INDEXATION_NOT_YET_PROVEN`, observed indexation/search performance and outcomes that cannot be guaranteed.
 
-Covers:
+### GEO / AI Discoverability Engineering
 
-- API/service boundaries
-- HTTP semantics and contracts
-- input validation and trust boundaries
-- server-side authorization
-- domain invariants and state machines
-- transactions and concurrency
-- idempotency
-- external dependency timeouts/retries/failure semantics
-- error handling
-- API/contract/authz/integration verification
+Builds on ordinary web/search fundamentals and covers AI-search crawler policy, infrastructure access, citation-ready content, entity/factual consistency, provider-specific controls and observable AI-search/referral evidence.
 
-### Database Design & Query Engineering
+It separates search-discovery crawlers from model-training crawlers where providers expose that distinction and treats emerging conventions such as `llms.txt` as experimental unless current provider documentation says otherwise.
 
-Covers:
+### Analytics & Conversion Instrumentation
 
-- entities, relationships and domain invariants
-- identifiers, types, nullability and defaults
-- primary/foreign/unique/check constraints
-- normalization and deliberate denormalization
-- indexes and query plans
-- N+1 and unbounded query patterns
-- transaction/isolation/locking semantics
-- ORM discipline and parameterized raw SQL
-- data lifecycle
-- representative database integration and concurrency evidence
-
-### Full-Stack Architecture & Integration
-
-Covers:
-
-- browser/client → frontend → API → domain → database → async/external flow
-- boundary ownership and contracts
-- dependency direction
-- cross-layer invariants
-- compatibility of API/data changes
-- failure propagation and user recovery
-- end-to-end evidence
-- thresholds for recording architecture decisions
-
-### Reliability & Observability Engineering
-
-Covers:
-
-- health and critical user/business symptoms
-- logs, metrics and traces
-- correlation and diagnostic context
-- background-worker and queue health
-- timeouts/retries/backpressure/degraded behavior
-- capacity and bottlenecks
-- actionable alerts
-- release/incident linkage
+Covers measurement plans, event/data contracts, conversion semantics, client/server instrumentation, deduplication, campaign/attribution hygiene, privacy escalation and a verification ladder from implementation through transport, provider ingestion, conversion correctness and reporting.
 
 ## Specialist governance packs
 
-SEF v1.3 contains 17 specialist routes:
+SEF v1.4 retains 17 specialist routes:
 
 1. Authentication / Authorization
 2. Database Migration & Recovery
@@ -123,18 +81,16 @@ SEF v1.3 contains 17 specialist routes:
 
 ## Proportionality
 
-SEF is designed to avoid a universal heavyweight checklist.
-
-Examples:
-
 ```text
 CSS color change
 → R0
 → lightweight verification
 
-standard business feature
-→ R1/R2
-→ relevant frontend/backend/database guidance
+public marketing site
+→ frontend + SEO discoverability
+
+lead-generation site
+→ frontend + SEO + analytics/conversion
 
 OAuth + admin authorization
 → R3
@@ -145,4 +101,4 @@ production destructive database operation
 → recovery evidence + qualified/human approval
 ```
 
-The actual Git diff is reassessed after implementation. A task initially planned as low risk can be escalated if the implementation introduces authentication, destructive migration, production infrastructure, sensitive data, tenant boundaries, external side effects, or other specialist triggers.
+The actual Git diff is reassessed after implementation. A task can be rerouted when implementation introduces authentication, destructive migration, production infrastructure, sensitive data, tenant boundaries, crawler/indexation behavior, analytics instrumentation or other specialist/task-scoped triggers.
