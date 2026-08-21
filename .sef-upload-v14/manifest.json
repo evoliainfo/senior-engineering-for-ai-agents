@@ -1,5 +1,5 @@
 {
   "version": "1.4",
-  "trigger": "exact-runtime-build-v2",
+  "trigger": "exact-runtime-build-v3",
   "sha256": "31e3dfc1b1a173c83f0a85e2aad6fe4080f33899f328261aa2129a060f5ac68e"
 }
