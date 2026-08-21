@@ -39,8 +39,14 @@ jobs:
             release_tag="$MANUAL_RELEASE_REF"
           fi
 
+          # Manual inputs can accidentally include leading/trailing whitespace,
+          # especially when copied from a mobile browser. Trim ASCII whitespace
+          # before validating while keeping the actual tag syntax strict.
+          release_tag="$(printf '%s' "$release_tag" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')"
+          printf 'Resolved release tag: %q\n' "$release_tag"
+
           if [[ ! "$release_tag" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]]; then
-            echo "Invalid release tag: $release_tag" >&2
+            printf 'Invalid release tag after trimming: %q\n' "$release_tag" >&2
             exit 1
           fi
 
