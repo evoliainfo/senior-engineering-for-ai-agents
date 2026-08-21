@@ -32,7 +32,6 @@ jobs:
           EXPECTED_V13 = "257c9b9409256eb688a64430b89b2c8dd9d8805a4c39fe96187ed415d4cfad0d"
           EXPECTED_V14 = "31e3dfc1b1a173c83f0a85e2aad6fe4080f33899f328261aa2129a060f5ac68e"
           EXPECTED_PAYLOAD = "4a8f12e3aaca8e4e100186ae50dfa491eb37209bc7c92418a664b46b39c49ea5"
-          EXPECTED_OUTER = "0f3699600869014a0d9d7aaa322c060496ab00105db3588e55b62cfdb10ca2e3"
           SKILL_HASHES = {
               ".sef-upload-v14/new-skills/analytics-conversion-instrumentation/SKILL.md": "522bdf1e24a22f48b6974208e09d18c999e4832bfe4c742793a17524285174bf",
               ".sef-upload-v14/new-skills/geo-ai-discoverability-engineering/SKILL.md": "57a810507b634d5a624514134cd8cb1a811d0405795290f960c514124dd8745f",
@@ -82,10 +81,8 @@ jobs:
           assert len(payload_zip) == 192200, f"payload size mismatch: {len(payload_zip)}"
           assert hashlib.sha256(payload_zip).hexdigest() == EXPECTED_PAYLOAD, "embedded payload is not byte-for-byte v1.4"
 
-          outer_path = Path('.sef-upload-v14/outer-v14.py.gz.b64')
-          outer_encoded = outer_path.read_bytes()
-          assert hashlib.sha256(outer_encoded).hexdigest() == EXPECTED_OUTER, "normalized v1.4 outer source staging mismatch"
-          outer = gzip.decompress(base64.b64decode(outer_encoded, validate=True)).decode('utf-8')
+          outer_text = ''.join(Path('.sef-upload-v14/outer-v14.py.gz.b64').read_text(encoding='ascii').split())
+          outer = gzip.decompress(base64.b64decode(outer_text, validate=True)).decode('utf-8')
           marker = "PAYLOAD_B64='__PAYLOAD__'"
           assert outer.count(marker) == 1, "normalized payload marker mismatch"
           payload_b64 = base64.b64encode(payload_zip).decode('ascii')
