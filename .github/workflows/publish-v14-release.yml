@@ -1,0 +1,62 @@
+name: Publish SEF v1.4.0-beta
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/publish-v14-release.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # pinned
+        with:
+          ref: main
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Verify exact v1.4 runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(sha256sum sef.py | awk '{print $1}')" = "31e3dfc1b1a173c83f0a85e2aad6fe4080f33899f328261aa2129a060f5ac68e"
+          grep -q 'VERSION="1.4"' sef.py
+          sha256sum -c SHA256SUMS
+          python3 -m py_compile sef.py
+          python3 sef.py self-test
+
+      - name: Create clean tagged commit without this workflow
+        id: clean
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git ls-remote --exit-code --tags origin refs/tags/v1.4.0-beta >/dev/null 2>&1; then
+            echo "Tag v1.4.0-beta already exists; refusing to move an immutable release tag." >&2
+            exit 1
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/publish-v14-release.yml
+          git commit -m "chore: finalize v1.4.0-beta release"
+          target="$(git rev-parse HEAD)"
+          git push origin HEAD:refs/tags/v1.4.0-beta
+          echo "target=$target" >> "$GITHUB_OUTPUT"
+
+      - name: Create GitHub pre-release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh release create v1.4.0-beta \
+            --verify-tag \
+            --title "SEF v1.4.0-beta — Public Beta" \
+            --notes-file RELEASES/v1.4.0-beta.md \
+            --prerelease
+          echo "Published v1.4.0-beta at ${{ steps.clean.outputs.target }}"
