@@ -1,0 +1,64 @@
+name: Assemble exact SEF v1.4 runtime
+
+on:
+  push:
+    branches: [release/v1.4]
+    paths:
+      - ".sef-upload-v14/manifest.json"
+
+permissions:
+  contents: write
+
+jobs:
+  assemble:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout release branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # pinned
+        with:
+          ref: release/v1.4
+          persist-credentials: true
+
+      - name: Reconstruct and verify exact validated runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import base64, gzip, hashlib, json
+
+          root = Path('.sef-upload-v14')
+          manifest = json.loads((root / 'manifest.json').read_text(encoding='utf-8'))
+          parts = sorted(root.glob('part-*.b64'))
+          if len(parts) != manifest['parts']:
+              raise SystemExit(f"part count mismatch: {len(parts)} != {manifest['parts']}")
+          encoded = ''.join(p.read_text(encoding='ascii') for p in parts)
+          if len(encoded) != manifest['encoded_length']:
+              raise SystemExit(f"encoded length mismatch: {len(encoded)} != {manifest['encoded_length']}")
+          payload = gzip.decompress(base64.b64decode(encoded, validate=True))
+          if len(payload) != manifest['runtime_bytes']:
+              raise SystemExit(f"runtime size mismatch: {len(payload)} != {manifest['runtime_bytes']}")
+          actual = hashlib.sha256(payload).hexdigest()
+          expected = manifest['sha256']
+          if actual != expected:
+              raise SystemExit(f"SHA mismatch: {actual} != {expected}")
+          Path('sef.py').write_bytes(payload)
+          Path('SHA256SUMS').write_text(f"{actual}  sef.py\n", encoding='ascii')
+          print(f"Verified exact SEF v{manifest['version']} runtime: {len(payload)} bytes, sha256={actual}")
+          PY
+          python3 -m py_compile sef.py
+          python3 sef.py self-test
+          sha256sum -c SHA256SUMS
+
+      - name: Publish reconstructed runtime and remove transfer staging
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf .sef-upload-v14
+          rm -f .github/workflows/assemble-v14-transfer.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "build: publish exact SEF v1.4 runtime"
+          git push origin HEAD:release/v1.4
