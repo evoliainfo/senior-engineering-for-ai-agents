@@ -101,14 +101,12 @@ jobs:
           python3 sef.py self-test
           sha256sum -c SHA256SUMS
 
-      - name: Publish exact runtime to release branch and clean staging
+      - name: Publish exact runtime to release branch
         shell: bash
         run: |
           set -euo pipefail
-          rm -rf .sef-upload-v14 .release-v14-parts
-          rm -f .github/workflows/assemble-v14-transfer.yml
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -A
+          git add sef.py SHA256SUMS
           git commit -m "build: publish exact SEF v1.4 runtime"
           git push origin HEAD:release/v1.4
