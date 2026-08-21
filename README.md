@@ -1,22 +1,22 @@
 # Senior Engineering for AI Coding Agents
 
-**Governed full-stack engineering workflows for Codex and Claude Code, from project discovery to production.**
+**Governed engineering workflows for Codex and Claude Code, from project discovery to production.**
 
-> You describe the software. Your coding agent writes the code. SEF governs the engineering.
+> You describe the product. Your coding agent writes the code. SEF governs the engineering.
 
-**Current beta:** `v1.3.0-beta`  
+**Current beta:** `v1.4.0-beta`  
 **Runtime:** [`sef.py`](sef.py)  
 **Integrity:** [`SHA256SUMS`](SHA256SUMS)
 
-SEF (Senior Engineering Framework) is a project engineering layer for AI coding agents. It is designed for people who want to build serious software with Codex or Claude Code without having to know every senior-engineering requirement in advance.
+SEF (Senior Engineering Framework) is a Project Engineering OS for AI coding agents. It is designed for people who want to build serious software with Codex or Claude Code without having to know every senior-engineering requirement in advance.
 
-SEF does **not** claim to make an AI model infallible or to turn it literally into a human senior engineer. It gives the agent a structured engineering operating system: project framing, inferred professional requirements, risk classification, specialist playbooks, dynamic Definition of Done, verification evidence, and release gates.
+SEF does **not** claim to make an AI model infallible or literally replace a senior engineer. It gives the agent a structured engineering operating system: project framing, inferred professional requirements, risk classification, specialist governance, task-scoped execution playbooks, dynamic Definition of Done, verification evidence and release gates.
 
 ## Quick start
 
 1. Download [`sef.py`](sef.py) and put it at the root of your project.
 2. Open the project in **Codex** or **Claude Code**.
-3. Describe the software you want to build.
+3. Describe the software, website or change you want to build.
 
 Example:
 
@@ -24,89 +24,100 @@ Example:
 
 That's the normal user workflow. You do **not** need to learn the SEF CLI.
 
-## What happens first
-
-For a new project, SEF starts with project discovery rather than immediately generating code:
+## How SEF works
 
 ```text
-PRODUCT DESCRIPTION
+USER / PRODUCT INTENT
         ↓
-PROJECT DISCOVERY
+PROJECT DISCOVERY + ENGINEERING BASELINE
         ↓
-EXPLICIT REQUIREMENTS
-+ INFERRED PROFESSIONAL REQUIREMENTS
+INFERRED PROFESSIONAL REQUIREMENTS
         ↓
-AUTHORITATIVE USER DECISIONS
+PLAN + RISK + DYNAMIC DEFINITION OF DONE
         ↓
-PROJECT ENGINEERING BASELINE
-        ↓
-ARCHITECTURE / DATA / SECURITY / QUALITY STRATEGY
-        ↓
-PROJECT DEFINITION OF DONE
+TASK-SCOPED EXECUTION PLAYBOOKS
         ↓
 IMPLEMENTATION
-```
-
-For an existing repository, SEF uses **ADOPT** mode: it inspects the current architecture and codebase, preserves existing work, compares the implementation with the intended product, and builds the engineering baseline around reality instead of replacing the project with a theoretical architecture.
-
-## The operating loop
-
-Once the initial project framing is sufficient, the user can talk to the coding agent normally:
-
-> Add the customer portal.
-
-> Fix the booking concurrency bug.
-
-> Add Google OAuth.
-
-> Prepare this version for production.
-
-The agent then operates the SEF lifecycle itself:
-
-```text
-USER INTENT
-    ↓
-SESSION / PROJECT BASELINE
-    ↓
-PLAN + RISK + DYNAMIC DOD
-    ↓
-TASK-GUIDANCE
-    ↓
-IMPLEMENTATION
-    ↓
+        ↓
 ACTUAL-DIFF REASSESSMENT
-    ↓
-VERIFY / EVIDENCE
-    ↓
-VERIFIED | NOT_VERIFIED | BLOCKED
-    ↓
-RELEASE GATE
+        ↓
+VERIFICATION + EVIDENCE
+        ↓
+VERIFIED | VERIFIED_WITH_RESIDUAL_RISK | NOT_VERIFIED | BLOCKED
+        ↓
+RELEASE READINESS
 ```
 
-## Full-stack engineering coverage
+For an existing repository, SEF uses an adoption workflow: it inspects the actual architecture and codebase, preserves existing work, and builds the engineering baseline around reality rather than replacing the project with a theoretical design.
 
-SEF v1.3 includes five execution playbooks for the implementation HOW:
+## Eight execution playbooks
 
-- **Frontend Application Engineering**
-- **Backend / API Service Engineering**
-- **Database Design & Query Engineering**
-- **Full-Stack Architecture & Integration**
-- **Reliability & Observability Engineering**
+SEF v1.4 includes eight task-scoped execution playbooks for the implementation HOW:
 
-These complement **17 specialist governance packs** covering authentication/authorization, database migration/recovery, CI and software supply chain, containers, IaC/network, multi-tenancy, webhooks, AI/agentic systems, privacy, performance/cost, accessibility/compatibility, external suppliers, maintenance/vulnerability lifecycle, release/progressive delivery, file uploads, time semantics, and regulated-domain escalation.
+1. **Frontend Application Engineering**
+2. **Backend / API Service Engineering**
+3. **Database Design & Query Engineering**
+4. **Application Architecture & Integration**
+5. **Reliability & Observability Engineering**
+6. **SEO & Web Discoverability Engineering**
+7. **GEO / AI Discoverability Engineering**
+8. **Analytics & Conversion Instrumentation**
+
+The three v1.4 web-growth playbooks make SEF better suited to public websites and acquisition-oriented web projects without turning every website edit into a heavyweight audit.
+
+### SEO & Web Discoverability
+
+Covers crawlability, indexation policy, robots directives, canonicals, sitemap integrity, metadata, structured data, rendering, URL architecture, internal linking, redirects/migrations, performance evidence and post-deploy verification.
+
+SEF explicitly distinguishes **technical SEO readiness** from **indexation** and **observed ranking/traffic**. Technical correctness is not reported as proof of search success.
+
+### GEO / AI Discoverability
+
+Covers AI-search and answer-engine discoverability with an evidence-first approach: provider crawler access, CDN/WAF behavior, citation-ready and extractable content, entity consistency, source quality, provider-specific evidence, referrals and conversion measurement.
+
+SEF does not promise placement or citations in generative answers. Provider-specific guidance must be re-checked against current primary documentation at execution time.
+
+### Analytics & Conversion Instrumentation
+
+Treats analytics as a measurement system rather than "a tag was installed": measurement plans, event contracts, conversion semantics, client/server instrumentation boundaries, deduplication, campaign/UTM hygiene, privacy/consent escalation, ingestion verification, reporting and critical-funnel regression protection.
+
+A tag firing is not accepted as evidence that a correct business conversion was ingested.
+
+## Proportional routing
+
+The new capabilities are **execution playbooks, not new specialist governance packs**. The governance catalog remains stable.
+
+Examples:
+
+```text
+"Create a public company website"
+  → Frontend + SEO/Web Discoverability
+
+"Create a website to generate leads"
+  → Frontend + SEO/Web Discoverability + Analytics/Conversion
+
+"Optimize for ChatGPT Search / GEO"
+  → SEO/Web Discoverability + GEO/AI Discoverability
+
+"Change only the button color on the website"
+  → lightweight frontend path (R0)
+  → no unnecessary SEO/GEO/analytics playbooks
+```
+
+SEF also reassesses the **actual Git diff**. If implementation introduces crawler policy, canonical behavior, analytics instrumentation or another material domain not present in the saved task plan, verification surfaces the newly required procedure and requires another review/verification cycle before a supported completion claim.
 
 ## Governance baseline
 
-Current v1.3 baseline:
+Current v1.4 baseline:
 
 - **212** Core engineering controls
 - **326** specialist controls
-- **17** specialist packs
+- **17** specialist governance packs
 - **538** atomic controls represented
-- **5** full-stack execution playbooks
+- **8** execution playbooks
 - historical policy regression suite: **30/30 PASS**
 
-The framework applies controls proportionately. A CSS color change should stay lightweight; authentication, tenant isolation, destructive database changes, production infrastructure, or irreversible operations receive deeper controls and evidence requirements.
+The 17 specialist packs cover authentication/authorization, database migration/recovery, CI and software supply chain, containers, IaC/network, multi-tenancy, webhooks/external input, AI/agentic systems, privacy, performance/cost, accessibility/compatibility, external suppliers, maintenance/vulnerability lifecycle, release/progressive delivery, file uploads, time semantics and regulated-domain escalation.
 
 ## Codex and Claude Code
 
@@ -117,15 +128,29 @@ AGENTS.md   → Codex adapter
 CLAUDE.md   → Claude Code adapter
 ```
 
-Both adapters enforce the same SEF lifecycle. Existing user instructions in those files are preserved.
+Both adapters use the same underlying SEF lifecycle and policy. Existing user instructions in those files are preserved during installation and upgrade.
 
 ## Python bootstrap
 
-The current beta runtime is Python-based.
-
-The agent first checks for an existing compatible Python 3 interpreter (`python3`, `python`, or Windows `py -3`). If Python is missing, the agent must **not silently modify the host machine**. It should explain the required installation and use a trusted OS/package-manager or official Python distribution only through the normal sandbox, network and approval model of the coding agent.
+The beta runtime is Python-based. The agent first checks for an existing compatible Python 3 interpreter (`python3`, `python`, or Windows `py -3`). If Python is missing, the agent must **not silently modify the host machine**. It should explain the required installation and use a trusted OS/package manager or official Python distribution through the normal sandbox, network and approval model of the coding agent.
 
 The bootstrap rule is written directly at the top of `sef.py`, so an agent can read it before Python is available.
+
+## Evidence model
+
+SEF separates states that are often incorrectly collapsed into "done":
+
+`PASS`, `FAIL`, `NOT_RUN`, `UNAVAILABLE`, `INCONCLUSIVE`, `FLAKY`, `N_A`, `WAIVED`, and `BLOCKED`.
+
+Examples:
+
+```text
+SEO implementation ≠ indexation ≠ ranking outcome
+AI crawl readiness ≠ AI citation / placement
+analytics tag present ≠ event ingestion ≠ valid conversion
+lab performance ≠ real-user field performance
+plan scope ≠ actual diff scope
+```
 
 ## What SEF does not do
 
@@ -133,11 +158,10 @@ SEF is not:
 
 - a guarantee that an AI model never makes mistakes;
 - a replacement for CI, protected branches, sandbox permissions or qualified human approval;
-- a claim of legal/regulatory compliance by itself;
-- a reason to ignore official framework, database or cloud documentation;
+- a claim of legal or regulatory compliance by itself;
+- a guarantee of search rankings, AI citations, traffic or causal attribution;
+- a reason to ignore official framework, database, cloud, search or analytics documentation;
 - a giant universal checklist applied to every code change.
-
-The evidence model distinguishes `PASS`, `FAIL`, `NOT_RUN`, `UNAVAILABLE`, `INCONCLUSIVE`, `FLAKY`, `N/A`, `WAIVED`, and `BLOCKED` so that "the agent says it is done" is not treated as objective verification.
 
 ## Documentation
 
@@ -146,10 +170,12 @@ The evidence model distinguishes `PASS`, `FAIL`, `NOT_RUN`, `UNAVAILABLE`, `INCO
 - [Validation](docs/VALIDATION.md)
 - [Security model](SECURITY.md)
 - [Changelog](CHANGELOG.md)
+- [v1.4.0-beta release notes](RELEASES/v1.4.0-beta.md)
+- [Contributing / beta feedback](CONTRIBUTING.md)
 
 ## Status
 
-**Public beta.** The current release is intended for controlled real-project testing with Codex and Claude Code.
+**Public beta.** v1.4.0-beta is intended for controlled real-project testing with Codex and Claude Code.
 
 Feedback and reproducible failure cases are especially valuable: wrong risk classification, missing requirements, unnecessary friction, missing playbooks, false-positive routing, false-negative routing, or ways an agent can incorrectly claim completion.
 
