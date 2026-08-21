@@ -1,0 +1,145 @@
+name: SEF v1.4 release assembler
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".sef-upload-v14/manifest.json"
+
+permissions:
+  contents: write
+
+jobs:
+  assemble-v14:
+    if: github.head_ref == 'release/v1.4' && github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout controlled release branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # pinned
+        with:
+          ref: release/v1.4
+          persist-credentials: true
+
+      - name: Reconstruct exact validated v1.4 runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import base64, gzip, hashlib, io, re, subprocess, tempfile, zipfile
+
+          EXPECTED_V13 = "257c9b9409256eb688a64430b89b2c8dd9d8805a4c39fe96187ed415d4cfad0d"
+          EXPECTED_V14 = "31e3dfc1b1a173c83f0a85e2aad6fe4080f33899f328261aa2129a060f5ac68e"
+          EXPECTED_PAYLOAD = "4a8f12e3aaca8e4e100186ae50dfa491eb37209bc7c92418a664b46b39c49ea5"
+          EXPECTED_OUTER3 = "732996d94927caab579ae7b74135a47b557cdbe809b4e152f74535cd5f8f186f"
+          EXPECTED_OUTER4 = "b9801409f60f45d44fb99b62977bb94fcf3ae7d511cd08dc988ff36b98e2e319"
+          EXPECTED_DELTA = "ae448af907e9bb93abcdf313b3e0e4ba15657c01bbee34225b90dff9ba7fb45a"
+          SKILL_HASHES = {
+              ".sef-upload-v14/new-skills/analytics-conversion-instrumentation/SKILL.md": "522bdf1e24a22f48b6974208e09d18c999e4832bfe4c742793a17524285174bf",
+              ".sef-upload-v14/new-skills/geo-ai-discoverability-engineering/SKILL.md": "57a810507b634d5a624514134cd8cb1a811d0405795290f960c514124dd8745f",
+              ".sef-upload-v14/new-skills/seo-web-discoverability-engineering/SKILL.md": "decc9fc7735d89236717f132645c050339b4edefbd109004ed3fa1b777831398",
+          }
+
+          runtime = Path("sef.py")
+          old_bytes = runtime.read_bytes()
+          if hashlib.sha256(old_bytes).hexdigest() != EXPECTED_V13:
+              raise SystemExit("release branch is not based on the validated v1.3 runtime")
+          old_text = old_bytes.decode("utf-8")
+          match = re.search(r"^PAYLOAD_B64='([^']+)'$", old_text, re.M)
+          if not match:
+              raise SystemExit("embedded v1.3 payload not found")
+          old_payload_b64 = match.group(1)
+          outer3 = old_text[:match.start()] + "PAYLOAD_B64='__PAYLOAD__'" + old_text[match.end():]
+          if hashlib.sha256(outer3.encode("utf-8")).hexdigest() != EXPECTED_OUTER3:
+              raise SystemExit("normalized v1.3 outer source mismatch")
+
+          delta_path = Path(".sef-upload-v14/outer3-to-outer4.diff.gz.b64")
+          delta_encoded = delta_path.read_bytes()
+          if hashlib.sha256(delta_encoded).hexdigest() != EXPECTED_DELTA:
+              raise SystemExit("outer delta staging hash mismatch")
+          delta_text = ''.join(delta_encoded.decode('ascii').split())
+          delta = gzip.decompress(base64.b64decode(delta_text, validate=True))
+
+          with tempfile.TemporaryDirectory() as td:
+              td = Path(td)
+              outer_file = td / "outer.py"
+              outer_file.write_text(outer3, encoding="utf-8")
+              proc = subprocess.run(
+                  ["patch", "--batch", str(outer_file)],
+                  input=delta,
+                  stdout=subprocess.PIPE,
+                  stderr=subprocess.STDOUT,
+              )
+              if proc.returncode != 0:
+                  raise SystemExit("outer delta patch failed:\n" + proc.stdout.decode("utf-8", errors="replace"))
+              outer4 = outer_file.read_text(encoding="utf-8")
+          if hashlib.sha256(outer4.encode("utf-8")).hexdigest() != EXPECTED_OUTER4:
+              raise SystemExit("reconstructed v1.4 outer source mismatch")
+          if outer4.count("PAYLOAD_B64='__PAYLOAD__'") != 1:
+              raise SystemExit("v1.4 payload marker mismatch")
+
+          old_zip_bytes = base64.b64decode(old_payload_b64, validate=True)
+          with zipfile.ZipFile(io.BytesIO(old_zip_bytes), "r") as zin:
+              old_names = zin.namelist()
+              contents = {name: zin.read(name) for name in old_names}
+
+          new_skills = {
+              ".agents/skills/analytics-conversion-instrumentation/SKILL.md": ".sef-upload-v14/new-skills/analytics-conversion-instrumentation/SKILL.md",
+              ".agents/skills/geo-ai-discoverability-engineering/SKILL.md": ".sef-upload-v14/new-skills/geo-ai-discoverability-engineering/SKILL.md",
+              ".agents/skills/seo-web-discoverability-engineering/SKILL.md": ".sef-upload-v14/new-skills/seo-web-discoverability-engineering/SKILL.md",
+          }
+          for target, staged in new_skills.items():
+              data = Path(staged).read_bytes()
+              if hashlib.sha256(data).hexdigest() != SKILL_HASHES[staged]:
+                  raise SystemExit(f"staged skill hash mismatch: {staged}")
+              contents[target] = data
+
+          skill_names = sorted(name for name in contents if name.startswith(".agents/skills/"))
+          non_skill_names = [name for name in old_names if not name.startswith(".agents/skills/")]
+          order = skill_names + non_skill_names
+          if len(order) != 55:
+              raise SystemExit(f"unexpected embedded file count: {len(order)}")
+
+          buf = io.BytesIO()
+          with zipfile.ZipFile(buf, "w") as zout:
+              for name in order:
+                  info = zipfile.ZipInfo(name, (2026, 8, 21, 0, 0, 0))
+                  info.create_system = 3
+                  info.external_attr = 2175008768
+                  zout.writestr(info, contents[name], compress_type=zipfile.ZIP_DEFLATED, compresslevel=9)
+          payload_zip = buf.getvalue()
+          if len(payload_zip) != 192200:
+              raise SystemExit(f"payload size mismatch: {len(payload_zip)}")
+          if hashlib.sha256(payload_zip).hexdigest() != EXPECTED_PAYLOAD:
+              raise SystemExit("embedded payload is not byte-for-byte v1.4")
+
+          payload_b64 = base64.b64encode(payload_zip).decode("ascii")
+          final_source = outer4.replace("PAYLOAD_B64='__PAYLOAD__'", "PAYLOAD_B64='" + payload_b64 + "'", 1)
+          final_bytes = final_source.encode("utf-8")
+          if len(final_bytes) != 352922:
+              raise SystemExit(f"runtime size mismatch: {len(final_bytes)}")
+          actual = hashlib.sha256(final_bytes).hexdigest()
+          if actual != EXPECTED_V14:
+              raise SystemExit(f"runtime SHA mismatch: {actual} != {EXPECTED_V14}")
+
+          runtime.write_bytes(final_bytes)
+          Path("SHA256SUMS").write_text(f"{actual}  sef.py\n", encoding="ascii")
+          print(f"EXACT SEF v1.4 reconstructed: {len(final_bytes)} bytes sha256={actual}")
+          PY
+
+          python3 -m py_compile sef.py
+          python3 sef.py self-test
+          sha256sum -c SHA256SUMS
+
+      - name: Publish exact runtime to release branch and clean staging
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf .sef-upload-v14 .release-v14-parts
+          rm -f .github/workflows/assemble-v14-transfer.yml tmp-no tmp-no2 tmp-no3 tmp-no4
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "build: publish exact SEF v1.4 runtime"
+          git push origin HEAD:release/v1.4
