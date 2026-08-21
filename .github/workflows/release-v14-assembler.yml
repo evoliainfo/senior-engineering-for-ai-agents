@@ -31,14 +31,22 @@ jobs:
 
           OLD_SHA = "257c9b9409256eb688a64430b89b2c8dd9d8805a4c39fe96187ed415d4cfad0d"
           NEW_SHA = "31e3dfc1b1a173c83f0a85e2aad6fe4080f33899f328261aa2129a060f5ac68e"
+          PATCH_SHA = "0dc608c6ca2e4bfc3a8ebe25df346f5de397a5f9b05f7d997667f689ed4206e0"
+          SKILL_HASHES = {
+              '.agents/skills/analytics-conversion-instrumentation/SKILL.md': '522bdf1e24a22f48b6974208e09d18c999e4832bfe4c742793a17524285174bf',
+              '.agents/skills/geo-ai-discoverability-engineering/SKILL.md': '57a810507b634d5a624514134cd8cb1a811d0405795290f960c514124dd8745f',
+              '.agents/skills/seo-web-discoverability-engineering/SKILL.md': 'decc9fc7735d89236717f132645c050339b4edefbd109004ed3fa1b777831398',
+          }
           root = Path('.sef-upload-v14')
           runtime = Path('sef.py')
           old_bytes = runtime.read_bytes()
           if hashlib.sha256(old_bytes).hexdigest() != OLD_SHA:
               raise SystemExit('Refusing to build: sef.py is not the expected v1.3 runtime')
 
-          def ungz(name):
-              return gzip.decompress(base64.b64decode(''.join((root / name).read_text(encoding='ascii').split()), validate=True))
+          patch_b64 = ''.join((root / f'outer-patch-{i:02d}.b64').read_text(encoding='ascii').strip() for i in range(4))
+          patch_bytes = gzip.decompress(base64.b64decode(patch_b64, validate=True))
+          if hashlib.sha256(patch_bytes).hexdigest() != PATCH_SHA:
+              raise SystemExit('Outer source patch integrity mismatch')
 
           old_text = old_bytes.decode('utf-8')
           match = re.search(r"PAYLOAD_B64='([^']*)'", old_text)
@@ -52,7 +60,7 @@ jobs:
               f = td / 'sef.py'
               f.write_text(placeholder, encoding='utf-8')
               patch = td / 'outer.patch'
-              patch.write_bytes(ungz('part-00.b64'))
+              patch.write_bytes(patch_bytes)
               subprocess.run(['git', 'apply', '--unsafe-paths', str(patch)], cwd=td, check=True)
               new_outer = f.read_text(encoding='utf-8')
 
@@ -61,11 +69,13 @@ jobs:
               files = {name: zin.read(name) for name in order}
 
           new_skills = {
-              '.agents/skills/analytics-conversion-instrumentation/SKILL.md': ungz('part-01.b64'),
-              '.agents/skills/geo-ai-discoverability-engineering/SKILL.md': ungz('part-02.b64'),
-              '.agents/skills/seo-web-discoverability-engineering/SKILL.md': ungz('part-03.b64'),
+              '.agents/skills/analytics-conversion-instrumentation/SKILL.md': (root / 'new-skills/analytics-conversion-instrumentation/SKILL.md').read_bytes(),
+              '.agents/skills/geo-ai-discoverability-engineering/SKILL.md': (root / 'new-skills/geo-ai-discoverability-engineering/SKILL.md').read_bytes(),
+              '.agents/skills/seo-web-discoverability-engineering/SKILL.md': (root / 'new-skills/seo-web-discoverability-engineering/SKILL.md').read_bytes(),
           }
           for name, data in new_skills.items():
+              if hashlib.sha256(data).hexdigest() != SKILL_HASHES[name]:
+                  raise SystemExit(f'Skill integrity mismatch: {name}')
               files[name] = data
               idx = 0
               while idx < len(order) and order[idx].startswith('.agents/skills/') and order[idx] < name:
