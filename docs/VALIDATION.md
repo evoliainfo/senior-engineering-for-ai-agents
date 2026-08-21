@@ -1,56 +1,55 @@
 # Validation
 
-SEF is developed with a regression-oriented validation model. The goal is not to prove that an AI coding agent can never fail; the goal is to verify that SEF routes representative engineering situations to the intended risk, controls, procedures and gates, and that its own lifecycle cannot silently convert missing evidence into success.
+SEF is developed with a regression-oriented validation model. These tests do not prove that an AI coding agent or every application built with SEF can never fail. They verify that SEF routes representative engineering situations to the intended risks, controls, procedures and gates, and that missing evidence is not silently converted into success.
 
-## Current beta baseline
-
-SEF v1.3 retains the validated policy baseline:
+## v1.4 beta baseline
 
 - **212 Core controls**
 - **326 specialist controls**
-- **17 specialist packs**
+- **17 specialist governance packs**
 - **538 atomic controls represented**
-- **30/30 historical policy regression scenarios PASS**
-- **5 full-stack execution playbooks**
+- **8 execution playbooks**
+- historical policy regression: **30/30 PASS**
 
-## v1.2 full-stack execution validation
+## v1.4 web discoverability & measurement validation
 
-Targeted scenarios verified that task routing distinguishes the implementation domain rather than loading every playbook merely because a repository contains multiple technologies.
+v1.4 adds three task-scoped execution playbooks while keeping the canonical governance catalog unchanged:
 
-Representative cases:
+- SEO & Web Discoverability Engineering
+- GEO / AI Discoverability Engineering
+- Analytics & Conversion Instrumentation
 
-- frontend-only task → frontend playbook
-- backend/API-only task → backend/API playbook
-- database-design task → database playbook
-- explicit cross-layer feature → frontend + backend + database + integration guidance
-- CSS-only visual change → remains lightweight / R0
-- OAuth change → backend execution + authentication/privacy governance
-- database migration → database design + migration/recovery guidance
-- production API work → backend + reliability + release engineering
-- `task-guidance` loads actual embedded HOW content rather than only procedure names
+Local candidate validation before publication produced:
 
-Targeted v1.2 full-stack validation: **13/13 PASS**.
+| Suite | Result |
+|---|---:|
+| Python syntax / runtime compilation | PASS |
+| Embedded policy self-test | PASS |
+| Historical policy regression | 30/30 PASS |
+| Specialist-pack validator | 17 packs / 326 specialist controls PASS |
+| Web/GEO/analytics routing red-team | 18/18 PASS |
+| Project-first + actual-diff integration | 9/9 PASS |
+| v1.3 → v1.4 preservation | 11/11 PASS |
+| Three new playbooks embedded | PASS |
+| Eight execution playbooks present | PASS |
 
-## v1.3 multi-agent validation
+Representative routing assertions:
 
-v1.3 adds the generic agent bootstrap and Claude Code adapter while preserving Codex support.
+- public lead-generation site → Frontend + SEO + Analytics;
+- explicit GEO/AEO/ChatGPT Search → SEO + GEO/AI Discoverability;
+- GEO does not masquerade as an AI/LLM application;
+- pure CSS/color website edit remains lightweight;
+- an actual diff introducing canonical or analytics behavior can surface newly required procedures and force another verification cycle.
 
-Validated scenarios include:
+## Evidence separation added in v1.4
 
-- pre-Python bootstrap protocol readable from the source file
-- generic `agent-start`
-- Codex adapter declared and preserved
-- Claude Code adapter declared and preserved
-- existing `AGENTS.md` instructions preserved
-- existing `CLAUDE.md` instructions preserved
-- installation manifest records both adapters
-- `doctor` validates installed project artifacts
-- full-stack guidance remains available after multi-agent changes
-- `codex-start` remains backward-compatible
-- v1.2 → v1.3 upgrade preserves baseline and user instructions
-- adapter instructions prohibit silent system-runtime installation and permission bypass
+```text
+SEO implementation ≠ indexation ≠ ranking outcome
+AI crawl readiness ≠ AI citation / placement
+analytics implementation ≠ transport ≠ ingestion ≠ valid conversion
+```
 
-Targeted v1.3 validation: **12/12 PASS**.
+Provider-specific behavior is time-sensitive, so the execution playbooks require current primary documentation to be re-checked when provider-specific decisions are made.
 
 ## Verification philosophy
 
@@ -65,38 +64,28 @@ documented
 ≠ production-proven
 ```
 
-For this reason, SEF does not collapse these outcomes into a single boolean:
-
-- `PASS`
-- `FAIL`
-- `NOT_RUN`
-- `UNAVAILABLE`
-- `INCONCLUSIVE`
-- `FLAKY`
-- `N_A`
-- `WAIVED`
-- `BLOCKED`
+Evidence/control states include `PASS`, `FAIL`, `NOT_RUN`, `UNAVAILABLE`, `INCONCLUSIVE`, `FLAKY`, `N_A`, `WAIVED`, and `BLOCKED`.
 
 ## Hard-stop examples
 
 Representative conditions that must not be reported as production-ready include:
 
-- required critical test/build/security failure
-- authentication/authorization bypass
-- exposed secret
-- uncontrolled destructive migration
-- unresolved material data-loss risk
-- critical requirement not verified
-- known regression
-- unexplained out-of-scope changes
-- absent required recovery/rollback evidence
-- tenant-isolation violation or unverified high-risk path
-- release artifact/revision not tied to verified source
-- missing independent/human approval where required
-- hard gate skipped, unavailable or silently treated as N/A
+- required critical test/build/security failure;
+- authentication/authorization bypass;
+- exposed secret;
+- uncontrolled destructive migration;
+- unresolved material data-loss risk;
+- critical requirement not verified;
+- known regression;
+- unexplained out-of-scope changes;
+- absent required recovery/rollback evidence;
+- tenant-isolation violation or unverified high-risk path;
+- release artifact/revision not tied to verified source;
+- missing independent/human approval where required;
+- hard gate skipped, unavailable or silently treated as N/A.
 
-## What these results mean
+## What the results mean
 
-The current results mean that **SEF's own routing and lifecycle passed the documented regression scenarios**. They do not mean that every future application built with an AI agent is automatically secure, correct, scalable, compliant or production-ready.
+The validation results mean **SEF's own candidate routing and lifecycle passed the documented regression scenarios**. They do not mean every future application is automatically secure, correct, scalable, compliant, highly ranked, cited by AI systems or accurately attributed.
 
 Real-project pilots, CI evidence, deployment evidence and adversarial testing remain necessary.
