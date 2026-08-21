@@ -1,0 +1,108 @@
+name: Attest SEF release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      release_ref:
+        description: "Existing immutable release tag to attest (for example v1.4.0-beta)"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  id-token: write
+  attestations: write
+
+concurrency:
+  group: attest-sef-release-${{ github.ref }}-${{ inputs.release_ref || github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  attest:
+    name: attest-release
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      MANUAL_RELEASE_REF: ${{ inputs.release_ref }}
+    steps:
+      - name: Resolve and checkout exact immutable release tag
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [[ "$GITHUB_EVENT_NAME" == "push" ]]; then
+            release_tag="$GITHUB_REF_NAME"
+          else
+            release_tag="$MANUAL_RELEASE_REF"
+          fi
+
+          if [[ ! "$release_tag" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]]; then
+            echo "Invalid release tag: $release_tag" >&2
+            exit 1
+          fi
+
+          git init .
+          git remote add origin "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY.git"
+          git fetch --depth=1 origin "refs/tags/$release_tag:refs/tags/$release_tag"
+          git checkout --detach "$release_tag^{commit}"
+
+          release_sha="$(git rev-parse HEAD)"
+          if [[ "$GITHUB_EVENT_NAME" == "push" && "$release_sha" != "$GITHUB_SHA" ]]; then
+            echo "Tag/trigger SHA mismatch: tag=$release_sha event=$GITHUB_SHA" >&2
+            exit 1
+          fi
+
+          echo "RELEASE_TAG=$release_tag" >> "$GITHUB_ENV"
+          echo "RELEASE_SHA=$release_sha" >> "$GITHUB_ENV"
+
+      - name: Verify release contents and runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          test -f sef.py
+          test -f SHA256SUMS
+          test -f "RELEASES/$RELEASE_TAG.md"
+
+          runtime_version="$(sed -n 's/^VERSION="\([^"]*\)"/\1/p' sef.py | head -n 1)"
+          test -n "$runtime_version"
+          case "$RELEASE_TAG" in
+            "v${runtime_version}".*) ;;
+            *)
+              echo "Runtime/tag version mismatch: runtime=$runtime_version tag=$RELEASE_TAG" >&2
+              exit 1
+              ;;
+          esac
+
+          sha256sum -c SHA256SUMS
+          python3 -m py_compile sef.py
+          python3 sef.py self-test
+
+      - name: Generate signed build provenance attestations
+        uses: actions/attest@508db95dd578ae2727ebd6217d5ba78e4fbda05d # v4.2.1
+        with:
+          subject-path: |
+            sef.py
+            SHA256SUMS
+            RELEASES/${{ env.RELEASE_TAG }}.md
+          subject-version: ${{ env.RELEASE_TAG }}
+
+      - name: Record verification instructions
+        shell: bash
+        run: |
+          {
+            echo "## SEF release attested"
+            echo
+            echo "- Tag: \`$RELEASE_TAG\`"
+            echo "- Commit: \`$RELEASE_SHA\`"
+            echo "- Runtime checksum: \`$(sha256sum sef.py | awk '{print $1}')\`"
+            echo
+            echo "Verify the downloaded runtime with:"
+            echo
+            echo '```bash'
+            echo "gh attestation verify sef.py -R $GITHUB_REPOSITORY --signer-workflow $GITHUB_REPOSITORY/.github/workflows/attest-release.yml"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
