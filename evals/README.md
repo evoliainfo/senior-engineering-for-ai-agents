@@ -7,30 +7,38 @@ This directory implements the benchmark contract defined in:
 
 ## Current implementation scope
 
-The first implementation is intentionally bounded:
+The implementation remains intentionally bounded:
 
 - black-box execution of the public `sef.py` CLI;
 - zero third-party Python dependencies;
-- deterministic L0/L1 scenario validation and plan-routing evaluation;
+- deterministic L1 plan-routing evaluation;
+- deterministic L1 actual-Git-diff reassessment;
 - isolated temporary fixture repository for every scenario;
 - exact SHA-256 identity for the tested `sef.py` and fixture tree;
 - machine-readable scenario/result records;
 - no modification of the runtime under test.
 
-The current materialized DEV slice contains 11 plan-level scenarios covering:
+The current materialized DEV slice contains **15 scenarios**:
 
-- low-risk proportionality;
-- authentication and authorization;
-- authorization + migration interaction;
-- destructive migration/recovery;
-- webhook trust;
-- file upload security;
-- CI/software-supply-chain routing;
-- SEO/web discoverability;
-- lead-generation analytics/conversion routing;
-- GEO/AI discoverability without accidental AI-runtime routing.
+- 11 plan-level routing/proportionality scenarios;
+- 4 actual-diff scenarios: `DIFF-001`, `DIFF-002`, `DIFF-004`, `DIFF-005`.
 
-It does **not** yet claim the full 48-scenario catalog is executable. Actual-diff, verification/release evidence, repeated Codex/Claude trials and real-project pilots are added in later bounded increments.
+`DIFF-003` remains in the CHALLENGE set and is intentionally not materialized during this tuning pass.
+
+It does **not** yet claim the full 48-scenario catalog is executable. Evidence/release behavior, repeated Codex/Claude trials and real-project pilots remain later bounded increments.
+
+## How actual-diff scenarios work
+
+For a `phase: verify` scenario the harness:
+
+1. creates a fresh temporary copy of the fixture;
+2. initializes SEF and records a clean Git checkpoint;
+3. saves the original task plan and records a second checkpoint;
+4. applies only the scenario-declared mutation;
+5. runs `sef.py verify --base HEAD`;
+6. grades the actual observed diff against the predeclared expectations.
+
+This keeps the saved SEF task state out of the candidate implementation diff and makes the tested mutation reproducible.
 
 ## Commands
 
@@ -40,7 +48,7 @@ Validate scenario contracts:
 python3 evals/run.py validate
 ```
 
-Run all currently materialized DEV scenarios:
+Run all materialized DEV scenarios:
 
 ```bash
 python3 evals/run.py run --set DEV
@@ -49,22 +57,24 @@ python3 evals/run.py run --set DEV
 Run selected scenarios:
 
 ```bash
-python3 evals/run.py run --ids PROP-001,AUTH-001
+python3 evals/run.py run --ids DIFF-001,DIFF-002
 ```
 
 A non-zero exit from `run` means at least one selected benchmark scenario failed or was inconclusive. That is a **benchmark result**, not automatically a harness defect.
 
 CI separately gates harness health: malformed scenarios, missing results and `HARNESS_ERROR` outcomes fail CI, while legitimate SEF baseline failures are recorded without being laundered into PASS.
 
-## Bootstrap baseline observation
+## Current baseline
 
 Against the exact v1.4 runtime SHA-256
 `31e3dfc1b1a173c83f0a85e2aad6fe4080f33899f328261aa2129a060f5ac68e`,
-the 11-scenario plan-level bootstrap currently records **10 PASS / 1 FAIL**.
+the original 11-scenario plan-level slice records **10 PASS / 1 FAIL**.
 
-The observed failure is `WEB-001`: the public company website is correctly routed to frontend + SEO, but the plan is blocked by an inferred material context even though the scenario supplies no organization/workspace/tenant product semantics. This is retained as baseline evidence rather than weakened to make v1.4 score green.
+The retained plan-level failure is `WEB-001`, an over-governance case already documented in the PR that introduced the harness.
 
-This is a partial bootstrap measurement, not the final 48-scenario v1.4 benchmark score.
+The first actual-diff baseline is measured in CI for this increment and should be recorded here only after the runner itself has passed harness-health review.
+
+This is a partial measurement, not the final 48-scenario v1.4 benchmark score.
 
 ## Design rule
 
