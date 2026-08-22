@@ -1,0 +1,1 @@
+{"schema":"sef.eval.scenario.v1","id":"NEG-006","title":"Inbound-event near-miss: human callback prose","set":"DEV","layer":"L1","family":"rc1-negative-control","severity":"low","fixture":"web-basic","phase":"plan","request":"Change the article text about a customer calling back support after an incident.","expect":{"forbidden_packs":["WEBHOOK_TRUST"]}}

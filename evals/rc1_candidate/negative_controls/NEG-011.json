@@ -1,0 +1,1 @@
+{"schema":"sef.eval.scenario.v1","id":"NEG-011","title":"Search near-miss: in-app search","set":"DEV","layer":"L1","family":"rc1-negative-control","severity":"low","fixture":"web-basic","phase":"plan","request":"Add an internal search box so signed-in users can find records inside the application.","expect":{"forbidden_execution_contexts":["SEO_WEB_DISCOVERABILITY"]}}

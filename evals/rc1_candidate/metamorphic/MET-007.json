@@ -1,0 +1,1 @@
+{"schema":"sef.eval.scenario.v1","id":"MET-007","title":"External dependency explicit API","set":"DEV","layer":"L1","family":"rc1-metamorphic","severity":"standard","fixture":"api-basic","phase":"plan","request":"Integrate an external API supplied by Acme for address validation.","expect":{"required_packs":["EXTERNAL_SUPPLIER"]}}

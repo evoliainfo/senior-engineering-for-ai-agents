@@ -1,0 +1,1 @@
+{"schema":"sef.eval.scenario.v1","id":"MET-011","title":"Search discoverability specialist wording","set":"DEV","layer":"L1","family":"rc1-metamorphic","severity":"standard","fixture":"web-basic","phase":"plan","request":"Add SEO for the public product page so search engines can index it.","expect":{"required_execution_contexts":["SEO_WEB_DISCOVERABILITY"]}}

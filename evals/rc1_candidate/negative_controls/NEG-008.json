@@ -1,0 +1,1 @@
+{"schema":"sef.eval.scenario.v1","id":"NEG-008","title":"Supplier near-miss: third-party award copy","set":"DEV","layer":"L1","family":"rc1-negative-control","severity":"low","fixture":"web-basic","phase":"plan","request":"Update the public copy mentioning a third-party industry award.","expect":{"forbidden_packs":["EXTERNAL_SUPPLIER"]}}

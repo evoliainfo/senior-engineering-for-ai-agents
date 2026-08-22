@@ -1,0 +1,1 @@
+{"schema":"sef.eval.scenario.v1","id":"MET-002","title":"Authorization ordinary morphology","set":"DEV","layer":"L1","family":"rc1-metamorphic","severity":"standard","fixture":"api-basic","phase":"plan","request":"Only an authorized administrator may view another user's account.","expect":{"required_packs":["AUTHORIZATION"]}}
