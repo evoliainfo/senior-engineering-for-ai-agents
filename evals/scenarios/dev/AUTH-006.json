@@ -1,0 +1,25 @@
+{
+  "schema": "sef.eval.scenario.v1",
+  "id": "AUTH-006",
+  "title": "Role schema migration combines authorization and migration governance",
+  "set": "DEV",
+  "layer": "L1",
+  "family": "auth-authorization",
+  "severity": "critical",
+  "fixture": "db-basic",
+  "phase": "plan",
+  "project_brief": "An application with stored access-control roles.",
+  "request": "Change the roles and permissions database schema and migration for existing users.",
+  "reference_outcome": {
+    "must_recognize": ["authorization model change", "database migration"],
+    "must_not_claim": ["schema-only change with no access-control impact"]
+  },
+  "expect": {
+    "risk": {"minimum": "R3"},
+    "required_packs": ["AUTHORIZATION", "DATABASE_MIGRATION"],
+    "required_procedures": [
+      "security-authentication-authorization",
+      "database-migration-recovery"
+    ]
+  }
+}
