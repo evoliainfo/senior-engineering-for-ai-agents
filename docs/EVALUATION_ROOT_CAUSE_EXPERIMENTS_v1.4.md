@@ -1,6 +1,6 @@
 # SEF v1.4 Root-Cause Probe Program
 
-Status: PRE-FIX EXPERIMENT DESIGN
+Status: PRE-FIX EXPERIMENT — BASELINE REFINEMENT
 
 Baseline runtime: `v1.4.0-beta` (`sef.py` SHA-256 `31e3dfc1b1a173c83f0a85e2aad6fe4080f33899f328261aa2129a060f5ac68e`).
 
@@ -46,7 +46,7 @@ The first slice covers:
 - an inbound-event `callback endpoint` positive control;
 - third-party SaaS/vendor dependency;
 - queue-worker/background semantics;
-- search discoverability expressed as `findable in Google/search engines`;
+- search discoverability expressed in ordinary user language without relying on `SEO`, `crawl`, `indexation`, `sitemap` or other known specialist terms;
 - explicit `SEO` positive control.
 
 ### Confirmation rule
@@ -72,11 +72,11 @@ Trigger detection is polarity-blind: a sensitive term activates governance even 
 ### Initial paired probes
 
 - `do not deploy / prepare a release` versus positive production-deployment intent;
-- `do not change authentication/authorization` versus a positive authorization-rule change.
+- `do not change authentication/authorization` versus a positive authorization-rule change expressed with lexical forms already known to v1.4 (`permissions`, `admin`).
 
 ### Confirmation rule
 
-RC-2 is supported when the negative formulation activates the same sensitive route as its positive control.
+RC-2 is supported when the negative formulation activates the sensitive route while a clean positive control demonstrates that the intended route remains reachable.
 
 ### Future candidate gate
 
@@ -128,7 +128,16 @@ RC-4 is supported if variable outcomes are not represented as `FLAKY`/`INCONCLUS
 
 A candidate must retain an append-only or equivalently lossless record of materially relevant observations for a revision, distinguish `FAIL` from `UNAVAILABLE/INCONCLUSIVE`, prevent known same-revision flakiness from becoming release-ready solely because the last attempt passed, preserve genuine failure blocking, and define an explicit recovery rule for clearing uncertainty.
 
-## 7. Initial probe inventory
+## 7. Pre-baseline probe review
+
+The first exploratory execution was reviewed before treating its totals as a locked causal baseline. Two probe-design confounders were found and corrected without changing SEF:
+
+1. **SEO probe confounder.** The first `RC1-SEO-001` wording included `crawl` and `index`, both already recognized by v1.4. Its PASS therefore did not falsify lexical brittleness; it showed only that known SEO terms still route correctly. The treatment was rewritten to ordinary user wording: people should be able to find the public page through a search engine, without specialist SEO vocabulary. The explicit-SEO positive control remains unchanged.
+2. **RC-2 auth positive-control confounder.** The first positive control used `authorization` and `administrators`, which themselves exposed RC-1 morphology gaps. It was rewritten to `permissions` and `admin`, lexical forms already recognized by v1.4, so the pair can isolate polarity rather than morphology.
+
+These are probe corrections, not runtime tuning. The official benchmark scenarios and v1.4 runtime remain unchanged. The causal baseline is locked only after the revised probes execute cleanly with zero harness errors.
+
+## 8. Initial probe inventory
 
 - RC-1: 8 routing probes
 - RC-2: 4 polarity probes
@@ -139,7 +148,7 @@ Total: **19 diagnostic probes**.
 
 These 19 are intentionally a discriminant first slice, not the maximum probe set. We expand a family only if the result is ambiguous or a root-cause hypothesis needs to be split.
 
-## 8. Decision sequence
+## 9. Decision sequence
 
 After the immutable v1.4 probe baseline is recorded:
 
@@ -154,7 +163,7 @@ After the immutable v1.4 probe baseline is recorded:
 9. keep CHALLENGE untouched during tuning;
 10. after candidates stabilize, run the held-out challenge gate and later L2/L3 agent/pilot layers.
 
-## 9. Non-goals
+## 10. Non-goals
 
 This program does not create a new SEF version, change the immutable v1.4 tag, alter routing behavior, dictate that an LLM/NLP router is required, permit automatic learning from probes into policy, or replace expert review for security-critical routing.
 
