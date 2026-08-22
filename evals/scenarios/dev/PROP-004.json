@@ -8,8 +8,8 @@
   "severity": "standard",
   "fixture": "web-basic",
   "phase": "plan",
-  "project_brief": "A public company marketing website intended to be discoverable in search.",
-  "request": "Add a static public 'How it works' marketing section. Do not add forms, conversion tracking, authentication or dynamic data.",
+  "project_brief": "A public marketing website intended to be discoverable in search.",
+  "request": "Add a static public 'How it works' section containing headings, copy and images, and keep the page discoverable in search.",
   "reference_outcome": {
     "must_recognize": ["public frontend change", "search discoverability relevance"],
     "must_not_activate": ["analytics solely from ordinary marketing content", "unrelated auth or database governance"]
