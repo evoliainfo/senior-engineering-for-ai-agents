@@ -55,6 +55,7 @@ CONCEPT_RULES: tuple[ConceptRule, ...] = (
         (
             r"\bwebhook(?:s)?\b.{0,100}\b(?:receive|receives|received|accept|accepts|inbound|event|events|provider|callback)\b",
             r"\b(?:receive|receives|accept|accepts|inbound)\b.{0,100}\bwebhook(?:s)?\b",
+            r"\bprovider\s+webhook(?:s)?\b",
         ),
     ),
     ConceptRule(
@@ -69,6 +70,8 @@ CONCEPT_RULES: tuple[ConceptRule, ...] = (
         "BACKGROUND_JOB", "execution_context", "BACKGROUND_JOB",
         (
             r"\bqueue\s+consumer\b.{0,100}\b(?:job|jobs|async|asynchronously|retry|retries|retryable)\b",
+            r"\bqueue\s+worker\b.{0,100}\b(?:job|jobs|async|asynchronously|retry|retries|retryable|failed)\b",
+            r"\b(?:retryable\s+)?background\s+worker\b",
             r"\bworker\b.{0,100}\b(?:process|processes|processing|run|runs|running)\b.{0,80}\b(?:job|jobs|task|tasks)\b",
             r"\bworker\b.{0,100}\b(?:job|jobs)\b.{0,80}\b(?:background|async|asynchronously|retry|retries|retryable)\b",
         ),
@@ -79,6 +82,8 @@ CONCEPT_RULES: tuple[ConceptRule, ...] = (
             r"\bseo\b.{0,120}\b(?:public|page|search engine|index|indexing|indexation|crawl|discover)\b",
             r"\b(?:public\s+)?(?:product\s+)?page\b.{0,120}\b(?:search engines?|search engine)\b.{0,80}\b(?:find|index|discover|crawl)\w*\b",
             r"\b(?:find|discover)\w*\b.{0,80}\bthrough\s+search\s+engines?\b",
+            r"\b(?:find|discover)\w*\b.{0,100}\bpublic\b.{0,80}\bpage\b.{0,120}\bsearch\s+engines?\b",
+            r"\bdiscoverable\s+(?:in|through|via)\s+search\b",
         ),
     ),
 )

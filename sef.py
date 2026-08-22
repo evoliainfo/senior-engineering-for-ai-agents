@@ -749,6 +749,73 @@ def project_status(repo):
     ))
     return {"status":"PASS" if a.get("status")!="FAIL" else "NEEDS_ATTENTION","project":baseline.get("project",{}),"baseline_state":baseline.get("status",{}).get("baseline_state"),"readiness":a.get("project_readiness"),"contexts":profile.get("contexts",[]),"unconfirmed_contexts":unconfirmed,"current_task":state.get("current_task"),"last_verification":state.get("last_verification"),"last_release_check":state.get("last_release_check"),"top_findings":a.get("findings",[])[:8]}
 
+
+# ---------- RC-1 deterministic concept normalization ----------
+# RC1_CONCEPT_NORMALIZATION_ADDITIVE_V1
+# This layer normalizes bounded request-language variants into six canonical
+# concepts. It is additive: it may add request routing signals, never remove or
+# downgrade legacy routing, and actual-diff reassessment remains independent.
+def _rc1_normalize_text(text):
+    import unicodedata
+    text=unicodedata.normalize("NFKC",str(text or ""))
+    text=text.replace("’","'").replace("‘","'").replace("‐","-").replace("‑","-").replace("–","-")
+    return re.sub(r"\s+"," ",text).strip().lower()
+
+_RC1_CONCEPT_RULES=(
+  ("AUTHORIZATION","pack","AUTHORIZATION",(
+    r"\b(?:permission|permissions|rbac|access control|authorization|authorisation)\b",
+    r"\b(?:authorized|authorised)\s+(?:administrator|admin|user|operator|person|role)\b",
+    r"\bonly\s+(?:an?\s+)?(?:authorized|authorised)\s+(?:administrator|admin|user|operator|person|role)\b",
+  )),
+  ("DATABASE_MIGRATION","pack","DATABASE_MIGRATION",(
+    r"\bdatabase\s+migration\b",
+    r"\bmigrat(?:e|es|ed|ing)\b.{0,80}\b(?:existing|stored|records?|rows?|timestamps?|data|database)\b",
+    r"\b(?:existing|stored|records?|rows?|timestamps?|data|database)\b.{0,80}\bmigrat(?:e|es|ed|ing)\b",
+  )),
+  ("WEBHOOK_TRUST","pack","WEBHOOK_TRUST",(
+    r"\bwebhook(?:s)?\b.{0,100}\b(?:receive|receives|received|accept|accepts|inbound|event|events|provider|callback)\b",
+    r"\b(?:receive|receives|accept|accepts|inbound)\b.{0,100}\bwebhook(?:s)?\b",
+    r"\bprovider\s+webhook(?:s)?\b",
+  )),
+  ("EXTERNAL_SUPPLIER","pack","EXTERNAL_SUPPLIER",(
+    r"\bexternal\s+api\b.{0,100}\b(?:supplied|provided|provider|vendor|third-party|third party)\b",
+    r"\b(?:third-party|third party|external)\s+(?:saas\s+)?(?:vendor|provider|supplier|service|api)\b",
+    r"\bdepend(?:s|ed|ing)?\s+on\b.{0,80}\b(?:third-party|third party|external)\b",
+  )),
+  ("BACKGROUND_JOB","execution_context","BACKGROUND_JOB",(
+    r"\bqueue\s+consumer\b.{0,100}\b(?:job|jobs|async|asynchronously|retry|retries|retryable)\b",
+    r"\bqueue\s+worker\b.{0,100}\b(?:job|jobs|async|asynchronously|retry|retries|retryable|failed)\b",
+    r"\b(?:retryable\s+)?background\s+worker\b",
+    r"\bworker\b.{0,100}\b(?:process|processes|processing|run|runs|running)\b.{0,80}\b(?:job|jobs|task|tasks)\b",
+    r"\bworker\b.{0,100}\b(?:job|jobs)\b.{0,80}\b(?:background|async|asynchronously|retry|retries|retryable)\b",
+  )),
+  ("SEO_WEB_DISCOVERABILITY","execution_context","SEO_WEB_DISCOVERABILITY",(
+    r"\bseo\b.{0,120}\b(?:public|page|search engine|index|indexing|indexation|crawl|discover)\b",
+    r"\b(?:public\s+)?(?:product\s+)?page\b.{0,120}\b(?:search engines?|search engine)\b.{0,80}\b(?:find|index|discover|crawl)\w*\b",
+    r"\b(?:find|discover)\w*\b.{0,80}\bthrough\s+search\s+engines?\b",
+    r"\b(?:find|discover)\w*\b.{0,100}\bpublic\b.{0,80}\bpage\b.{0,120}\bsearch\s+engines?\b",
+    r"\bdiscoverable\s+(?:in|through|via)\s+search\b",
+  )),
+)
+
+def _rc1_detect_concepts(request):
+    normalized=_rc1_normalize_text(request); observations=[]
+    for concept,output_kind,output_id,patterns in _RC1_CONCEPT_RULES:
+        matches=[]
+        for pattern in patterns:
+            m=re.search(pattern,normalized,re.I)
+            if m: matches.append({"pattern":pattern,"match":m.group(0),"span":[m.start(),m.end()]})
+        if matches:
+            observations.append({"concept":concept,"candidate_output":{"kind":output_kind,"id":output_id},"evidence":matches})
+    return observations
+
+def _rc1_detected_ids(request):
+    return {str(x.get("concept")) for x in _rc1_detect_concepts(request)}
+
+def _rc1_stateful_database_companion(request):
+    text=_rc1_normalize_text(request)
+    return re.search(r"\bdatabase\b|\bledger\s+state\b|\bwrite(?:s|ing)?\b.{0,50}\b(?:ledger|state|record|records|row|rows|database)\b",text,re.I) is not None
+
 # ---------- request → engineering task plan ----------
 def _request_change(profile,request):
     t=request.lower(); triggers=set(); contexts=set(profile.get("contexts",[])); task_contexts=set(); profiles=set(profile.get("profiles",[])); evidence=[]
@@ -823,6 +890,25 @@ def _request_change(profile,request):
         substantive=triggers-{"UI_STYLE_CHANGED","UI_BEHAVIOR_CHANGED"}
         if not substantive: triggers.discard("UI_BEHAVIOR_CHANGED")
     if not triggers: triggers.add("NEW_FEATURE" if hit(r"\b(add|ajouter|ajoute|create|créer|creer|implement|implémenter|implementer|build|construire|feature|fonctionnalité|new|nouveau|nouvelle)\b") else "BUSINESS_LOGIC_CHANGED")
+
+    # RC-1 additive compatibility adapter. Legacy request signals above remain
+    # untouched; canonical concepts may only add missing triggers/contexts.
+    rc1_observations=_rc1_detect_concepts(request)
+    for observation in rc1_observations:
+        concept=str(observation.get("concept") or "")
+        if concept=="AUTHORIZATION": triggers.add("AUTHZ_CHANGED")
+        elif concept=="DATABASE_MIGRATION":
+            triggers.add("DATABASE_SCHEMA_CHANGED"); contexts.add("DATABASE"); task_contexts.add("DATABASE")
+        elif concept=="WEBHOOK_TRUST":
+            triggers.add("INBOUND_WEBHOOK_ADDED"); contexts.update(["INBOUND_WEBHOOK","PUBLIC_API"]); task_contexts.update(["INBOUND_WEBHOOK","PUBLIC_API"])
+        elif concept=="EXTERNAL_SUPPLIER":
+            contexts.add("EXTERNAL_SAAS"); task_contexts.add("EXTERNAL_SAAS")
+        elif concept=="BACKGROUND_JOB":
+            contexts.add("BACKGROUND_JOB"); task_contexts.add("BACKGROUND_JOB")
+            if _rc1_stateful_database_companion(request): contexts.add("DATABASE"); task_contexts.add("DATABASE")
+        elif concept=="SEO_WEB_DISCOVERABILITY": task_contexts.add("SEO_WEB_DISCOVERABILITY")
+        else: continue
+        evidence.append({"trigger":"RC1_CONCEPT:"+concept,"reason":"deterministic canonical concept detected","source":"rc1_additive","concept_evidence":observation.get("evidence",[])})
     risk="R0" if triggers=={"UI_STYLE_CHANGED"} else "R1"
     # Generic new product features in an already full-stack repository may reasonably cross layers;
     # bugs/refactors without layer evidence stay on core procedures until inspection/diff reveals scope.
@@ -841,6 +927,12 @@ def _assess_request(repo,request):
         packs=module.load_json(root/".sef/packs.json")
         normalized=module.normalize_change(change,profile,ontology,[])
         result=module.assess_workflow(matrix,normalized,packs)
+
+        # RC-1 compatibility: v1.4 has an EXTERNAL_SUPPLIER pack but no request
+        # trigger selecting it from EXTERNAL_SAAS alone.
+        if "EXTERNAL_SUPPLIER" in _rc1_detected_ids(request):
+            selected=set(result.get("required_context_packs",[])); selected.add("EXTERNAL_SUPPLIER")
+            result["required_context_packs"]=sorted(selected)
         result["request_detection"]=change["request_detection"]
         result["request_execution_contexts"]=change.get("execution_contexts",[])
         return result
