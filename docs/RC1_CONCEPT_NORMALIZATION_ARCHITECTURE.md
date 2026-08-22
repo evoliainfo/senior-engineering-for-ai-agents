@@ -1,6 +1,6 @@
 # RC-1 Candidate Architecture — Deterministic Task-Concept Normalization
 
-Status: DESIGN CANDIDATE — NOT IMPLEMENTED
+Status: DESIGN CANDIDATE — REVIEWED, PRE-IMPLEMENTATION GATE
 
 Baseline: SEF `v1.4.0-beta` runtime remains unchanged.
 
@@ -12,11 +12,11 @@ This document is a design gate. It does not authorize or implement a runtime cha
 
 SEF v1.4 currently maps request text directly to routing triggers through regular-expression matches. That design is deterministic and auditable, but the semantic boundary is too close to surface wording.
 
-The locked benchmark and the independent root-cause probes demonstrate that semantically equivalent requests can route differently because of morphology, lexical choice or ordinary user phrasing. Confirmed examples include authorization, data migration, webhook/event intake, external suppliers, background work and search discoverability.
+The locked benchmark and independent root-cause probes demonstrate that semantically equivalent requests can route differently because of morphology, lexical choice or ordinary user phrasing. Confirmed examples include authorization, data migration, webhook/event intake, external suppliers, background work and search discoverability.
 
 RC-1 is therefore not simply "missing synonyms". The architectural defect is the absence of a stable intermediate representation between user language and governance policy.
 
-The desired change is:
+Desired flow:
 
 ```text
 raw request
@@ -25,139 +25,127 @@ deterministic lexical normalization
     ↓
 canonical task concepts + evidence
     ↓
-explicit compatibility/policy mapping
+explicit compatibility mapping
     ↓
-existing triggers / contexts
+existing triggers / task contexts
     ↓
 existing packs / risk / procedures
 ```
 
-The governance decision must remain deterministic, explainable and fail-safe.
+Governance decisions remain deterministic, explainable and fail-safe.
 
-## 2. Goals
+## 2. Goals and invariants
 
 The RC-1 candidate MUST:
 
-1. recognize materially equivalent task intent across safe lexical and morphological variants;
+1. recognize materially equivalent task intent across bounded lexical and morphological variants;
 2. create a stable canonical concept boundary before risk/policy routing;
 3. preserve deterministic and inspectable policy decisions;
-4. emit evidence explaining why each concept was detected;
-5. preserve current trigger/context/pack semantics unless a separately reviewed policy change is required;
-6. preserve the independent actual-diff reassessment path;
-7. avoid introducing network calls, model calls or nondeterministic dependencies;
+4. emit evidence explaining every concept detection;
+5. preserve current trigger/context/pack semantics unless separately reviewed;
+6. preserve independent actual-diff reassessment;
+7. avoid network calls, model calls and nondeterministic dependencies;
 8. support English and French at least to the level already claimed by current routing;
 9. avoid broad stemming/fuzzy matching that materially increases over-routing;
-10. remain compatible with the single-file SEF distribution/bootstrap invariant.
+10. remain compatible with the single-file SEF distribution/bootstrap invariant;
+11. make registry validity machine-checkable at self-test/CI time;
+12. define deterministic merge/deduplication semantics between legacy and concept-derived routes.
 
 ## 3. Non-goals
 
-This candidate does NOT attempt to solve:
+This candidate does NOT solve:
 
-- RC-2 polarity or negation handling;
+- RC-2 polarity/negation;
 - RC-3 task-materiality of project-level context;
 - RC-4 evidence history/state semantics;
 - free-form LLM semantic classification;
 - automatic policy learning;
 - probabilistic security decisions;
-- renaming all existing triggers/packs;
-- rewriting the current governance engine;
-- changing the immutable `v1.4.0-beta` release/tag.
+- wholesale trigger/pack renaming;
+- governance-engine rewrite;
+- changes to immutable `v1.4.0-beta`.
 
-RC-2 is intentionally separated. During the first RC-1 implementation, a concept found inside negated text is still detectable; no suppression rule is introduced. That preserves experimental isolation.
+RC-2 remains isolated: a concept inside negated text may still be detected during RC-1. No suppression rule is introduced in this patch family.
 
-## 4. Architectural options considered
+## 4. Options considered
 
-### Option A — Append more alternatives to current routing regexes
+### A. Add alternatives to existing routing regexes
 
-Example: add `authorization`, `authorized`, `webhooks`, `migrate`, `vendor`, `queue worker`, and similar terms directly to each existing regex.
+Rejected as the architecture. It fixes sentences while preserving lexical-policy coupling and encourages benchmark-specific hard-coding.
 
-**Rejected as the architecture.**
+### B. Generic stemming/fuzzy matching
 
-It may fix individual failures but keeps lexical knowledge coupled to policy routing. Future variants continue to require editing governance logic, testability remains fragmented, and probe-specific hard-coding becomes difficult to distinguish from genuine generalization.
+Rejected for the first candidate. Broad suffix stripping/edit distance/substrings increase false positives and weaken explainability.
 
-### Option B — Generic stemming/fuzzy text matching
+### C. LLM/NLP classifier before hard policy routing
 
-**Rejected for the first candidate.**
+Rejected for the deterministic core. Model/version drift, latency, external dependency and probabilistic behavior are inappropriate for the hard safety-routing boundary. A future advisory layer could be evaluated separately but cannot silently replace deterministic routing.
 
-Aggressive stemming, edit-distance or substring matching can produce unsafe false positives, especially across English/French morphology and short security-sensitive terms. It also weakens explainability.
+### D. Deterministic canonical task-concept normalization
 
-### Option C — LLM/NLP classifier before policy routing
-
-**Rejected for the deterministic core candidate.**
-
-It can improve semantic recall but introduces model/version drift, latency, cost, external dependency and probabilistic behavior at the safety-routing boundary. A future optional advisory layer may be evaluated separately, but it must never silently replace deterministic hard-gate logic.
-
-### Option D — Deterministic canonical concept normalization
-
-**Selected candidate.**
-
-A small, explicit semantic-normalization layer converts bounded lexical/compositional evidence into canonical task concepts. A separate mapping translates concepts into the current SEF triggers and execution contexts. Policy/risk logic stays downstream and explicit.
+Selected. Bounded lexical/compositional evidence maps to canonical concepts; a separate compatibility adapter maps concepts to existing triggers/contexts; existing policy remains downstream.
 
 ## 5. Proposed components
 
-### 5.1 Text normalization
+### 5.1 Deterministic text normalization
 
-A pure deterministic preprocessor produces a normalized view of the request while retaining offsets back to the original text.
+Pure preprocessing retains offsets to raw text and may perform:
 
-Allowed operations:
-
-- Unicode normalization (NFKC);
+- Unicode NFKC normalization;
 - case-folding;
-- whitespace normalization;
-- punctuation normalization where semantics are not lost;
-- tokenization with stable offsets;
-- safe normalization of selected hyphen/space forms.
+- stable whitespace normalization;
+- semantics-preserving punctuation normalization;
+- tokenization with offsets;
+- selected hyphen/space normalization.
 
-Not allowed in the first candidate:
+Not allowed initially: uncontrolled stemming, fuzzy edit distance, embeddings, external NLP libraries or model inference.
 
-- uncontrolled stemming;
-- fuzzy edit-distance matching;
-- embeddings;
-- external NLP libraries;
-- model inference.
+### 5.2 Canonical concept registry
 
-### 5.2 Canonical task-concept registry
+Initial scope is limited to six demonstrated families:
 
-Concepts are named semantic units independent of packs and procedures.
-
-Initial RC-1 scope is intentionally limited to concepts demonstrated by the probes:
-
-| Canonical concept | Meaning | Compatibility target |
+| Concept | Meaning | Compatibility target |
 | --- | --- | --- |
 | `AUTHORIZATION_CHANGE` | role/permission/object-access semantics | `AUTHZ_CHANGED` |
 | `DATABASE_STATE_MIGRATION` | migration/backfill/transformation of stored state | database migration routing |
 | `INBOUND_PROVIDER_EVENT` | externally initiated callback/webhook/event reception | `INBOUND_WEBHOOK_ADDED` |
-| `EXTERNAL_SERVICE_DEPENDENCY` | new or material third-party/SaaS/vendor dependency | external supplier governance |
-| `BACKGROUND_PROCESSING` | queue/worker/consumer/background execution semantics | `BACKGROUND_JOB` execution context |
-| `SEARCH_DISCOVERABILITY` | intent that public content be discoverable through search engines | `SEO_WEB_DISCOVERABILITY` |
+| `EXTERNAL_SERVICE_DEPENDENCY` | new/material third-party/SaaS/vendor dependency | external supplier governance |
+| `BACKGROUND_PROCESSING` | queue/worker/consumer/background execution | `BACKGROUND_JOB` task context |
+| `SEARCH_DISCOVERABILITY` | public content intended to be found through search engines | `SEO_WEB_DISCOVERABILITY` task context |
 
-The registry is semantic infrastructure, not a list of benchmark sentences.
+A concept definition may contain direct lexemes, explicitly safe morphology, bounded compositional rules, English/French variants and stable rule IDs.
 
-Each concept definition may contain:
+Broad words such as `find`, `worker`, `vendor`, `service`, `admin`, `change` or `Google` MUST NOT independently activate a high-impact concept unless independently specific. Broad cues require composition.
 
-1. **direct lexemes** for highly specific terms;
-2. **safe morphological families** where the transformation is unambiguous;
-3. **compositional rules** requiring multiple cues within a bounded token window;
-4. **language variants** where English/French equivalence is intentional;
-5. **rule identifiers** used in evidence and tests.
+### 5.3 Machine-checkable registry schema
 
-Example concept logic, illustrative only:
+The implementation MUST represent registry entries with a validated internal schema. The concrete Python representation may vary, but every concept definition MUST expose equivalent fields to:
 
 ```text
-SEARCH_DISCOVERABILITY
-  direct: seo, search discoverability
-  compositional:
-    FIND/BE_FOUND + SEARCH_ENGINE
-    VISIBLE/DISCOVERABLE + GOOGLE/SEARCH_ENGINE
+concept_id        stable unique identifier
+rules[]           non-empty list of lexical/compositional rules
+rule_id           globally unique stable identifier
+rule_kind         DIRECT | MORPHOLOGY | COMPOSITE
+language          EN | FR | BOTH
+strength          DIRECT | COMPOSITE
+policy_mapping    NOT ALLOWED HERE
 ```
 
-This is materially different from a single giant routing regex: lexical evidence is normalized into a concept first; policy mapping is separate.
+Registry validation MUST fail self-test/CI for:
 
-### 5.3 Concept evidence
+- duplicate concept IDs;
+- duplicate rule IDs;
+- unknown rule kinds/languages;
+- empty rule definitions;
+- unsupported normalization operators;
+- embedded pack names, risk levels, procedure names or release decisions inside lexical rules;
+- compatibility mappings targeting unknown triggers/contexts.
 
-Every emitted concept MUST carry inspectable evidence.
+The lexical registry answers only **what concept is expressed**. Policy semantics belong exclusively to the compatibility/policy layer.
 
-Proposed logical record:
+### 5.4 Concept evidence
+
+Every emitted concept MUST carry inspectable evidence equivalent to:
 
 ```json
 {
@@ -171,121 +159,72 @@ Proposed logical record:
 }
 ```
 
-`strength` is categorical and deterministic, not a probabilistic confidence score. Candidate values may be `DIRECT` and `COMPOSITE`.
+`strength` is categorical/deterministic, not probabilistic confidence.
 
-The exact serialized shape is an implementation detail, but equivalent traceability is mandatory.
+### 5.5 Compatibility adapter
 
-### 5.4 Concept-to-policy compatibility adapter
+Concepts MUST NOT choose specialist packs directly. A small explicit adapter maps canonical concepts to existing request triggers and/or task execution contexts.
 
-Canonical concepts MUST NOT directly choose specialist packs.
-
-Instead, a small explicit compatibility table maps concepts to existing request triggers and/or execution contexts.
-
-Illustrative form:
+Example:
 
 ```text
-AUTHORIZATION_CHANGE
-  -> trigger AUTHZ_CHANGED
-
-INBOUND_PROVIDER_EVENT
-  -> trigger INBOUND_WEBHOOK_ADDED
-  -> contexts INBOUND_WEBHOOK, PUBLIC_API
-
-SEARCH_DISCOVERABILITY
-  -> context SEO_WEB_DISCOVERABILITY
+AUTHORIZATION_CHANGE -> trigger AUTHZ_CHANGED
+INBOUND_PROVIDER_EVENT -> trigger INBOUND_WEBHOOK_ADDED + contexts INBOUND_WEBHOOK,PUBLIC_API
+SEARCH_DISCOVERABILITY -> context SEO_WEB_DISCOVERABILITY
 ```
 
-This boundary preserves the existing governance engine and makes future trigger renames or policy evolution independent from language normalization.
+If faithful mapping requires a policy-semantic change, implementation stops and raises a separate architecture/policy decision.
 
-If a concept cannot be faithfully mapped to an existing trigger without changing policy semantics, implementation MUST stop and surface an architecture/policy decision instead of silently inventing a route.
+### 5.6 Deterministic merge and deduplication contract
 
-### 5.5 Existing governance engine
+During the additive migration, legacy request routing and concept-derived routing coexist. Their merge semantics MUST be explicit:
 
-After compatibility mapping, the current pack/risk/procedure logic remains authoritative.
+1. evaluate legacy request routing and concept routing independently from the same raw request;
+2. preserve source attribution for every emitted trigger/context;
+3. union trigger IDs and task-context IDs by canonical identifier;
+4. duplicate emission MUST NOT duplicate downstream packs/procedures or inflate risk merely because two detectors found the same semantic route;
+5. concept-derived routes may ADD a missing request route but may not REMOVE or downgrade a legacy route;
+6. if two routes imply different downstream controls, existing governance aggregation remains authoritative;
+7. ordering of registry definitions or detector execution MUST NOT change the final canonical route set;
+8. actual-diff findings are merged through their existing independent path and can never be suppressed by request-route deduplication.
 
-The RC-1 candidate MUST NOT introduce a second policy engine.
+Required first-candidate property:
 
-The current downstream properties remain valuable:
+```text
+candidate_request_routes ⊇ legacy_request_routes
+```
 
-- deterministic pack selection;
-- explicit route-to-skill mapping;
-- risk/action-class logic;
-- authoritative-context gates;
-- Definition-of-Done augmentation;
-- release and evidence gates.
+This is a migration invariant, not a permanent requirement after later separately-reviewed de-duplication.
 
-### 5.6 Actual-diff isolation
+### 5.7 Existing governance engine
 
-Actual Git diff reassessment remains an independent safety channel.
+After compatibility mapping/merge, current pack/risk/procedure logic remains authoritative. RC-1 MUST NOT create a second policy engine.
+
+### 5.8 Actual-diff isolation
 
 Required invariant:
 
 ```text
-request-language normalization
-        │
-        ├── request concepts → request routing
-        │
-actual diff analysis ───────────────→ independent diff routing
+request normalization -> request concepts -> request routing
+
+actual diff analysis -----------------------> independent diff routing
 ```
 
-A failure, omission, future negation rule, or ambiguity in request-text normalization MUST NOT suppress a sensitive trigger discovered from changed files or actual diff semantics.
+Request normalization, future polarity rules, ambiguity or detector failure cannot downgrade a sensitive actual-diff finding.
 
-No concept-normalization state is allowed to downgrade actual-diff risk.
+## 6. Rule-design constraints
 
-## 6. Concept-rule design rules
+- Prefer semantic families over benchmark phrases.
+- Use controlled morphology only when ambiguity is low.
+- Require bounded composition for broad cues.
+- Rule evaluation/deduplication is deterministic.
+- No pack/risk/procedure meaning in lexical rules.
+- No global fuzzy substring matching.
+- No catastrophic regular expressions.
 
-To avoid recreating the current problem in a new file, every concept rule MUST satisfy all applicable rules below.
+Examples appropriate for controlled handling include webhook/webhooks, permission/permissions, role/roles, and migration/migrate only with required state/database context where necessary.
 
-### 6.1 Prefer semantic families over probe phrases
-
-Invalid approach:
-
-```text
-if text == "people should be able to find this page in a search engine": ...
-```
-
-Valid direction:
-
-```text
-FINDABILITY cue + SEARCH_ENGINE cue -> SEARCH_DISCOVERABILITY
-```
-
-### 6.2 Use safe morphology only
-
-Regular singular/plural or controlled noun/verb variants may be normalized when ambiguity is low.
-
-Examples appropriate for explicit handling:
-
-- webhook / webhooks;
-- permission / permissions;
-- role / roles;
-- migration / migrate / migrating where the database/state context is present.
-
-Generic suffix stripping is not acceptable as a security-routing primitive.
-
-### 6.3 Require composition for broad words
-
-Broad terms such as `find`, `worker`, `vendor`, `change`, `service`, `admin` or `Google` MUST NOT independently activate high-impact concepts unless they are already sufficiently specific.
-
-Use bounded co-occurrence or phrase structures instead.
-
-### 6.4 Deterministic rule precedence
-
-Rule evaluation order, deduplication and aggregation MUST be deterministic. Reordering concept definitions must not unpredictably change routing.
-
-### 6.5 No policy meaning inside lexical rules
-
-A lexical/concept rule answers:
-
-> What task concept is expressed?
-
-It does not answer:
-
-> Which pack is required, what risk level applies, or whether implementation is allowed?
-
-Those remain policy decisions downstream.
-
-## 7. Proposed execution flow
+## 7. Execution flow
 
 ```text
 1. Receive request + project context
@@ -293,191 +232,190 @@ Those remain policy decisions downstream.
 3. Build normalized request representation
 4. Detect canonical task concepts
 5. Record concept evidence
-6. Map concepts to legacy/current triggers + task execution contexts
-7. Merge with existing deterministic request signals
+6. Map concepts to legacy/current triggers + task contexts
+7. Merge/deduplicate with legacy request signals under the explicit contract
 8. Run current pack/risk/procedure engine
-9. Later, independently reassess actual diff
+9. Independently reassess actual diff later
 10. Never let request normalization downgrade actual-diff findings
 ```
 
-For the first candidate, existing direct request regexes should not be deleted wholesale in the same patch. Migration must be incremental so equivalence can be measured.
+## 8. Migration stages
 
-## 8. Incremental migration strategy
+### Stage 1 — shadow observation
 
-### Stage 1 — Shadow observation
+Preferred when implementation cost remains proportionate:
 
-Preferred if implementation cost remains small:
+- compute concepts and compatibility routes;
+- keep legacy routing behavior authoritative;
+- compare legacy versus concept-derived route sets;
+- expose comparison only through diagnostic/machine-readable evaluation output, not by changing normal CLI text.
 
-- compute canonical concepts;
-- record them in diagnostic output;
-- keep v1.4 routing authoritative;
-- compare concept-derived compatibility triggers with legacy triggers.
+### Stage 2 — additive behavior
 
-Purpose: detect unexpected over/under-recognition before behavior changes.
+Concept mapping may add missing request triggers/contexts but cannot remove legacy routes. This is the first behavioral candidate.
 
-If the current CLI/output contract makes shadow observation disproportionately invasive, this stage may be simulated in tests rather than exposed in public output.
+### Stage 3 — legacy lexical de-duplication
 
-### Stage 2 — RC-1 concept-derived additions
+Only after separately reviewed evidence, including held-out/pilot evidence. Not part of first RC-1 implementation.
 
-Allow concept mapping to add missing request triggers/contexts, but never remove a legacy trigger.
+## 9. Shadow/additive telemetry compatibility contract
 
-This is the safest first behavioral candidate because it addresses RC-1 recall while preventing accidental policy suppression.
+The implementation MUST make concept behavior observable without breaking the existing public CLI contract.
 
-Expected property:
+Preferred contract:
 
-```text
-candidate_routes ⊇ legacy_request_routes
-```
+- default human-facing output remains backward-compatible;
+- existing JSON keys retain their meaning;
+- concept evidence is exposed through an opt-in diagnostic/debug field or existing machine-readable assessment envelope;
+- diagnostic records distinguish `legacy_request`, `concept_request`, and `actual_diff` sources;
+- shadow mode records `legacy_only`, `concept_only`, and `both` canonical route IDs;
+- telemetry is local/deterministic and creates no network analytics dependency;
+- absence of diagnostic mode MUST NOT change routing behavior;
+- diagnostics MUST NOT contain secrets beyond request text already supplied to SEF; no additional environment/token capture is allowed.
 
-for RC-1 implementation only.
+A compatibility test MUST compare normal CLI/JSON behavior before and after shadow instrumentation and reject unintended public-output drift.
 
-Because additions can create over-governance, R0/R1 and positive-control regression checks remain mandatory.
+## 10. Interaction with RC-2/3/4
 
-### Stage 3 — Legacy lexical de-duplication
+- RC-2: leave a future polarity extension point but do not suppress negated concepts in RC-1.
+- RC-3: concept detection is task-language evidence, not proof that project-level uncertainty is task-material.
+- RC-4: no change to verification history/release readiness.
 
-Only after measured equivalence and challenge/pilot evidence may duplicated direct regex logic be removed or simplified.
+## 11. Failure behavior
 
-This is explicitly not part of the first RC-1 implementation candidate.
+- malformed registry -> self-test/CI failure;
+- unsupported concept mapping -> validation failure;
+- detector exception -> preserve legacy routing, surface diagnostic failure, never silently replace routes with empty output;
+- weak/ambiguous language -> do not invent high-impact concepts from broad cues alone;
+- actual-diff sensitive finding -> always preserved.
 
-## 9. Interaction with RC-2, RC-3 and RC-4
+## 12. Performance/dependency constraints
 
-### RC-2 polarity
+Initial candidate SHOULD remain Python-standard-library only, linear or near-linear over normal request length, with compiled static rules, no network access, no model download, no mutable external lexicon and deterministic output for identical input/version.
 
-The concept representation SHOULD leave a future extension point for polarity metadata, but RC-1 MUST NOT implement suppression based on negation.
+## 13. Observability contract
 
-Reason: fixing RC-1 and RC-2 simultaneously would prevent causal attribution and could create security regressions.
+A maintainer MUST be able to answer:
 
-### RC-3 materiality
-
-Concept detection is task-language evidence, not proof that every project-level uncertainty is task-material. RC-3 retains a separate future decision layer.
-
-### RC-4 evidence history
-
-No interaction. Verification history and release readiness remain unchanged during RC-1 work.
-
-## 10. Failure behavior
-
-The concept layer MUST fail safely and observably.
-
-- malformed internal registry: self-test/validation failure;
-- duplicate concept/rule IDs: validation failure;
-- unsupported concept-to-policy mapping: validation failure, not silent ignore for required mappings;
-- ambiguous ordinary language: do not invent a high-impact concept solely from weak cues;
-- detector exception: preserve existing routing and surface diagnostic failure; do not silently return an empty route set;
-- actual-diff sensitive finding: always preserved regardless of request detector outcome.
-
-## 11. Performance and dependency constraints
-
-The initial candidate SHOULD remain Python-standard-library only.
-
-Target characteristics:
-
-- linear or near-linear processing over normal request length;
-- compiled static patterns/rules;
-- no catastrophic-regex patterns;
-- no network access;
-- no runtime model download;
-- no mutable external lexicon;
-- deterministic output for identical input and SEF version.
-
-## 12. Observability / explainability contract
-
-A developer evaluating a route MUST be able to answer:
-
-1. which canonical concepts were detected;
-2. which rule/evidence caused each detection;
+1. which concepts were detected;
+2. which rule/evidence caused each;
 3. which trigger/context each concept produced;
-4. which downstream pack/procedure/risk decision resulted;
-5. which findings came from request text versus actual diff.
+4. whether the same route came from legacy request, concept request or actual diff;
+5. which downstream pack/procedure/risk resulted.
 
-The user-facing CLI does not need to print all internals by default, but machine-readable/debug evidence must remain obtainable for evaluation and maintenance.
+## 14. Acceptance gates
 
-## 13. Candidate acceptance gates
+The first behavioral implementation is acceptable only if ALL hard gates hold.
 
-The first behavioral implementation of this architecture is acceptable only if ALL hard gates below hold.
-
-### 13.1 Integrity gates
+### 14.1 Integrity
 
 - `sef.py` compiles;
 - embedded self-test passes;
-- integrity manifest is intentionally updated only when a candidate runtime is intentionally changed;
-- no change to immutable `v1.4.0-beta` tag;
+- integrity manifest changes only for intentional candidate runtime change;
+- immutable `v1.4.0-beta` remains untouched;
 - no CHALLENGE tuning.
 
-### 13.2 RC-1 causal gates
+### 14.2 RC-1 causal probes
 
-On the visible RC-1 diagnostic family:
+- `RC1-AUTH-001` passes;
+- all other visible RC-1 treatment probes pass;
+- RC-1 positive controls remain pass;
+- zero `HARNESS_ERROR`.
 
-- `RC1-AUTH-001`: PASS;
-- all other RC-1 treatment probes: PASS;
-- RC-1 positive controls remain PASS;
-- no `HARNESS_ERROR`.
+Necessary, not sufficient: visible probes are tuning data.
 
-This is necessary but not sufficient because the probes are visible tuning data.
+### 14.3 Official DEV regression gates
 
-### 13.3 Official DEV regression gates
-
-- zero new critical DEV failures;
+- zero new critical DEV false negatives;
 - existing critical routing successes remain successes;
-- actual-diff escalation scenarios remain unchanged or improve;
-- no evidence/release regression attributable to RC-1;
-- no material increase in unnecessary heavyweight routing on R0/R1 tasks.
+- actual-diff escalation remains unchanged or improves;
+- evidence/release behavior has no RC-1 regression;
+- benchmark expectations are never weakened to accommodate candidate behavior.
 
-### 13.4 Metamorphic generalization gates
+### 14.4 Frozen negative-control / over-routing budget
 
-Before CHALLENGE, add deterministic metamorphic checks that transform wording without changing intent, for example:
+Before implementing behavior, create and freeze a dedicated R0/R1 negative-control set outside CHALLENGE. It MUST include lexical near-misses for each concept family, for example ordinary `admin` prose without access-control change, a `worker` as a person rather than background execution, vendor/business copy without new supplier dependency, search UI without search-engine discoverability, and migration language unrelated to stored-state migration.
 
-- singular ↔ plural where semantically safe;
-- noun ↔ controlled verb form;
-- English ↔ already-supported French equivalent;
-- explicit specialist term ↔ ordinary-language compositional form.
+Hard budget for the first candidate:
 
-The candidate must preserve the same canonical concept under these transformations where the semantic contract is unchanged.
+- **0 new critical false positives** versus v1.4 baseline;
+- **0 new specialist security/data/supplier packs on the frozen negative controls** unless the control is independently reclassified before candidate execution;
+- **0 regressions on existing R0 scenarios that currently remain R0**;
+- any new R1 over-routing must be individually reviewed and justified; aggregate percentage alone cannot waive it.
 
-These tests validate the normalization mechanism rather than memorizing the 19 probe sentences.
+This budget is intentionally stricter than a generic pass-rate threshold because additive routing naturally biases toward over-governance.
 
-### 13.5 Held-out gate
+### 14.5 Metamorphic generalization gates
 
-Only after the candidate stabilizes on official DEV + probes + metamorphic checks:
+Before CHALLENGE, add deterministic intent-preserving transformations:
 
-- execute the predeclared CHALLENGE set once as the held-out gate;
-- do not tune repeatedly on CHALLENGE;
+- safe singular/plural;
+- controlled noun/verb morphology;
+- English/already-supported French equivalents;
+- specialist term/ordinary-language compositional equivalents.
+
+Equivalent intent must preserve the same canonical concept where the semantic contract is unchanged.
+
+### 14.6 Public-output compatibility gate
+
+Shadow/additive instrumentation MUST have a regression test proving that default human-facing output and existing machine-readable contract do not drift unintentionally. New diagnostic fields must be additive/opt-in or otherwise explicitly versioned.
+
+### 14.7 Held-out gate
+
+Only after DEV + probes + negative controls + metamorphic checks stabilize:
+
+- execute the predeclared CHALLENGE set once;
+- do not repeatedly tune on CHALLENGE;
 - any new critical false negative blocks promotion.
 
-## 14. Rejected shortcuts during implementation
+## 15. Rejected shortcuts
 
-The following changes should cause review rejection unless separately justified by new evidence:
+Reject unless separately justified by new evidence:
 
-- adding one regex alternative per failing sentence while retaining direct policy coupling;
-- introducing fuzzy substring matching globally;
-- adding an LLM call to decide hard safety routes;
-- changing RC-2 negation behavior in the same patch;
-- weakening existing actual-diff escalation;
-- disabling or relaxing a positive control to improve probe totals;
-- changing benchmark expectations to match candidate behavior;
-- editing held-out CHALLENGE scenarios during tuning;
-- declaring success only from aggregate pass percentage.
+- one regex alternative per failing sentence while retaining direct policy coupling;
+- global fuzzy substring matching;
+- LLM hard-gate classification;
+- RC-2/3/4 changes in the same patch;
+- weakening actual-diff escalation;
+- relaxing positive controls/benchmark expectations;
+- editing CHALLENGE during tuning;
+- declaring success from aggregate pass percentage alone.
 
-## 15. Implementation boundary proposal
+## 16. Implementation boundary
 
-The future RC-1 implementation PR SHOULD be narrow:
+Future RC-1 implementation PR SHOULD remain narrow:
 
 1. add deterministic normalization helpers;
-2. add the six initial canonical concept definitions;
+2. add six canonical concept definitions under the validated registry contract;
 3. add concept-evidence representation;
-4. add concept-to-current-trigger/context compatibility mapping;
-5. integrate additive concept-derived routing into the request path;
-6. add unit/metamorphic tests;
-7. replay official DEV + probes;
-8. update checksum only because the runtime candidate changed;
-9. leave RC-2/3/4 behavior untouched.
+4. add compatibility mapping;
+5. add deterministic merge/deduplication;
+6. add shadow diagnostics without public-output drift;
+7. freeze negative controls before behavioral tuning;
+8. add unit/metamorphic tests;
+9. integrate additive concept-derived routing;
+10. replay official DEV + probes + negative controls;
+11. update checksum only for intentional runtime change;
+12. leave RC-2/3/4 untouched.
 
-If preserving the single-file distribution requires source-generation changes, packaging work must be scoped explicitly and must not become an unrelated framework refactor.
+## 17. Senior architecture review decision
 
-## 16. Decision record
+**Decision: ACCEPT WITH CONDITIONS, conditions incorporated in this revision.**
 
-**Recommended:** proceed with Option D, deterministic canonical task-concept normalization, using an additive first behavioral candidate.
+Selected architecture remains Option D: deterministic canonical task-concept normalization with additive first migration.
 
-**Why:** it addresses the demonstrated RC-1 cause at the correct abstraction boundary while preserving SEF's strongest property: deterministic, auditable governance decisions.
+The review identified four pre-implementation weaknesses in the initial draft and this revision closes them at design level:
 
-**Do not implement yet:** this document must be reviewed as the architecture gate before any `sef.py` modification.
+1. registry schema/invariants are now machine-checkable;
+2. legacy/concept merge and deduplication semantics are explicit;
+3. over-routing has a frozen negative-control set and hard budget;
+4. shadow/additive observability has a backward-compatibility contract.
+
+Residual risks remain and are intentionally handled by gates rather than hidden:
+
+- additive routing can over-govern;
+- bounded deterministic semantics cannot understand arbitrary paraphrase;
+- RC-2 negation remains unfixed by design;
+- visible probes can be overfit, therefore metamorphic and held-out gates remain mandatory.
+
+**Recommendation:** after CI/review of this document revision, merge this design gate. Then open a separate implementation branch/PR. Do not implement RC-1 on the design branch.
