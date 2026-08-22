@@ -395,19 +395,38 @@ def git(repo: Path, *args: str) -> subprocess.CompletedProcess[str]:
     return run_process(["git", *args], cwd=repo, timeout=60)
 
 
-def git_checkpoint(repo: Path, message: str) -> None:
+def git_checkpoint(repo: Path, message: str) -> str:
     for key, value in (("user.name", "SEF Evaluation Harness"), ("user.email", "evals@sef.local")):
         completed = git(repo, "config", key, value)
         if completed.returncode != 0:
             raise RuntimeError(f"git config failed: {completed.stderr[-1000:]}")
+
     add = git(repo, "add", "-A")
     if add.returncode != 0:
         raise RuntimeError(f"git add failed: {add.stderr[-1000:]}")
-    commit = git(repo, "commit", "--no-gpg-sign", "-m", message)
+
+    head = git(repo, "rev-parse", "--verify", "HEAD")
+    has_head = head.returncode == 0
+    staged = git(repo, "diff", "--cached", "--quiet")
+    if staged.returncode not in {0, 1}:
+        raise RuntimeError(f"git diff --cached failed: {staged.stderr[-1000:]}")
+
+    if staged.returncode == 0 and has_head:
+        return head.stdout.strip()
+
+    commit_args = ["commit", "--no-gpg-sign", "-m", message]
+    if staged.returncode == 0 and not has_head:
+        commit_args.insert(1, "--allow-empty")
+    commit = git(repo, *commit_args)
     if commit.returncode != 0:
         raise RuntimeError(
             f"git commit failed ({commit.returncode}): stdout={commit.stdout[-1000:]} stderr={commit.stderr[-1000:]}"
         )
+
+    resolved = git(repo, "rev-parse", "--verify", "HEAD")
+    if resolved.returncode != 0 or not resolved.stdout.strip():
+        raise RuntimeError(f"git checkpoint HEAD resolution failed: {resolved.stderr[-1000:]}")
+    return resolved.stdout.strip()
 
 
 def apply_mutations(repo: Path, mutations: list[dict[str, Any]]) -> None:
