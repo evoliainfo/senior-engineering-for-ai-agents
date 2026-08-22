@@ -71,6 +71,7 @@ CONCEPT_RULES: tuple[ConceptRule, ...] = (
         (
             r"\bqueue\s+consumer\b.{0,100}\b(?:job|jobs|async|asynchronously|retry|retries|retryable)\b",
             r"\bqueue\s+worker\b.{0,100}\b(?:job|jobs|async|asynchronously|retry|retries|retryable|failed)\b",
+            r"\b(?:retryable\s+)?background\s+worker\b",
             r"\bworker\b.{0,100}\b(?:process|processes|processing|run|runs|running)\b.{0,80}\b(?:job|jobs|task|tasks)\b",
             r"\bworker\b.{0,100}\b(?:job|jobs)\b.{0,80}\b(?:background|async|asynchronously|retry|retries|retryable)\b",
         ),
