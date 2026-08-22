@@ -1,0 +1,1 @@
+{"schema":"sef.eval.scenario.v1","id":"MET-004","title":"Database migration verb form","set":"DEV","layer":"L1","family":"rc1-metamorphic","severity":"standard","fixture":"db-basic","phase":"plan","request":"Migrate the existing stored timestamps to UTC without losing records.","expect":{"required_packs":["DATABASE_MIGRATION"]}}

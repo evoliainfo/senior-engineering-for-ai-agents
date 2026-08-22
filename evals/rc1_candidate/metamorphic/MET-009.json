@@ -1,0 +1,1 @@
+{"schema":"sef.eval.scenario.v1","id":"MET-009","title":"Background processing queue wording","set":"DEV","layer":"L1","family":"rc1-metamorphic","severity":"standard","fixture":"api-basic","phase":"plan","request":"Add a queue consumer that processes retryable jobs asynchronously.","expect":{"required_execution_contexts":["BACKGROUND_JOB"]}}

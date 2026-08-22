@@ -1,0 +1,1 @@
+{"schema":"sef.eval.scenario.v1","id":"MET-005","title":"Inbound provider event singular","set":"DEV","layer":"L1","family":"rc1-metamorphic","severity":"standard","fixture":"api-basic","phase":"plan","request":"Add a webhook endpoint that receives events from the payment provider.","expect":{"required_packs":["WEBHOOK_TRUST"]}}

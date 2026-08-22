@@ -1,0 +1,1 @@
+{"schema":"sef.eval.scenario.v1","id":"MET-012","title":"Search discoverability ordinary wording","set":"DEV","layer":"L1","family":"rc1-metamorphic","severity":"standard","fixture":"web-basic","phase":"plan","request":"Make the public product page easy for people to find through search engines.","expect":{"required_execution_contexts":["SEO_WEB_DISCOVERABILITY"]}}

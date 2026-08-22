@@ -76,7 +76,6 @@ jobs:
           python3 - "$report" "$benchmark_exit" <<'PY'
           import json, sys
           from pathlib import Path
-
           path, benchmark_exit = sys.argv[1], int(sys.argv[2])
           with open(path, encoding="utf-8") as handle:
               report = json.load(handle)
@@ -104,7 +103,6 @@ jobs:
           python3 - "$report" "$benchmark_exit" <<'PY'
           import json, sys
           from pathlib import Path
-
           path, benchmark_exit = sys.argv[1], int(sys.argv[2])
           with open(path, encoding="utf-8") as handle:
               report = json.load(handle)
@@ -132,17 +130,13 @@ jobs:
           set -uo pipefail
           report="$RUNNER_TEMP/sef-root-cause-routing.json"
           set +e
-          python3 evals/run.py run \
-            --scenarios evals/probes/root_cause/routing \
-            --fixtures evals/fixtures \
-            --set DEV > "$report"
+          python3 evals/run.py run --scenarios evals/probes/root_cause/routing --fixtures evals/fixtures --set DEV > "$report"
           probe_exit=$?
           set -e
           cat "$report"
           python3 - "$report" "$probe_exit" <<'PY'
           import json, sys
           from pathlib import Path
-
           path, probe_exit = sys.argv[1], int(sys.argv[2])
           with open(path, encoding="utf-8") as handle:
               report = json.load(handle)
@@ -163,17 +157,13 @@ jobs:
           set -uo pipefail
           report="$RUNNER_TEMP/sef-root-cause-evidence.json"
           set +e
-          python3 evals/run_evidence_release.py run \
-            --scenarios evals/probes/root_cause/evidence \
-            --fixtures evals/evidence_release/fixtures \
-            --set DEV > "$report"
+          python3 evals/run_evidence_release.py run --scenarios evals/probes/root_cause/evidence --fixtures evals/evidence_release/fixtures --set DEV > "$report"
           probe_exit=$?
           set -e
           cat "$report"
           python3 - "$report" "$probe_exit" <<'PY'
           import json, sys
           from pathlib import Path
-
           path, probe_exit = sys.argv[1], int(sys.argv[2])
           with open(path, encoding="utf-8") as handle:
               report = json.load(handle)
@@ -186,4 +176,65 @@ jobs:
               raise SystemExit(f"Root-cause evidence harness errors: {harness_errors}")
           print(f"Root-cause evidence exit code: {probe_exit} (non-gating diagnostic measurement)")
           print(f"Root-cause evidence summary: {report.get('summary')}")
+          PY
+
+      - name: Validate frozen RC-1 candidate contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 evals/run.py validate --scenarios evals/rc1_candidate/negative_controls
+          python3 evals/run.py validate --scenarios evals/rc1_candidate/metamorphic
+
+      - name: Record frozen RC-1 negative-control baseline
+        shell: bash
+        run: |
+          set -uo pipefail
+          report="$RUNNER_TEMP/sef-rc1-negative-controls.json"
+          set +e
+          python3 evals/run.py run --scenarios evals/rc1_candidate/negative_controls --fixtures evals/fixtures --set DEV > "$report"
+          candidate_exit=$?
+          set -e
+          cat "$report"
+          python3 - "$report" "$candidate_exit" <<'PY'
+          import json, sys
+          from pathlib import Path
+          path, candidate_exit = sys.argv[1], int(sys.argv[2])
+          with open(path, encoding="utf-8") as handle:
+              report = json.load(handle)
+          results = report.get("results", [])
+          expected = len(list(Path("evals/rc1_candidate/negative_controls").glob("*.json")))
+          if len(results) != expected:
+              raise SystemExit(f"RC-1 control harness error: expected {expected}, got {len(results)}")
+          harness_errors = [r.get("scenario_id") for r in results if r.get("status") == "HARNESS_ERROR"]
+          if harness_errors:
+              raise SystemExit(f"RC-1 negative-control harness errors: {harness_errors}")
+          print(f"RC-1 negative-control exit code: {candidate_exit} (frozen pre-fix baseline)")
+          print(f"RC-1 negative-control summary: {report.get('summary')}")
+          PY
+
+      - name: Record frozen RC-1 metamorphic baseline
+        shell: bash
+        run: |
+          set -uo pipefail
+          report="$RUNNER_TEMP/sef-rc1-metamorphic.json"
+          set +e
+          python3 evals/run.py run --scenarios evals/rc1_candidate/metamorphic --fixtures evals/fixtures --set DEV > "$report"
+          candidate_exit=$?
+          set -e
+          cat "$report"
+          python3 - "$report" "$candidate_exit" <<'PY'
+          import json, sys
+          from pathlib import Path
+          path, candidate_exit = sys.argv[1], int(sys.argv[2])
+          with open(path, encoding="utf-8") as handle:
+              report = json.load(handle)
+          results = report.get("results", [])
+          expected = len(list(Path("evals/rc1_candidate/metamorphic").glob("*.json")))
+          if len(results) != expected:
+              raise SystemExit(f"RC-1 metamorphic harness error: expected {expected}, got {len(results)}")
+          harness_errors = [r.get("scenario_id") for r in results if r.get("status") == "HARNESS_ERROR"]
+          if harness_errors:
+              raise SystemExit(f"RC-1 metamorphic harness errors: {harness_errors}")
+          print(f"RC-1 metamorphic exit code: {candidate_exit} (frozen pre-fix baseline)")
+          print(f"RC-1 metamorphic summary: {report.get('summary')}")
           PY

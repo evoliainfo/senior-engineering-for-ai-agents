@@ -1,0 +1,1 @@
+{"schema":"sef.eval.scenario.v1","id":"MET-010","title":"Background processing worker wording","set":"DEV","layer":"L1","family":"rc1-metamorphic","severity":"standard","fixture":"api-basic","phase":"plan","request":"Add a worker that processes jobs in the background with retries.","expect":{"required_execution_contexts":["BACKGROUND_JOB"]}}
