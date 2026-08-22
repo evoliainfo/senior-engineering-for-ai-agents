@@ -10,7 +10,6 @@ from __future__ import annotations
 import re
 import unicodedata
 from dataclasses import dataclass
-from typing import Iterable
 
 SHADOW_VERSION = "rc1-shadow-v1"
 
@@ -70,8 +69,8 @@ CONCEPT_RULES: tuple[ConceptRule, ...] = (
         "BACKGROUND_JOB", "execution_context", "BACKGROUND_JOB",
         (
             r"\bqueue\s+consumer\b.{0,100}\b(?:job|jobs|async|asynchronously|retry|retries|retryable)\b",
-            r"\bworker\b.{0,100}\b(?:job|jobs|background|async|asynchronously|retry|retries)\b",
-            r"\b(?:job|jobs)\b.{0,100}\b(?:background|asynchronously|queue\s+consumer|worker|retry|retries)\b",
+            r"\bworker\b.{0,100}\b(?:process|processes|processing|run|runs|running)\b.{0,80}\b(?:job|jobs|task|tasks)\b",
+            r"\bworker\b.{0,100}\b(?:job|jobs)\b.{0,80}\b(?:background|async|asynchronously|retry|retries|retryable)\b",
         ),
     ),
     ConceptRule(
