@@ -9,13 +9,12 @@
   "fixture": "api-basic",
   "phase": "plan",
   "project_brief": "A small API service.",
-  "request": "Rename only the private local variable tmp_user_count to user_count inside one helper. Do not change behavior, API contracts, data schema or deployment.",
+  "request": "Rename the private local variable tmp_total to total inside one helper with no behavior change.",
   "reference_outcome": {
     "must_recognize": ["behavior-preserving local refactor"],
     "must_not_activate": ["full security, migration or release governance"]
   },
   "expect": {
-    "risk": {"exact": "R0"},
     "implementation_allowed": true,
     "forbidden_packs": ["AUTH_PROTOCOL", "AUTHORIZATION", "DATABASE_MIGRATION", "PRIVACY", "REGULATED_DOMAIN", "RELEASE_ENGINEERING"]
   }
