@@ -1,0 +1,18 @@
+{
+  "schema": "sef.eval.scenario.v1",
+  "id": "RC2-TREAT-008",
+  "title": "Negative webhook preservation plus positive replay protection",
+  "set": "DEV",
+  "layer": "L1",
+  "family": "request-polarity",
+  "severity": "high",
+  "fixture": "api-basic",
+  "phase": "plan",
+  "project_brief": "A small internal utility repository.",
+  "request": "Do not disable the webhook signature check; add replay protection.",
+  "expect": {
+    "required_packs": [
+      "WEBHOOK_TRUST"
+    ]
+  }
+}
