@@ -1,0 +1,21 @@
+{
+  "schema": "sef.eval.scenario.v1",
+  "id": "AUTH-005",
+  "title": "Public non-sensitive health endpoint does not inherit user auth",
+  "set": "DEV",
+  "layer": "L1",
+  "family": "auth-authorization",
+  "severity": "standard",
+  "fixture": "api-basic",
+  "phase": "plan",
+  "project_brief": "An API service whose normal user endpoints require authentication.",
+  "request": "Add a public GET /health endpoint returning only status 'ok' and the build version. It must not require user authentication and must not expose secrets, user data or internal diagnostics.",
+  "reference_outcome": {
+    "must_recognize": ["explicitly public non-sensitive endpoint", "no user authorization requirement for this route"],
+    "must_not_activate": ["authentication solely because other endpoints use auth"]
+  },
+  "expect": {
+    "forbidden_packs": ["AUTH_PROTOCOL", "AUTHORIZATION", "PRIVACY"],
+    "implementation_allowed": true
+  }
+}
