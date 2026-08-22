@@ -1,0 +1,133 @@
+name: RC-1 routing regression gate
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: rc1-routing-regression-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  rc1-routing-regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout exact tested revision
+        shell: bash
+        env:
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          git init .
+          git remote add origin "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY.git"
+          target_sha="${PR_HEAD_SHA:-$GITHUB_SHA}"
+          git fetch --depth=1 origin "$target_sha"
+          git checkout --detach FETCH_HEAD
+          printf 'tested_head=%s\n' "$target_sha" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Verify runtime integrity
+        run: |
+          set -euo pipefail
+          sha256sum -c SHA256SUMS
+          python3 -m py_compile sef.py evals/run.py evals/run_evidence_release.py
+          python3 sef.py self-test
+
+      - name: Execute RC-1 regression corpus
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts/rc1-regression
+          run_measurement() {
+            local output="$1"; shift
+            set +e
+            "$@" > "$output"
+            local code=$?
+            set -e
+            printf '%s\n' "$code" > "${output%.json}.exit-code"
+          }
+
+          run_measurement artifacts/rc1-regression/official.json \
+            python3 evals/run.py run --sef sef.py --scenarios evals/scenarios/dev --fixtures evals/fixtures --set DEV
+          run_measurement artifacts/rc1-regression/negative.json \
+            python3 evals/run.py run --sef sef.py --scenarios evals/rc1_candidate/negative_controls --fixtures evals/fixtures --set DEV
+          run_measurement artifacts/rc1-regression/metamorphic.json \
+            python3 evals/run.py run --sef sef.py --scenarios evals/rc1_candidate/metamorphic --fixtures evals/fixtures --set DEV
+          run_measurement artifacts/rc1-regression/probes.json \
+            python3 evals/run.py run --sef sef.py --scenarios evals/probes/root_cause/routing --fixtures evals/fixtures --set DEV
+          run_measurement artifacts/rc1-regression/evidence.json \
+            python3 evals/run_evidence_release.py run --sef sef.py --set DEV
+
+      - name: Enforce frozen RC-1 gates
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          root=Path('artifacts/rc1-regression')
+          failures=[]
+
+          def load(name):
+              return json.loads((root/f'{name}.json').read_text(encoding='utf-8'))
+          def rows(report):
+              return {str(x.get('scenario_id')):x for x in report.get('results',[])}
+          def nonpass(report):
+              return {sid for sid,row in rows(report).items() if row.get('status')!='PASS'}
+          def no_harness(name, report):
+              bad=[sid for sid,row in rows(report).items() if row.get('status')=='HARNESS_ERROR']
+              if bad: failures.append(f'{name}: HARNESS_ERROR {sorted(bad)}')
+
+          official=load('official'); negative=load('negative'); meta=load('metamorphic'); probes=load('probes'); evidence=load('evidence')
+          for name,report in [('official',official),('negative',negative),('metamorphic',meta),('probes',probes),('evidence',evidence)]:
+              no_harness(name,report)
+
+          # RC-1 integration must never reintroduce a failure outside the two
+          # already-attributed RC-2/RC-3 official residuals. Future fixes may
+          # reduce this set, so the gate is subset-based rather than exact.
+          unexpected=nonpass(official)-{'DIFF-004','WEB-001'}
+          if unexpected: failures.append(f'official unexpected failures: {sorted(unexpected)}')
+
+          neg_unexpected=nonpass(negative)-{'NEG-002','NEG-004'}
+          if neg_unexpected: failures.append(f'negative-control regressions: {sorted(neg_unexpected)}')
+
+          meta_bad=nonpass(meta)
+          if meta_bad: failures.append(f'metamorphic regressions: {sorted(meta_bad)}')
+
+          rc1_bad=sorted(sid for sid,row in rows(probes).items() if sid.startswith('RC1-') and row.get('status')!='PASS')
+          if rc1_bad: failures.append(f'RC-1 causal probe regressions: {rc1_bad}')
+
+          # RC-4 is deliberately not fixed by RC-1. Existing evidence residuals
+          # may improve later, but no additional evidence/release failure is allowed.
+          evidence_unexpected=nonpass(evidence)-{'EVID-003','REL-004'}
+          if evidence_unexpected: failures.append(f'evidence/release regressions: {sorted(evidence_unexpected)}')
+
+          summary={
+              'official': official.get('summary',{}),
+              'negative': negative.get('summary',{}),
+              'metamorphic': meta.get('summary',{}),
+              'root_cause': probes.get('summary',{}),
+              'evidence': evidence.get('summary',{}),
+              'gate':'FAIL' if failures else 'PASS',
+              'failures':failures,
+          }
+          (root/'summary.json').write_text(json.dumps(summary,indent=2,sort_keys=True)+'\n',encoding='utf-8')
+          print(json.dumps(summary,indent=2,sort_keys=True))
+          if failures: raise SystemExit('\n'.join(failures))
+          PY
+
+      - name: Publish RC-1 regression evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rc1-routing-regression-${{ github.run_id }}
+          path: artifacts/rc1-regression/
+          if-no-files-found: error
+          retention-days: 90
