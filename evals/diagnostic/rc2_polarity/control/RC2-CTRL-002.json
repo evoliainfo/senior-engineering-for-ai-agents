@@ -1,14 +1,18 @@
 {
-  "schema":"sef.eval.scenario.v1",
-  "id":"RC2-CTRL-002",
-  "title":"Webhook duplicate prevention remains positive routing",
-  "set":"RC2_CONTROL",
-  "layer":"L1",
-  "family":"request-polarity-control",
-  "severity":"high",
-  "fixture":"api-basic",
-  "phase":"plan",
-  "project_brief":"A small internal utility repository.",
-  "request":"Prevent duplicate webhook processing.",
-  "plan_expect":{"required_packs":["WEBHOOK_TRUST"]}
+  "schema": "sef.eval.scenario.v1",
+  "id": "RC2-CTRL-002",
+  "title": "Webhook duplicate prevention remains positive routing",
+  "set": "DEV",
+  "layer": "L1",
+  "family": "request-polarity-control",
+  "severity": "high",
+  "fixture": "api-basic",
+  "phase": "plan",
+  "project_brief": "A small internal utility repository.",
+  "request": "Prevent duplicate webhook processing.",
+  "expect": {
+    "required_packs": [
+      "WEBHOOK_TRUST"
+    ]
+  }
 }

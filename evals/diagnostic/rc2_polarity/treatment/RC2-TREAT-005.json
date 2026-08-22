@@ -1,14 +1,21 @@
 {
-  "schema":"sef.eval.scenario.v1",
-  "id":"RC2-TREAT-005",
-  "title":"French documentation request excludes deployment and infrastructure",
-  "set":"RC2_TREATMENT",
-  "layer":"L1",
-  "family":"request-polarity",
-  "severity":"high",
-  "fixture":"api-basic",
-  "phase":"plan",
-  "project_brief":"A small internal utility repository.",
-  "request":"Modifie le README sans changer le déploiement ni l'infrastructure.",
-  "plan_expect":{"forbidden_packs":["CONTAINER_ENGINEERING","CI_SUPPLY_CHAIN","INFRASTRUCTURE_IAC","RELEASE_ENGINEERING"]}
+  "schema": "sef.eval.scenario.v1",
+  "id": "RC2-TREAT-005",
+  "title": "French documentation request excludes deployment and infrastructure",
+  "set": "DEV",
+  "layer": "L1",
+  "family": "request-polarity",
+  "severity": "high",
+  "fixture": "api-basic",
+  "phase": "plan",
+  "project_brief": "A small internal utility repository.",
+  "request": "Modifie le README sans changer le déploiement ni l'infrastructure.",
+  "expect": {
+    "forbidden_packs": [
+      "CONTAINER_ENGINEERING",
+      "CI_SUPPLY_CHAIN",
+      "INFRASTRUCTURE_IAC",
+      "RELEASE_ENGINEERING"
+    ]
+  }
 }

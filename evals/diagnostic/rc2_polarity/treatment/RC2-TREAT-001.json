@@ -1,15 +1,26 @@
 {
-  "schema":"sef.eval.scenario.v1",
-  "id":"RC2-TREAT-001",
-  "title":"Documentation-only request excludes deployment and infrastructure",
-  "set":"DEV",
-  "layer":"L1",
-  "family":"request-polarity",
-  "severity":"high",
-  "fixture":"api-basic",
-  "phase":"plan",
-  "project_brief":"A small internal utility repository.",
-  "request":"Update README only; do not change deployment or infrastructure.",
-  "reference_outcome":{"must_recognize":["deployment and infrastructure are explicit non-goals"]},
-  "expect":{"forbidden_packs":["CONTAINER_ENGINEERING","CI_SUPPLY_CHAIN","INFRASTRUCTURE_IAC","RELEASE_ENGINEERING"]}
+  "schema": "sef.eval.scenario.v1",
+  "id": "RC2-TREAT-001",
+  "title": "Documentation-only request excludes deployment and infrastructure",
+  "set": "DEV",
+  "layer": "L1",
+  "family": "request-polarity",
+  "severity": "high",
+  "fixture": "api-basic",
+  "phase": "plan",
+  "project_brief": "A small internal utility repository.",
+  "request": "Update README only; do not change deployment or infrastructure.",
+  "reference_outcome": {
+    "must_recognize": [
+      "deployment and infrastructure are explicit non-goals"
+    ]
+  },
+  "expect": {
+    "forbidden_packs": [
+      "CONTAINER_ENGINEERING",
+      "CI_SUPPLY_CHAIN",
+      "INFRASTRUCTURE_IAC",
+      "RELEASE_ENGINEERING"
+    ]
+  }
 }

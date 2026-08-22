@@ -1,14 +1,18 @@
 {
-  "schema":"sef.eval.scenario.v1",
-  "id":"RC2-CTRL-008",
-  "title":"Unsafe without authorization remains positive authorization routing",
-  "set":"RC2_CONTROL",
-  "layer":"L1",
-  "family":"request-polarity-control",
-  "severity":"high",
-  "fixture":"api-basic",
-  "phase":"plan",
-  "project_brief":"A small internal utility repository.",
-  "request":"Without authorization this endpoint is unsafe; implement role checks.",
-  "plan_expect":{"required_packs":["AUTHORIZATION"]}
+  "schema": "sef.eval.scenario.v1",
+  "id": "RC2-CTRL-008",
+  "title": "Unsafe without authorization remains positive authorization routing",
+  "set": "DEV",
+  "layer": "L1",
+  "family": "request-polarity-control",
+  "severity": "high",
+  "fixture": "api-basic",
+  "phase": "plan",
+  "project_brief": "A small internal utility repository.",
+  "request": "Without authorization this endpoint is unsafe; implement role checks.",
+  "expect": {
+    "required_packs": [
+      "AUTHORIZATION"
+    ]
+  }
 }

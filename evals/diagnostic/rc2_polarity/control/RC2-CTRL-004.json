@@ -1,14 +1,18 @@
 {
-  "schema":"sef.eval.scenario.v1",
-  "id":"RC2-CTRL-004",
-  "title":"Negative exposure requirement still changes infrastructure",
-  "set":"RC2_CONTROL",
-  "layer":"L1",
-  "family":"request-polarity-control",
-  "severity":"high",
-  "fixture":"api-basic",
-  "phase":"plan",
-  "project_brief":"A small internal utility repository.",
-  "request":"The deployment must not expose port 80 publicly; change the infrastructure accordingly.",
-  "plan_expect":{"required_packs":["INFRASTRUCTURE_IAC"]}
+  "schema": "sef.eval.scenario.v1",
+  "id": "RC2-CTRL-004",
+  "title": "Negative exposure requirement still changes infrastructure",
+  "set": "DEV",
+  "layer": "L1",
+  "family": "request-polarity-control",
+  "severity": "high",
+  "fixture": "api-basic",
+  "phase": "plan",
+  "project_brief": "A small internal utility repository.",
+  "request": "The deployment must not expose port 80 publicly; change the infrastructure accordingly.",
+  "expect": {
+    "required_packs": [
+      "INFRASTRUCTURE_IAC"
+    ]
+  }
 }

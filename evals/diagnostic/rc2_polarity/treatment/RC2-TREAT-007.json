@@ -1,14 +1,18 @@
 {
-  "schema":"sef.eval.scenario.v1",
-  "id":"RC2-TREAT-007",
-  "title":"Negative preservation plus positive authorization strengthening",
-  "set":"RC2_TREATMENT",
-  "layer":"L1",
-  "family":"request-polarity",
-  "severity":"high",
-  "fixture":"api-basic",
-  "phase":"plan",
-  "project_brief":"A small internal utility repository.",
-  "request":"Do not remove authorization checks; strengthen the admin permission rule.",
-  "plan_expect":{"required_packs":["AUTHORIZATION"]}
+  "schema": "sef.eval.scenario.v1",
+  "id": "RC2-TREAT-007",
+  "title": "Negative preservation plus positive authorization strengthening",
+  "set": "DEV",
+  "layer": "L1",
+  "family": "request-polarity",
+  "severity": "high",
+  "fixture": "api-basic",
+  "phase": "plan",
+  "project_brief": "A small internal utility repository.",
+  "request": "Do not remove authorization checks; strengthen the admin permission rule.",
+  "expect": {
+    "required_packs": [
+      "AUTHORIZATION"
+    ]
+  }
 }
