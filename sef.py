@@ -816,8 +816,65 @@ def _rc1_stateful_database_companion(request):
     text=_rc1_normalize_text(request)
     return re.search(r"\bdatabase\b|\bledger\s+state\b|\bwrite(?:s|ing)?\b.{0,50}\b(?:ledger|state|record|records|row|rows|database)\b",text,re.I) is not None
 
+
+# ---------- RC-2 request polarity / bounded non-goals ----------
+_RC2_BOUNDARY_RE=re.compile(r"\s*(?:[;.!?]+|\bbut\b|\bmais\b)\s*",re.I)
+_RC2_NON_GOAL_PATTERNS=(
+  ("do_not_change",re.compile(r"\b(?:do not|don't)\s+(?:change|modify|touch)\b",re.I)),
+  ("without_change",re.compile(r"\bwithout\s+(?:changing|modifying|touching)\b",re.I)),
+  ("leave_unchanged",re.compile(r"\b(?:leave|keep)\b.+?\bunchanged\b",re.I)),
+  ("no_changes_to",re.compile(r"\bno\s+changes?\s+to\b",re.I)),
+  ("no_modifications_to",re.compile(r"\bno\s+modifications?\s+to\b",re.I)),
+  ("out_of_scope",re.compile(r"\b(?:out of scope|not in scope)\b",re.I)),
+  ("fr_sans_changer",re.compile(r"\bsans\s+(?:changer|modifier|toucher)\b",re.I)),
+  ("fr_unchanged",re.compile(r"\b(?:laisser|garder)\b.+?\binchang[ée]s?\b",re.I)),
+  ("fr_no_change",re.compile(r"\baucun\s+changement\b",re.I)),
+  ("fr_out_of_scope",re.compile(r"\bhors\s+p[ée]rim[èe]tre\b",re.I)),
+)
+_RC2_POSITIVE_GUARDS=(
+  ("do_not_forget",re.compile(r"\b(?:do not|don't)\s+forget\b",re.I)),
+  ("cannot_leave_unchanged",re.compile(r"\bcannot\s+(?:leave|keep)\b.+?\bunchanged\b",re.I)),
+  ("prohibitive_requirement",re.compile(r"\b(?:must not|cannot|may not)\b",re.I)),
+  ("no_actor_may",re.compile(r"\bno\s+.+?\bmay\b",re.I)),
+  ("without_is_unsafe",re.compile(r"\bwithout\b.+?\b(?:unsafe|insecure|vulnerable)\b",re.I)),
+)
+
+def _rc2_clauses(text):
+    out=[]; start=0
+    for m in _RC2_BOUNDARY_RE.finditer(str(text or "")):
+        chunk=str(text or "")[start:m.start()].strip(" ,")
+        if chunk: out.append((start,m.start(),chunk))
+        start=m.end()
+    raw=str(text or ""); chunk=raw[start:].strip(" ,")
+    if chunk: out.append((start,len(raw),chunk))
+    return out
+
+def _rc2_annotate(request):
+    observations=[]
+    for start,end,clause in _rc2_clauses(request):
+        guards=[name for name,rx in _RC2_POSITIVE_GUARDS if rx.search(clause)]
+        matches=[]
+        if not guards:
+            for name,rx in _RC2_NON_GOAL_PATTERNS:
+                m=rx.search(clause)
+                if m: matches.append({"cue":name,"span":[start+m.start(),start+m.end()],"text":m.group(0)})
+        polarity="NON_GOAL" if matches else ("POSITIVE_GUARD" if guards else "UNMARKED")
+        observations.append({"span":[start,end],"clause":clause,"polarity":polarity,"cues":matches,"guards":guards})
+    return {"request":request,"clauses":observations,"shadow_only":False}
+
+def _rc2_positive_request_text(request):
+    observation=_rc2_annotate(request); kept=[]; suppressed=[]
+    for clause in observation.get("clauses",[]):
+        value=str(clause.get("clause") or "").strip()
+        if not value: continue
+        if clause.get("polarity")=="NON_GOAL": suppressed.append(value)
+        else: kept.append(value)
+    return "; ".join(kept),suppressed,observation
+
 # ---------- request → engineering task plan ----------
 def _request_change(profile,request):
+    original_request=request
+    request,rc2_suppressed,rc2_observation=_rc2_positive_request_text(request)
     t=request.lower(); triggers=set(); contexts=set(profile.get("contexts",[])); task_contexts=set(); profiles=set(profile.get("profiles",[])); evidence=[]
     def hit(pattern): return re.search(pattern,t,re.I) is not None
     def add(trg,why,ctx=(),prof=()): triggers.add(trg); contexts.update(ctx); task_contexts.update(ctx); profiles.update(prof); evidence.append({"trigger":trg,"reason":why})
@@ -909,13 +966,15 @@ def _request_change(profile,request):
         elif concept=="SEO_WEB_DISCOVERABILITY": task_contexts.add("SEO_WEB_DISCOVERABILITY")
         else: continue
         evidence.append({"trigger":"RC1_CONCEPT:"+concept,"reason":"deterministic canonical concept detected","source":"rc1_additive","concept_evidence":observation.get("evidence",[])})
+    if rc2_suppressed:
+        evidence.append({"trigger":"RC2_POLARITY_FILTER","reason":"bounded request non-goal excluded from request-derived routing","source":"rc2_canonical","suppressed_clauses":rc2_suppressed,"polarity_observation":rc2_observation})
     risk="R0" if triggers=={"UI_STYLE_CHANGED"} else "R1"
     # Generic new product features in an already full-stack repository may reasonably cross layers;
     # bugs/refactors without layer evidence stay on core procedures until inspection/diff reveals scope.
     if not task_contexts and "NEW_FEATURE" in triggers:
         app=[c for c in ("WEB_UI","PUBLIC_API","DATABASE") if c in contexts]
         if len(app)>=2: task_contexts.update(app)
-    return {"summary":request,"risk":risk,"action_class":"A1","contexts":sorted(contexts),"execution_contexts":sorted(task_contexts),"triggers":sorted(triggers),"profiles":sorted(profiles),"environment":"LOCAL","request_detection":evidence}
+    return {"summary":original_request,"risk":risk,"action_class":"A1","contexts":sorted(contexts),"execution_contexts":sorted(task_contexts),"triggers":sorted(triggers),"profiles":sorted(profiles),"environment":"LOCAL","request_detection":evidence}
 
 def _assess_request(repo,request):
     repo=Path(repo).resolve(); profile=_load_json(repo/".sef/project-profile.json",scan(repo)); change=_request_change(profile,request)
@@ -930,7 +989,8 @@ def _assess_request(repo,request):
 
         # RC-1 compatibility: v1.4 has an EXTERNAL_SUPPLIER pack but no request
         # trigger selecting it from EXTERNAL_SAAS alone.
-        if "EXTERNAL_SUPPLIER" in _rc1_detected_ids(request):
+        rc2_positive_request,_,_=_rc2_positive_request_text(request)
+        if "EXTERNAL_SUPPLIER" in _rc1_detected_ids(rc2_positive_request):
             selected=set(result.get("required_context_packs",[])); selected.add("EXTERNAL_SUPPLIER")
             result["required_context_packs"]=sorted(selected)
         result["request_detection"]=change["request_detection"]
