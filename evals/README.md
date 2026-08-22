@@ -36,9 +36,9 @@ For a `phase: verify` scenario the harness:
 3. saves the original task plan and records a second checkpoint;
 4. applies only the scenario-declared mutation;
 5. runs `sef.py verify --base HEAD`;
-6. grades the actual observed diff against the predeclared expectations.
+6. grades the original plan and actual observed diff against predeclared expectations.
 
-This keeps the saved SEF task state out of the candidate implementation diff and makes the tested mutation reproducible.
+A clean checkpoint with an existing `HEAD` is valid even if there is nothing new to commit. This keeps harness bookkeeping from becoming a false failure while preserving an exact Git base for `verify`.
 
 ## Commands
 
@@ -64,17 +64,33 @@ A non-zero exit from `run` means at least one selected benchmark scenario failed
 
 CI separately gates harness health: malformed scenarios, missing results and `HARNESS_ERROR` outcomes fail CI, while legitimate SEF baseline failures are recorded without being laundered into PASS.
 
-## Current baseline
+## Current v1.4 baseline
 
-Against the exact v1.4 runtime SHA-256
-`31e3dfc1b1a173c83f0a85e2aad6fe4080f33899f328261aa2129a060f5ac68e`,
-the original 11-scenario plan-level slice records **10 PASS / 1 FAIL**.
+Against exact runtime SHA-256:
 
-The retained plan-level failure is `WEB-001`, an over-governance case already documented in the PR that introduced the harness.
+`31e3dfc1b1a173c83f0a85e2aad6fe4080f33899f328261aa2129a060f5ac68e`
 
-The first actual-diff baseline is measured in CI for this increment and should be recorded here only after the runner itself has passed harness-health review.
+Latest Ubuntu CI measurement:
 
-This is a partial measurement, not the final 48-scenario v1.4 benchmark score.
+- **15 DEV scenarios executed**
+- **13 PASS**
+- **2 FAIL**
+- **0 critical failures**
+- **0 harness errors**
+
+Retained failures:
+
+1. `WEB-001` — public company website + SEO is routed correctly, but a broad `company` signal creates an unconfirmed multi-tenant candidate and unnecessarily blocks implementation.
+2. `DIFF-004` — the actual Docker/CI/IaC diff is correctly detected and escalated to R3 with the expected packs, but the original documentation-only request already activates `RELEASE_ENGINEERING` because the negative phrase `do not change ... deployment` is matched as release intent.
+
+Actual-diff observations:
+
+- `DIFF-001`: PASS — analytics introduced outside a CSS-only plan is detected and adds analytics obligations.
+- `DIFF-002`: PASS — privileged admin authorization introduced outside a routine API plan is detected at R3 with `AUTHORIZATION`.
+- `DIFF-004`: FAIL overall — actual diff detection itself passes; the failure is the over-routed initial documentation plan described above.
+- `DIFF-005`: PASS — a genuinely harmless localized CSS diff remains R0 without invented heavyweight routes.
+
+This is a partial baseline, not the final 48-scenario v1.4 benchmark score.
 
 ## Design rule
 
