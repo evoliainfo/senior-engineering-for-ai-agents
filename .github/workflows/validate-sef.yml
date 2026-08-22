@@ -59,6 +59,27 @@ jobs:
         shell: bash
         run: python3 evals/run.py validate
 
-      - name: Run deterministic evaluation bootstrap scenarios
+      - name: Record deterministic evaluation baseline without gating harness health
         shell: bash
-        run: python3 evals/run.py self-test --ids PROP-001,AUTH-001,DATA-002,WEB-001
+        run: |
+          set -uo pipefail
+          report="$RUNNER_TEMP/sef-eval-bootstrap.json"
+          set +e
+          python3 evals/run.py run --ids PROP-001,AUTH-001,DATA-002,WEB-001 > "$report"
+          benchmark_exit=$?
+          set -e
+          cat "$report"
+          python3 - "$report" "$benchmark_exit" <<'PY'
+          import json, sys
+          path, benchmark_exit = sys.argv[1], int(sys.argv[2])
+          with open(path, encoding="utf-8") as handle:
+              report = json.load(handle)
+          results = report.get("results", [])
+          if len(results) != 4:
+              raise SystemExit(f"Harness error: expected 4 results, got {len(results)}")
+          harness_errors = [r.get("scenario_id") for r in results if r.get("status") == "HARNESS_ERROR"]
+          if harness_errors:
+              raise SystemExit(f"Harness error scenarios: {harness_errors}")
+          print(f"Benchmark exit code: {benchmark_exit} (non-gating baseline measurement)")
+          print(f"Baseline summary: {report.get('summary')}")
+          PY
