@@ -118,3 +118,72 @@ jobs:
           print(f"Evidence/release benchmark exit code: {benchmark_exit} (non-gating baseline measurement)")
           print(f"Evidence/release baseline summary: {report.get('summary')}")
           PY
+
+      - name: Validate root-cause probe contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 evals/run.py validate --scenarios evals/probes/root_cause/routing
+          python3 evals/run_evidence_release.py validate --scenarios evals/probes/root_cause/evidence
+
+      - name: Record root-cause routing probes
+        shell: bash
+        run: |
+          set -uo pipefail
+          report="$RUNNER_TEMP/sef-root-cause-routing.json"
+          set +e
+          python3 evals/run.py run \
+            --scenarios evals/probes/root_cause/routing \
+            --fixtures evals/fixtures \
+            --set DEV > "$report"
+          probe_exit=$?
+          set -e
+          cat "$report"
+          python3 - "$report" "$probe_exit" <<'PY'
+          import json, sys
+          from pathlib import Path
+
+          path, probe_exit = sys.argv[1], int(sys.argv[2])
+          with open(path, encoding="utf-8") as handle:
+              report = json.load(handle)
+          results = report.get("results", [])
+          expected = len(list(Path("evals/probes/root_cause/routing").glob("*.json")))
+          if len(results) != expected:
+              raise SystemExit(f"Probe harness error: expected {expected} routing results, got {len(results)}")
+          harness_errors = [r.get("scenario_id") for r in results if r.get("status") == "HARNESS_ERROR"]
+          if harness_errors:
+              raise SystemExit(f"Root-cause routing harness errors: {harness_errors}")
+          print(f"Root-cause routing exit code: {probe_exit} (non-gating diagnostic measurement)")
+          print(f"Root-cause routing summary: {report.get('summary')}")
+          PY
+
+      - name: Record root-cause evidence probes
+        shell: bash
+        run: |
+          set -uo pipefail
+          report="$RUNNER_TEMP/sef-root-cause-evidence.json"
+          set +e
+          python3 evals/run_evidence_release.py run \
+            --scenarios evals/probes/root_cause/evidence \
+            --fixtures evals/evidence_release/fixtures \
+            --set DEV > "$report"
+          probe_exit=$?
+          set -e
+          cat "$report"
+          python3 - "$report" "$probe_exit" <<'PY'
+          import json, sys
+          from pathlib import Path
+
+          path, probe_exit = sys.argv[1], int(sys.argv[2])
+          with open(path, encoding="utf-8") as handle:
+              report = json.load(handle)
+          results = report.get("results", [])
+          expected = len(list(Path("evals/probes/root_cause/evidence").glob("*.json")))
+          if len(results) != expected:
+              raise SystemExit(f"Probe harness error: expected {expected} evidence results, got {len(results)}")
+          harness_errors = [r.get("scenario_id") for r in results if r.get("status") == "HARNESS_ERROR"]
+          if harness_errors:
+              raise SystemExit(f"Root-cause evidence harness errors: {harness_errors}")
+          print(f"Root-cause evidence exit code: {probe_exit} (non-gating diagnostic measurement)")
+          print(f"Root-cause evidence summary: {report.get('summary')}")
+          PY
