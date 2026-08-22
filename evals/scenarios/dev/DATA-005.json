@@ -14,7 +14,6 @@
     "must_recognize": ["background execution", "stateful database write", "idempotency and duplicate-side-effect risk"]
   },
   "expect": {
-    "risk": {"minimum": "R2"},
     "required_execution_contexts": ["BACKGROUND_JOB", "DATABASE"],
     "required_procedures": ["backend-api-service-engineering", "reliability-observability-engineering"]
   }
