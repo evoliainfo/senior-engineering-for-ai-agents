@@ -1,0 +1,20 @@
+{
+  "schema": "sef.eval.scenario.v1",
+  "id": "EXT-003",
+  "title": "Long-lived SaaS credential activates supplier governance",
+  "set": "DEV",
+  "layer": "L1",
+  "family": "external-trust",
+  "severity": "high",
+  "fixture": "api-basic",
+  "phase": "plan",
+  "project_brief": "A small API service integrating external SaaS providers.",
+  "request": "Integrate an external SaaS API using a long-lived API token kept server-side. The credential must never be committed to the repository or exposed to browser code.",
+  "reference_outcome": {
+    "must_recognize": ["external supplier dependency", "long-lived secret-management boundary"]
+  },
+  "expect": {
+    "required_packs": ["EXTERNAL_SUPPLIER"],
+    "required_procedures": ["external-supplier-saas-governance"]
+  }
+}

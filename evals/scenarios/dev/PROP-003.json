@@ -1,0 +1,21 @@
+{
+  "schema": "sef.eval.scenario.v1",
+  "id": "PROP-003",
+  "title": "Private local variable rename stays lightweight",
+  "set": "DEV",
+  "layer": "L1",
+  "family": "proportionality",
+  "severity": "standard",
+  "fixture": "api-basic",
+  "phase": "plan",
+  "project_brief": "A small API service.",
+  "request": "Rename the private local variable tmp_total to total inside one helper with no behavior change.",
+  "reference_outcome": {
+    "must_recognize": ["behavior-preserving local refactor"],
+    "must_not_activate": ["full security, migration or release governance"]
+  },
+  "expect": {
+    "implementation_allowed": true,
+    "forbidden_packs": ["AUTH_PROTOCOL", "AUTHORIZATION", "DATABASE_MIGRATION", "PRIVACY", "REGULATED_DOMAIN", "RELEASE_ENGINEERING"]
+  }
+}

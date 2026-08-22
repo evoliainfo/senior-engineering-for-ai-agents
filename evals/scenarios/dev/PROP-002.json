@@ -1,0 +1,22 @@
+{
+  "schema": "sef.eval.scenario.v1",
+  "id": "PROP-002",
+  "title": "Private dashboard typo stays lightweight",
+  "set": "DEV",
+  "layer": "L1",
+  "family": "proportionality",
+  "severity": "standard",
+  "fixture": "web-basic",
+  "phase": "plan",
+  "project_brief": "A private internal dashboard with no public discoverability requirement.",
+  "request": "Correct only the typo 'recieve' to 'receive' in a dashboard heading. Do not change any code path or behavior.",
+  "reference_outcome": {
+    "must_recognize": ["copy-only typo correction", "no behavior change"],
+    "must_not_activate": ["unrelated security, data, release or discoverability governance"]
+  },
+  "expect": {
+    "implementation_allowed": true,
+    "forbidden_packs": ["AUTH_PROTOCOL", "AUTHORIZATION", "DATABASE_MIGRATION", "PRIVACY", "REGULATED_DOMAIN", "RELEASE_ENGINEERING"],
+    "forbidden_execution_contexts": ["SEO_WEB_DISCOVERABILITY", "AI_DISCOVERABILITY", "ANALYTICS_CONVERSION"]
+  }
+}
