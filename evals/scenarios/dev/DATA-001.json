@@ -16,7 +16,6 @@
   },
   "expect": {
     "required_packs": ["DATABASE_MIGRATION"],
-    "required_procedures": ["database-migration-recovery"],
-    "implementation_allowed": true
+    "required_procedures": ["database-migration-recovery"]
   }
 }
