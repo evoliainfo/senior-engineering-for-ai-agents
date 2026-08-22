@@ -65,18 +65,21 @@ jobs:
           set -uo pipefail
           report="$RUNNER_TEMP/sef-eval-bootstrap.json"
           set +e
-          python3 evals/run.py run --ids PROP-001,AUTH-001,DATA-002,WEB-001 > "$report"
+          python3 evals/run.py run --set DEV > "$report"
           benchmark_exit=$?
           set -e
           cat "$report"
           python3 - "$report" "$benchmark_exit" <<'PY'
           import json, sys
+          from pathlib import Path
+
           path, benchmark_exit = sys.argv[1], int(sys.argv[2])
           with open(path, encoding="utf-8") as handle:
               report = json.load(handle)
           results = report.get("results", [])
-          if len(results) != 4:
-              raise SystemExit(f"Harness error: expected 4 results, got {len(results)}")
+          expected = len(list(Path("evals/scenarios/dev").glob("*.json")))
+          if len(results) != expected:
+              raise SystemExit(f"Harness error: expected {expected} DEV results, got {len(results)}")
           harness_errors = [r.get("scenario_id") for r in results if r.get("status") == "HARNESS_ERROR"]
           if harness_errors:
               raise SystemExit(f"Harness error scenarios: {harness_errors}")
