@@ -44,10 +44,21 @@ jobs:
         shell: bash
         run: python3 --version
 
-      - name: Compile runtime
+      - name: Compile runtime and evaluation runner
         shell: bash
-        run: python3 -m py_compile sef.py
+        run: |
+          set -euo pipefail
+          python3 -m py_compile sef.py
+          python3 -m py_compile evals/run.py
 
       - name: Run embedded SEF self-test
         shell: bash
         run: python3 sef.py self-test
+
+      - name: Validate evaluation scenario contracts
+        shell: bash
+        run: python3 evals/run.py validate
+
+      - name: Run deterministic evaluation bootstrap scenarios
+        shell: bash
+        run: python3 evals/run.py self-test --ids PROP-001,AUTH-001,DATA-002,WEB-001
