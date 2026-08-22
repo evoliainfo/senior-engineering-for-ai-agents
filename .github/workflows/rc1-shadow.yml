@@ -1,0 +1,60 @@
+name: RC-1 shadow concept observations
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: rc1-shadow-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  rc1-shadow:
+    name: rc1-shadow
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout exact tested revision
+        shell: bash
+        env:
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          git init .
+          git remote add origin "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY.git"
+          target_sha="${PR_HEAD_SHA:-$GITHUB_SHA}"
+          git fetch --depth=1 origin "$target_sha"
+          git checkout --detach FETCH_HEAD
+          printf 'tested_head=%s\n' "$target_sha" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Compile shadow detector
+        run: |
+          set -euo pipefail
+          python3 -m py_compile rc1_shadow.py evals/run_rc1_shadow.py
+
+      - name: Verify frozen contracts in shadow mode
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts/rc1-shadow
+          python3 evals/run_rc1_shadow.py | tee artifacts/rc1-shadow/report.json
+
+      - name: Prove authoritative SEF baseline remains unchanged
+        run: |
+          set -euo pipefail
+          sha256sum -c SHA256SUMS
+          python3 sef.py self-test
+          python3 evals/run.py run --scenarios evals/rc1_candidate/negative_controls --fixtures evals/fixtures --set DEV > artifacts/rc1-shadow/authoritative-negative-controls.json || true
+          python3 evals/run.py run --scenarios evals/rc1_candidate/metamorphic --fixtures evals/fixtures --set DEV > artifacts/rc1-shadow/authoritative-metamorphic.json || true
+
+      - name: Publish shadow evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rc1-shadow-${{ github.run_id }}
+          path: artifacts/rc1-shadow/
+          if-no-files-found: error
+          retention-days: 90
