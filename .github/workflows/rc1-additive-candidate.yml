@@ -1,0 +1,175 @@
+name: RC-1 additive routing candidate
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: rc1-additive-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  rc1-additive:
+    name: rc1-additive
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout exact tested revision
+        shell: bash
+        env:
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          git init .
+          git remote add origin "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY.git"
+          target_sha="${PR_HEAD_SHA:-$GITHUB_SHA}"
+          git fetch --depth=1 origin "$target_sha"
+          git checkout --detach FETCH_HEAD
+          printf 'tested_head=%s\n' "$target_sha" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Compile candidate and preserve canonical runtime integrity
+        run: |
+          set -euo pipefail
+          python3 -m py_compile sef.py rc1_shadow.py sef_rc1_candidate.py evals/run.py evals/run_evidence_release.py
+          sha256sum -c SHA256SUMS
+          python3 sef.py self-test
+          python3 sef_rc1_candidate.py self-test
+
+      - name: Execute canonical and candidate evaluations
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts/rc1-additive
+          run_measurement() {
+            local output="$1"; shift
+            set +e
+            "$@" > "$output"
+            local code=$?
+            set -e
+            printf '%s\n' "$code" > "${output%.json}.exit-code"
+          }
+
+          run_measurement artifacts/rc1-additive/official-canonical.json \
+            python3 evals/run.py run --sef sef.py --scenarios evals/scenarios/dev --fixtures evals/fixtures --set DEV
+          run_measurement artifacts/rc1-additive/official-candidate.json \
+            python3 evals/run.py run --sef sef_rc1_candidate.py --scenarios evals/scenarios/dev --fixtures evals/fixtures --set DEV
+
+          run_measurement artifacts/rc1-additive/negative-canonical.json \
+            python3 evals/run.py run --sef sef.py --scenarios evals/rc1_candidate/negative_controls --fixtures evals/fixtures --set DEV
+          run_measurement artifacts/rc1-additive/negative-candidate.json \
+            python3 evals/run.py run --sef sef_rc1_candidate.py --scenarios evals/rc1_candidate/negative_controls --fixtures evals/fixtures --set DEV
+
+          run_measurement artifacts/rc1-additive/metamorphic-canonical.json \
+            python3 evals/run.py run --sef sef.py --scenarios evals/rc1_candidate/metamorphic --fixtures evals/fixtures --set DEV
+          run_measurement artifacts/rc1-additive/metamorphic-candidate.json \
+            python3 evals/run.py run --sef sef_rc1_candidate.py --scenarios evals/rc1_candidate/metamorphic --fixtures evals/fixtures --set DEV
+
+          run_measurement artifacts/rc1-additive/probes-canonical.json \
+            python3 evals/run.py run --sef sef.py --scenarios evals/probes/root_cause/routing --fixtures evals/fixtures --set DEV
+          run_measurement artifacts/rc1-additive/probes-candidate.json \
+            python3 evals/run.py run --sef sef_rc1_candidate.py --scenarios evals/probes/root_cause/routing --fixtures evals/fixtures --set DEV
+
+          run_measurement artifacts/rc1-additive/evidence-canonical.json \
+            python3 evals/run_evidence_release.py run --sef sef.py --set DEV
+          run_measurement artifacts/rc1-additive/evidence-candidate.json \
+            python3 evals/run_evidence_release.py run --sef sef_rc1_candidate.py --set DEV
+
+      - name: Enforce additive promotion gates
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          root = Path('artifacts/rc1-additive')
+          failures = []
+
+          def load(name):
+              return json.loads((root / name).read_text(encoding='utf-8'))
+
+          def by_id(report):
+              return {str(x.get('scenario_id')): x for x in report.get('results', [])}
+
+          def counts(report):
+              return report.get('summary', {}).get('counts', {})
+
+          def assert_no_harness(label, report):
+              bad = [str(x.get('scenario_id')) for x in report.get('results', []) if x.get('status') == 'HARNESS_ERROR']
+              if bad:
+                  failures.append(f'{label}: HARNESS_ERROR for {bad}')
+
+          def compare_no_regression(label, canonical, candidate):
+              c0, c1 = by_id(canonical), by_id(candidate)
+              if set(c0) != set(c1):
+                  failures.append(f'{label}: scenario ID sets differ')
+                  return
+              for sid in sorted(c0):
+                  if c0[sid].get('status') == 'PASS' and c1[sid].get('status') != 'PASS':
+                      failures.append(f'{label}: canonical PASS regressed: {sid} -> {c1[sid].get("status")}')
+                  if c0[sid].get('severity') == 'critical' and c0[sid].get('status') == 'PASS' and c1[sid].get('status') != 'PASS':
+                      failures.append(f'{label}: critical regression: {sid}')
+
+          official0, official1 = load('official-canonical.json'), load('official-candidate.json')
+          negative0, negative1 = load('negative-canonical.json'), load('negative-candidate.json')
+          meta0, meta1 = load('metamorphic-canonical.json'), load('metamorphic-candidate.json')
+          probes0, probes1 = load('probes-canonical.json'), load('probes-candidate.json')
+          evidence0, evidence1 = load('evidence-canonical.json'), load('evidence-candidate.json')
+
+          for label, report in [
+              ('official canonical', official0), ('official candidate', official1),
+              ('negative canonical', negative0), ('negative candidate', negative1),
+              ('metamorphic canonical', meta0), ('metamorphic candidate', meta1),
+              ('probes canonical', probes0), ('probes candidate', probes1),
+              ('evidence canonical', evidence0), ('evidence candidate', evidence1),
+          ]:
+              assert_no_harness(label, report)
+
+          compare_no_regression('official DEV', official0, official1)
+          compare_no_regression('negative controls', negative0, negative1)
+          compare_no_regression('root-cause routing probes', probes0, probes1)
+          compare_no_regression('evidence/release', evidence0, evidence1)
+
+          # Frozen visible RC-1 generalization gate: all 12 metamorphic cases must pass.
+          meta_bad = [sid for sid, row in by_id(meta1).items() if row.get('status') != 'PASS']
+          if meta_bad:
+              failures.append(f'metamorphic candidate failures: {sorted(meta_bad)}')
+
+          # The candidate must materially improve the official DEV baseline, not merely preserve it.
+          official_pass0 = counts(official0).get('PASS', 0)
+          official_pass1 = counts(official1).get('PASS', 0)
+          if official_pass1 <= official_pass0:
+              failures.append(f'official DEV did not improve: {official_pass0} -> {official_pass1} PASS')
+
+          # All RC-1 diagnostic treatments and positive controls must pass after activation.
+          rc1_bad = [sid for sid, row in by_id(probes1).items() if sid.startswith('RC1-') and row.get('status') != 'PASS']
+          if rc1_bad:
+              failures.append(f'RC-1 root-cause probes still failing: {sorted(rc1_bad)}')
+
+          summary = {
+              'official': {'canonical': counts(official0), 'candidate': counts(official1)},
+              'negative_controls': {'canonical': counts(negative0), 'candidate': counts(negative1)},
+              'metamorphic': {'canonical': counts(meta0), 'candidate': counts(meta1)},
+              'root_cause_routing': {'canonical': counts(probes0), 'candidate': counts(probes1)},
+              'evidence_release': {'canonical': counts(evidence0), 'candidate': counts(evidence1)},
+              'promotion_gate': 'FAIL' if failures else 'PASS',
+              'failures': failures,
+          }
+          (root / 'comparison-summary.json').write_text(json.dumps(summary, indent=2, sort_keys=True) + '\n', encoding='utf-8')
+          print(json.dumps(summary, indent=2, sort_keys=True))
+          if failures:
+              raise SystemExit('\n'.join(failures))
+          PY
+
+      - name: Publish candidate evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rc1-additive-${{ github.run_id }}
+          path: artifacts/rc1-additive/
+          if-no-files-found: error
+          retention-days: 90
