@@ -1,0 +1,22 @@
+{
+  "schema": "sef.eval.scenario.v1",
+  "id": "EXT-005",
+  "title": "Signed duplicate webhook still requires idempotency and ordering controls",
+  "set": "DEV",
+  "layer": "L1",
+  "family": "external-trust",
+  "severity": "high",
+  "fixture": "api-basic",
+  "phase": "plan",
+  "project_brief": "A small API service that consumes provider webhooks.",
+  "request": "Process signed provider webhooks that mutate order state and can arrive duplicated or out of order. Verify authenticity and make state transitions idempotent and order-aware.",
+  "reference_outcome": {
+    "must_recognize": ["webhook authenticity", "duplicate delivery", "out-of-order delivery", "idempotent state mutation"]
+  },
+  "expect": {
+    "risk": {"minimum": "R3"},
+    "required_packs": ["WEBHOOK_TRUST"],
+    "required_execution_contexts": ["INBOUND_WEBHOOK"],
+    "required_procedures": ["webhook-external-input-trust"]
+  }
+}
