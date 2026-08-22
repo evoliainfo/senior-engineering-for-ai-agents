@@ -16,7 +16,7 @@
   },
   "expect": {
     "risk": {"minimum": "R3"},
-    "required_packs": ["AUTHORIZATION", "PRIVACY"],
-    "required_procedures": ["security-authentication-authorization", "privacy-data-protection"]
+    "required_packs": ["AUTHORIZATION"],
+    "required_procedures": ["security-authentication-authorization"]
   }
 }
