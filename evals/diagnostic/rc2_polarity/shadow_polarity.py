@@ -16,6 +16,7 @@ NON_GOAL_PATTERNS = [
     ("without_change", re.compile(r"\bwithout\s+(?:changing|modifying|touching)\b", re.I)),
     ("leave_unchanged", re.compile(r"\b(?:leave|keep)\b.+?\bunchanged\b", re.I)),
     ("no_changes_to", re.compile(r"\bno\s+changes?\s+to\b", re.I)),
+    ("no_modifications_to", re.compile(r"\bno\s+modifications?\s+to\b", re.I)),
     ("out_of_scope", re.compile(r"\b(?:out of scope|not in scope)\b", re.I)),
     ("fr_sans_changer", re.compile(r"\bsans\s+(?:changer|modifier|toucher)\b", re.I)),
     ("fr_unchanged", re.compile(r"\b(?:laisser|garder)\b.+?\binchang[ée]s?\b", re.I)),
