@@ -1,0 +1,25 @@
+{
+  "schema": "sef.eval.scenario.v1",
+  "id": "WEB-001",
+  "title": "Public company website activates SEO without analytics by default",
+  "set": "DEV",
+  "layer": "L1",
+  "family": "web-discoverability",
+  "severity": "standard",
+  "fixture": "web-basic",
+  "phase": "plan",
+  "project_brief": "A public company website.",
+  "request": "Create a public company website with SEO so it is discoverable in search.",
+  "reference_outcome": {
+    "must_recognize": ["frontend work", "SEO/web discoverability"],
+    "must_not_activate": ["analytics/conversion without measurement or lead-generation intent"]
+  },
+  "expect": {
+    "required_execution_contexts": ["SEO_WEB_DISCOVERABILITY"],
+    "forbidden_execution_contexts": ["ANALYTICS_CONVERSION"],
+    "required_procedures": [
+      "frontend-application-engineering",
+      "seo-web-discoverability-engineering"
+    ]
+  }
+}
