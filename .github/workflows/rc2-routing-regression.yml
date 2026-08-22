@@ -1,0 +1,107 @@
+name: RC-2 routing regression gate
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  rc2-routing:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate canonical runtime integrity
+        run: |
+          set -euo pipefail
+          sha256sum -c SHA256SUMS
+          python3 -m py_compile sef.py evals/run.py evals/run_evidence_release.py
+          python3 sef.py self-test
+      - name: Execute RC-2 protected suites
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts/rc2-routing
+          run_suite() {
+            name="$1"; runner="$2"; scenarios="$3"; fixtures="$4"
+            set +e
+            python3 "$runner" run --sef sef.py --scenarios "$scenarios" --fixtures "$fixtures" --set DEV > "artifacts/rc2-routing/${name}.json"
+            code=$?
+            set -e
+            printf '%s\n' "$code" > "artifacts/rc2-routing/${name}.exit"
+          }
+          run_suite official evals/run.py evals/scenarios/dev evals/fixtures
+          run_suite rc1-negative evals/run.py evals/rc1_candidate/negative_controls evals/fixtures
+          run_suite rc1-metamorphic evals/run.py evals/rc1_candidate/metamorphic evals/fixtures
+          run_suite rc2-treatment evals/run.py evals/diagnostic/rc2_polarity/treatment evals/fixtures
+          run_suite rc2-control evals/run.py evals/diagnostic/rc2_polarity/control evals/fixtures
+          run_suite evidence evals/run_evidence_release.py evals/evidence_release/scenarios evals/evidence_release/fixtures
+      - name: Enforce RC-2 invariants
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json, os
+          from pathlib import Path
+          root=Path('artifacts/rc2-routing')
+          names=['official','rc1-negative','rc1-metamorphic','rc2-treatment','rc2-control','evidence']
+          reports={}
+          failures=[]
+          lines=['# RC-2 routing regression','', '| Suite | PASS | FAIL |','| --- | ---: | ---: |']
+          for name in names:
+            report=json.loads((root/f'{name}.json').read_text())
+            results={r['scenario_id']:r for r in report.get('results',[])}
+            reports[name]=results
+            harness=[sid for sid,r in results.items() if r.get('status')=='HARNESS_ERROR']
+            if harness: failures.append(f'{name}: HARNESS_ERROR {harness}')
+            p=sum(r.get('status')=='PASS' for r in results.values()); f=sum(r.get('status')=='FAIL' for r in results.values())
+            lines.append(f'| `{name}` | {p} | {f} |')
+
+          official=reports['official']
+          if official.get('DIFF-004',{}).get('status')!='PASS': failures.append('official: DIFF-004 must remain PASS')
+          if sum(r.get('status')=='PASS' for r in official.values()) < 23: failures.append('official: fewer than 23 DEV scenarios pass')
+          unexpected=[sid for sid,r in official.items() if r.get('status')!='PASS' and sid!='WEB-001']
+          if unexpected: failures.append(f'official: unexpected non-PASS scenarios {unexpected}')
+
+          treatments=reports['rc2-treatment']
+          treatment_fail=[sid for sid,r in treatments.items() if r.get('status')!='PASS']
+          if treatment_fail: failures.append(f'RC-2 treatments must remain 8/8 PASS: {treatment_fail}')
+
+          controls=reports['rc2-control']
+          protected_controls={f'RC2-CTRL-{i:03d}' for i in (1,2,3,5,6,7,8)}
+          bad=[sid for sid in protected_controls if controls.get(sid,{}).get('status')!='PASS']
+          if bad: failures.append(f'RC-2 anti-suppression control regression: {bad}')
+
+          meta=reports['rc1-metamorphic']
+          bad_meta=[sid for sid,r in meta.items() if r.get('status')!='PASS']
+          if bad_meta: failures.append(f'RC-1 metamorphic regression: {bad_meta}')
+
+          neg=reports['rc1-negative']
+          protected_neg=[sid for sid,r in neg.items() if sid not in {'NEG-002','NEG-004'} and r.get('status')!='PASS']
+          if protected_neg: failures.append(f'RC-1 negative-control regression: {protected_neg}')
+
+          evidence=reports['evidence']
+          for sid in ('EVID-001','REL-003'):
+            if evidence.get(sid,{}).get('status')!='PASS': failures.append(f'Evidence/Release regression: {sid}')
+
+          diff=official.get('DIFF-004',{}).get('observed',{}).get('actual_diff',{})
+          required={'CONTAINER_ENGINEERING','CI_SUPPLY_CHAIN','INFRASTRUCTURE_IAC'}
+          packs=set(diff.get('packs') or [])
+          if diff.get('risk')!='R3': failures.append(f"DIFF-004 actual diff risk expected R3, got {diff.get('risk')}")
+          if not required.issubset(packs): failures.append(f'DIFF-004 actual diff missing packs {sorted(required-packs)}')
+
+          lines += ['',f"- Gate: `{'PASS' if not failures else 'FAIL'}`",'- RC-2 applies to request-derived routing only; actual-diff escalation is explicitly rechecked.']
+          if failures: lines += ['', 'Failures:', *[f'- {x}' for x in failures]]
+          summary='\n'.join(lines)+'\n'; (root/'summary.md').write_text(summary); print(summary)
+          step=os.environ.get('GITHUB_STEP_SUMMARY')
+          if step: Path(step).write_text(summary)
+          if failures: raise SystemExit('; '.join(failures))
+          PY
+      - name: Publish RC-2 routing evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rc2-routing-regression-${{ github.run_id }}
+          path: artifacts/rc2-routing/
+          if-no-files-found: error
+          retention-days: 90
