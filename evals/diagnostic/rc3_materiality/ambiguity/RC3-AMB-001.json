@@ -1,0 +1,1 @@
+{"schema":"sef.eval.scenario.v1","id":"RC3-AMB-001","title":"Company dashboard remains conservative","set":"DEV","layer":"L1","family":"task-materiality-ambiguity","severity":"high","fixture":"api-basic","phase":"plan","project_brief":"A B2B company application for organizations.","request":"Add the company dashboard.","expect":{"implementation_allowed":false}}
