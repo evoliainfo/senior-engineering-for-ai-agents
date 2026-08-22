@@ -1,0 +1,14 @@
+{
+  "schema":"sef.eval.scenario.v1",
+  "id":"RC2-TREAT-003",
+  "title":"Parser refactor excludes database schema",
+  "set":"RC2_TREATMENT",
+  "layer":"L1",
+  "family":"request-polarity",
+  "severity":"high",
+  "fixture":"api-basic",
+  "phase":"plan",
+  "project_brief":"A small internal utility repository.",
+  "request":"Refactor the parser; no changes to the database schema.",
+  "plan_expect":{"forbidden_packs":["DATABASE_MIGRATION"]}
+}

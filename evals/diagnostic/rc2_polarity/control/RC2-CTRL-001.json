@@ -1,0 +1,14 @@
+{
+  "schema":"sef.eval.scenario.v1",
+  "id":"RC2-CTRL-001",
+  "title":"Prohibitive authorization requirement remains positive routing",
+  "set":"RC2_CONTROL",
+  "layer":"L1",
+  "family":"request-polarity-control",
+  "severity":"high",
+  "fixture":"api-basic",
+  "phase":"plan",
+  "project_brief":"A small internal utility repository.",
+  "request":"Add authorization so users cannot access another user's profile.",
+  "plan_expect":{"required_packs":["AUTHORIZATION"]}
+}
