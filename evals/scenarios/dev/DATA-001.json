@@ -1,0 +1,22 @@
+{
+  "schema": "sef.eval.scenario.v1",
+  "id": "DATA-001",
+  "title": "Backward-compatible nullable column uses proportionate migration governance",
+  "set": "DEV",
+  "layer": "L1",
+  "family": "database-recovery",
+  "severity": "standard",
+  "fixture": "db-basic",
+  "phase": "plan",
+  "project_brief": "An internal application with a relational database.",
+  "request": "Add a nullable nickname TEXT column to the non-critical user_preferences table. Existing readers and writers must remain compatible while the column is introduced.",
+  "reference_outcome": {
+    "must_recognize": ["database schema migration", "backward compatibility"],
+    "must_not_claim": ["destructive migration", "irreversible production operation"]
+  },
+  "expect": {
+    "required_packs": ["DATABASE_MIGRATION"],
+    "required_procedures": ["database-migration-recovery"],
+    "implementation_allowed": true
+  }
+}
