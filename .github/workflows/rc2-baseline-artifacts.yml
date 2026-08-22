@@ -1,0 +1,88 @@
+name: Persist RC-2 baseline evidence
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: rc2-baseline-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  rc2-baseline:
+    name: rc2-baseline
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      BASELINE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+      VALIDATION_SHA: ${{ github.sha }}
+    steps:
+      - name: Checkout exact candidate head
+        shell: bash
+        run: |
+          set -euo pipefail
+          git init .
+          git remote add origin "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY.git"
+          git fetch --depth=1 origin "$BASELINE_SHA"
+          git checkout --detach FETCH_HEAD
+          test "$(git rev-parse HEAD)" = "$BASELINE_SHA"
+
+      - name: Validate runtime and frozen RC-2 scenarios
+        shell: bash
+        run: |
+          set -euo pipefail
+          sha256sum -c SHA256SUMS
+          python3 -m py_compile sef.py evals/run.py
+          python3 evals/run.py validate --scenarios evals/diagnostic/rc2_polarity/treatment
+          python3 evals/run.py validate --scenarios evals/diagnostic/rc2_polarity/control
+
+      - name: Execute RC-2 baseline
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts/rc2-baseline
+          set +e
+          python3 evals/run.py run --scenarios evals/diagnostic/rc2_polarity/treatment --fixtures evals/fixtures --set DEV > artifacts/rc2-baseline/treatment.json
+          treatment_exit=$?
+          python3 evals/run.py run --scenarios evals/diagnostic/rc2_polarity/control --fixtures evals/fixtures --set DEV > artifacts/rc2-baseline/control.json
+          control_exit=$?
+          set -e
+          printf '%s\n' "$treatment_exit" > artifacts/rc2-baseline/treatment.exit-code
+          printf '%s\n' "$control_exit" > artifacts/rc2-baseline/control.exit-code
+
+          python3 - <<'PY'
+          import json, os
+          from pathlib import Path
+          root=Path('artifacts/rc2-baseline')
+          specs=[('Treatment',Path('evals/diagnostic/rc2_polarity/treatment'),root/'treatment.json'),('Controls',Path('evals/diagnostic/rc2_polarity/control'),root/'control.json')]
+          lines=['# RC-2 pre-implementation baseline','',f"- Candidate head SHA: `{os.environ.get('BASELINE_SHA')}`",f"- GitHub validation SHA: `{os.environ.get('VALIDATION_SHA')}`",f"- Run: `{os.environ.get('GITHUB_RUN_ID')}`",'- Runtime behavior change: none.','']
+          failures=[]; total=0
+          for label,directory,path in specs:
+              report=json.loads(path.read_text())
+              results=report.get('results',[]); expected=len(list(directory.glob('*.json'))); total+=len(results)
+              if len(results)!=expected: failures.append(f'{label}: expected {expected}, got {len(results)}')
+              errors=[r.get('scenario_id') for r in results if r.get('status')=='HARNESS_ERROR']
+              if errors: failures.append(f"{label}: HARNESS_ERROR {errors}")
+              lines += [f'## {label}','',f"- Expected: `{expected}`",f"- Recorded: `{len(results)}`",f"- Summary: `{report.get('summary')}`",'','| Scenario | Status |','| --- | --- |']
+              for r in results: lines.append(f"| `{r.get('scenario_id')}` | `{r.get('status')}` |")
+              lines.append('')
+          lines += ['## Integrity','',f'- Total recorded: `{total}`',f"- Harness integrity: `{'FAIL' if failures else 'PASS'}`"]
+          if failures: lines += ['', *[f'- {x}' for x in failures]]
+          summary='\n'.join(lines)+'\n'; (root/'summary.md').write_text(summary); print(summary)
+          step=os.environ.get('GITHUB_STEP_SUMMARY')
+          if step: Path(step).write_text(summary)
+          if failures: raise SystemExit('; '.join(failures))
+          PY
+
+      - name: Publish RC-2 baseline artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rc2-pre-implementation-baseline-${{ github.run_id }}
+          path: artifacts/rc2-baseline/
+          if-no-files-found: error
+          retention-days: 90
