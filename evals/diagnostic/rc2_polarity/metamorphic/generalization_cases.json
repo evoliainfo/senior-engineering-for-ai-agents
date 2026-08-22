@@ -1,0 +1,22 @@
+[
+  {"id":"RC2-META-NG-001","request":"Please revise the README; deployment is out of scope.","expected_non_goal":true},
+  {"id":"RC2-META-NG-002","request":"Only update docs. Keep infrastructure unchanged.","expected_non_goal":true},
+  {"id":"RC2-META-NG-003","request":"Improve the error messages, with no modifications to authentication.","expected_non_goal":true},
+  {"id":"RC2-META-NG-004","request":"Clean up parser comments. The database schema is not in scope.","expected_non_goal":true},
+  {"id":"RC2-META-NG-005","request":"Corrige la documentation; le déploiement est hors périmètre.","expected_non_goal":true},
+  {"id":"RC2-META-NG-006","request":"Update the endpoint documentation without modifying CI.","expected_non_goal":true},
+  {"id":"RC2-META-NG-007","request":"Change the labels, but keep Docker unchanged.","expected_non_goal":true},
+  {"id":"RC2-META-NG-008","request":"Refresh the examples; no changes to permissions.","expected_non_goal":true},
+  {"id":"RC2-META-NG-009","request":"Refactor the docs only. Don't touch the database schema.","expected_non_goal":true},
+  {"id":"RC2-META-NG-010","request":"Mets à jour les textes sans toucher à l'authentification.","expected_non_goal":true},
+  {"id":"RC2-META-POS-001","request":"Users must not read another tenant's records; add authorization checks.","expected_non_goal":false},
+  {"id":"RC2-META-POS-002","request":"Do not forget to add the migration before deploy.","expected_non_goal":false},
+  {"id":"RC2-META-POS-003","request":"The service cannot leave authentication unchanged; enable MFA.","expected_non_goal":false},
+  {"id":"RC2-META-POS-004","request":"Without signature verification the webhook is unsafe; enforce it.","expected_non_goal":false},
+  {"id":"RC2-META-POS-005","request":"No anonymous user may invoke admin actions.","expected_non_goal":false},
+  {"id":"RC2-META-POS-006","request":"Infrastructure must not permit public SSH; update Terraform accordingly.","expected_non_goal":false},
+  {"id":"RC2-META-POS-007","request":"Prevent the database migration from losing rows.","expected_non_goal":false},
+  {"id":"RC2-META-POS-008","request":"Les utilisateurs ne doivent pas accéder aux comptes des autres; ajoute les contrôles d'autorisation.","expected_non_goal":false},
+  {"id":"RC2-META-POS-009","request":"Don't remove the auth check; add role enforcement.","expected_non_goal":false},
+  {"id":"RC2-META-POS-010","request":"Change deployment so it does not expose port 80.","expected_non_goal":false}
+]
