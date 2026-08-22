@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sef.local/schemas/result.schema.json",
+  "title": "SEF Evaluation Result v1",
+  "type": "object",
+  "required": [
+    "schema",
+    "scenario_id",
+    "status",
+    "assertions"
+  ],
+  "properties": {
+    "schema": {"const": "sef.eval.result.v1"},
+    "scenario_id": {"type": "string"},
+    "scenario_set": {"enum": ["DEV", "CHALLENGE"]},
+    "layer": {"enum": ["L0", "L1", "L2", "L3"]},
+    "severity": {"enum": ["low", "standard", "high", "critical"]},
+    "sef_framework_version": {"type": ["string", "null"]},
+    "sef_source_sha256": {"type": "string"},
+    "fixture_revision": {"type": "string"},
+    "status": {"enum": ["PASS", "FAIL", "INCONCLUSIVE", "HARNESS_ERROR"]},
+    "observed": {"type": "object"},
+    "assertions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "status", "critical", "expected", "observed"],
+        "properties": {
+          "id": {"type": "string"},
+          "status": {"enum": ["PASS", "FAIL", "INCONCLUSIVE"]},
+          "critical": {"type": "boolean"},
+          "expected": {},
+          "observed": {}
+        },
+        "additionalProperties": false
+      }
+    },
+    "limitations": {"type": "array", "items": {"type": "string"}}
+  },
+  "additionalProperties": true
+}
