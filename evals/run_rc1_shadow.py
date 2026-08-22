@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Verify RC-1 shadow detector against frozen candidate contracts.
+"""Verify RC-1 shadow detector against frozen contracts and independent probes.
 
 This is an observational gate. It never invokes or changes SEF routing.
 """
@@ -35,28 +35,31 @@ def load_scenarios(path: Path):
         yield file, json.loads(file.read_text(encoding="utf-8"))
 
 
+def record(rows, failures, scenario, kind, request, expected):
+    result = detect_concepts(request)
+    ids = detected_ids(result)
+    ok = (expected in ids) if expected else (not ids)
+    rows.append({"scenario": scenario, "kind": kind, "expected": expected or [], "detected": sorted(ids), "ok": ok})
+    if not ok:
+        failures.append(f"{scenario}: expected {expected or []}, got {sorted(ids)}")
+
+
 def main() -> int:
     failures = []
     rows = []
 
-    for file, scenario in load_scenarios(ROOT / "evals/rc1_candidate/metamorphic"):
+    for _, scenario in load_scenarios(ROOT / "evals/rc1_candidate/metamorphic"):
         sid = scenario["id"]
-        result = detect_concepts(scenario["request"])
-        ids = detected_ids(result)
-        expected = EXPECTED_METAMORPHIC[sid]
-        ok = expected in ids
-        rows.append({"scenario": sid, "kind": "metamorphic", "expected": expected, "detected": sorted(ids), "ok": ok})
-        if not ok:
-            failures.append(f"{sid}: expected shadow concept {expected}, got {sorted(ids)}")
+        record(rows, failures, sid, "metamorphic", scenario["request"], EXPECTED_METAMORPHIC[sid])
 
-    for file, scenario in load_scenarios(ROOT / "evals/rc1_candidate/negative_controls"):
-        sid = scenario["id"]
-        result = detect_concepts(scenario["request"])
-        ids = detected_ids(result)
-        ok = not ids
-        rows.append({"scenario": sid, "kind": "negative_control", "expected": [], "detected": sorted(ids), "ok": ok})
-        if not ok:
-            failures.append(f"{sid}: negative control produced shadow concepts {sorted(ids)}")
+    for _, scenario in load_scenarios(ROOT / "evals/rc1_candidate/negative_controls"):
+        record(rows, failures, scenario["id"], "negative_control", scenario["request"], None)
+
+    probes = json.loads((ROOT / "evals/rc1_shadow_probe_requests.json").read_text(encoding="utf-8"))
+    for index, probe in enumerate(probes.get("positive", []), 1):
+        record(rows, failures, f"PROBE-POS-{index:02d}", "independent_positive", probe["request"], probe["concept"])
+    for index, probe in enumerate(probes.get("negative", []), 1):
+        record(rows, failures, f"PROBE-NEG-{index:02d}", "independent_negative", probe["request"], None)
 
     report = {
         "mode": "SHADOW_ONLY",
