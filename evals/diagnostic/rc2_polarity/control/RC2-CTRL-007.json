@@ -1,0 +1,14 @@
+{
+  "schema":"sef.eval.scenario.v1",
+  "id":"RC2-CTRL-007",
+  "title":"Unauthenticated access prohibition remains authorization routing",
+  "set":"RC2_CONTROL",
+  "layer":"L1",
+  "family":"request-polarity-control",
+  "severity":"high",
+  "fixture":"api-basic",
+  "phase":"plan",
+  "project_brief":"A small internal utility repository.",
+  "request":"No unauthenticated user may access admin endpoints.",
+  "plan_expect":{"required_packs":["AUTHORIZATION"]}
+}

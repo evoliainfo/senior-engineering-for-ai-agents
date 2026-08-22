@@ -1,0 +1,14 @@
+{
+  "schema":"sef.eval.scenario.v1",
+  "id":"RC2-CTRL-003",
+  "title":"Migration loss prevention remains positive routing",
+  "set":"RC2_CONTROL",
+  "layer":"L1",
+  "family":"request-polarity-control",
+  "severity":"high",
+  "fixture":"api-basic",
+  "phase":"plan",
+  "project_brief":"A small internal utility repository.",
+  "request":"Ensure the migration does not lose stored data.",
+  "plan_expect":{"required_packs":["DATABASE_MIGRATION"]}
+}
