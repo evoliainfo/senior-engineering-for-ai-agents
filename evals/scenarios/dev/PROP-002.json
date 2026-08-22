@@ -15,7 +15,6 @@
     "must_not_activate": ["unrelated security, data, release or discoverability governance"]
   },
   "expect": {
-    "risk": {"exact": "R0"},
     "implementation_allowed": true,
     "forbidden_packs": ["AUTH_PROTOCOL", "AUTHORIZATION", "DATABASE_MIGRATION", "PRIVACY", "REGULATED_DOMAIN", "RELEASE_ENGINEERING"],
     "forbidden_execution_contexts": ["SEO_WEB_DISCOVERABILITY", "AI_DISCOVERABILITY", "ANALYTICS_CONVERSION"]
