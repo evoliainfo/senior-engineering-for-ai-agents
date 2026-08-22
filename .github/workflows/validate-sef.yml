@@ -44,10 +44,45 @@ jobs:
         shell: bash
         run: python3 --version
 
-      - name: Compile runtime
+      - name: Compile runtime and evaluation runner
         shell: bash
-        run: python3 -m py_compile sef.py
+        run: |
+          set -euo pipefail
+          python3 -m py_compile sef.py
+          python3 -m py_compile evals/run.py
 
       - name: Run embedded SEF self-test
         shell: bash
         run: python3 sef.py self-test
+
+      - name: Validate evaluation scenario contracts
+        shell: bash
+        run: python3 evals/run.py validate
+
+      - name: Record deterministic evaluation baseline without gating harness health
+        shell: bash
+        run: |
+          set -uo pipefail
+          report="$RUNNER_TEMP/sef-eval-bootstrap.json"
+          set +e
+          python3 evals/run.py run --set DEV > "$report"
+          benchmark_exit=$?
+          set -e
+          cat "$report"
+          python3 - "$report" "$benchmark_exit" <<'PY'
+          import json, sys
+          from pathlib import Path
+
+          path, benchmark_exit = sys.argv[1], int(sys.argv[2])
+          with open(path, encoding="utf-8") as handle:
+              report = json.load(handle)
+          results = report.get("results", [])
+          expected = len(list(Path("evals/scenarios/dev").glob("*.json")))
+          if len(results) != expected:
+              raise SystemExit(f"Harness error: expected {expected} DEV results, got {len(results)}")
+          harness_errors = [r.get("scenario_id") for r in results if r.get("status") == "HARNESS_ERROR"]
+          if harness_errors:
+              raise SystemExit(f"Harness error scenarios: {harness_errors}")
+          print(f"Benchmark exit code: {benchmark_exit} (non-gating baseline measurement)")
+          print(f"Baseline summary: {report.get('summary')}")
+          PY

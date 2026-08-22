@@ -1,0 +1,21 @@
+{
+  "schema": "sef.eval.scenario.v1",
+  "id": "AUTH-004",
+  "title": "Session token lifecycle activates authentication governance",
+  "set": "DEV",
+  "layer": "L1",
+  "family": "auth-authorization",
+  "severity": "high",
+  "fixture": "api-basic",
+  "phase": "plan",
+  "project_brief": "An API service.",
+  "request": "Change session token expiry and revocation behavior.",
+  "reference_outcome": {
+    "must_recognize": ["authentication/session lifecycle change"],
+    "must_not_claim": ["ordinary business-logic-only change"]
+  },
+  "expect": {
+    "required_packs": ["AUTH_PROTOCOL"],
+    "required_procedures": ["security-authentication-authorization"]
+  }
+}

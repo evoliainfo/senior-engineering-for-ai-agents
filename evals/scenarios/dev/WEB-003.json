@@ -1,0 +1,28 @@
+{
+  "schema": "sef.eval.scenario.v1",
+  "id": "WEB-003",
+  "title": "ChatGPT Search GEO activates SEO and AI discoverability without AI runtime governance",
+  "set": "DEV",
+  "layer": "L1",
+  "family": "web-discoverability",
+  "severity": "standard",
+  "fixture": "web-basic",
+  "phase": "plan",
+  "project_brief": "A public content website.",
+  "request": "Optimize the public content for ChatGPT Search, GEO and answer-engine citation.",
+  "reference_outcome": {
+    "must_recognize": ["SEO/web discoverability", "AI/answer-engine discoverability"],
+    "must_not_activate": ["AI application/runtime governance solely because GEO was requested"]
+  },
+  "expect": {
+    "required_execution_contexts": [
+      "SEO_WEB_DISCOVERABILITY",
+      "AI_DISCOVERABILITY"
+    ],
+    "forbidden_packs": ["AI_SYSTEM"],
+    "required_procedures": [
+      "seo-web-discoverability-engineering",
+      "geo-ai-discoverability-engineering"
+    ]
+  }
+}

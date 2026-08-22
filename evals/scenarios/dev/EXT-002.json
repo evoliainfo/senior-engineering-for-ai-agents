@@ -1,0 +1,21 @@
+{
+  "schema": "sef.eval.scenario.v1",
+  "id": "EXT-002",
+  "title": "User file upload activates hostile-file handling governance",
+  "set": "DEV",
+  "layer": "L1",
+  "family": "external-input",
+  "severity": "high",
+  "fixture": "api-basic",
+  "phase": "plan",
+  "project_brief": "A web API that stores user content.",
+  "request": "Add a user file upload endpoint and later serve the uploaded files back to users.",
+  "reference_outcome": {
+    "must_recognize": ["hostile file input", "storage and access boundary"],
+    "must_not_claim": ["extension-only validation is sufficient"]
+  },
+  "expect": {
+    "required_packs": ["FILE_UPLOAD_SECURITY"],
+    "required_procedures": ["file-upload-security"]
+  }
+}

@@ -1,0 +1,28 @@
+{
+  "schema": "sef.eval.scenario.v1",
+  "id": "WEB-002",
+  "title": "Lead-generation website activates SEO and conversion measurement",
+  "set": "DEV",
+  "layer": "L1",
+  "family": "web-discoverability",
+  "severity": "standard",
+  "fixture": "web-basic",
+  "phase": "plan",
+  "project_brief": "A public lead-generation website.",
+  "request": "Create a public lead-generation website with SEO and conversion tracking.",
+  "reference_outcome": {
+    "must_recognize": ["frontend", "SEO/web discoverability", "analytics/conversion measurement"],
+    "must_not_claim": ["tag presence alone proves a valid business conversion"]
+  },
+  "expect": {
+    "required_execution_contexts": [
+      "SEO_WEB_DISCOVERABILITY",
+      "ANALYTICS_CONVERSION"
+    ],
+    "required_procedures": [
+      "frontend-application-engineering",
+      "seo-web-discoverability-engineering",
+      "analytics-conversion-instrumentation"
+    ]
+  }
+}

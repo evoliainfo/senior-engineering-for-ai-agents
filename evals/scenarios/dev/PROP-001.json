@@ -1,0 +1,34 @@
+{
+  "schema": "sef.eval.scenario.v1",
+  "id": "PROP-001",
+  "title": "CSS-only button color change stays lightweight",
+  "set": "DEV",
+  "layer": "L1",
+  "family": "proportionality",
+  "severity": "standard",
+  "fixture": "web-basic",
+  "phase": "plan",
+  "project_brief": "A small existing website.",
+  "request": "Change only the CSS button color from blue to green.",
+  "reference_outcome": {
+    "must_recognize": ["pure visual style change"],
+    "must_not_activate": ["unrelated authentication, database, privacy, GEO, analytics or release-heavy governance"]
+  },
+  "expect": {
+    "risk": {"exact": "R0"},
+    "implementation_allowed": true,
+    "forbidden_packs": [
+      "AUTH_PROTOCOL",
+      "AUTHORIZATION",
+      "DATABASE_MIGRATION",
+      "PRIVACY",
+      "REGULATED_DOMAIN",
+      "RELEASE_ENGINEERING"
+    ],
+    "forbidden_execution_contexts": [
+      "SEO_WEB_DISCOVERABILITY",
+      "AI_DISCOVERABILITY",
+      "ANALYTICS_CONVERSION"
+    ]
+  }
+}

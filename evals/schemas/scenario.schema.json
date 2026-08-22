@@ -1,0 +1,54 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sef.local/schemas/scenario.schema.json",
+  "title": "SEF Evaluation Scenario v1",
+  "type": "object",
+  "required": [
+    "schema",
+    "id",
+    "title",
+    "set",
+    "layer",
+    "family",
+    "severity",
+    "fixture",
+    "phase",
+    "request",
+    "expect"
+  ],
+  "properties": {
+    "schema": {"const": "sef.eval.scenario.v1"},
+    "id": {"type": "string", "pattern": "^[A-Z]+-[0-9]{3}$"},
+    "title": {"type": "string", "minLength": 1},
+    "set": {"enum": ["DEV", "CHALLENGE"]},
+    "layer": {"enum": ["L0", "L1", "L2", "L3"]},
+    "family": {"type": "string", "minLength": 1},
+    "severity": {"enum": ["low", "standard", "high", "critical"]},
+    "fixture": {"type": "string", "minLength": 1},
+    "phase": {"enum": ["plan", "verify", "release"]},
+    "project_brief": {"type": "string"},
+    "request": {"type": "string", "minLength": 1},
+    "reference_outcome": {"type": "object"},
+    "expect": {
+      "type": "object",
+      "properties": {
+        "risk": {
+          "type": "object",
+          "properties": {
+            "exact": {"enum": ["R0", "R1", "R2", "R3", "R4"]},
+            "minimum": {"enum": ["R0", "R1", "R2", "R3", "R4"]}
+          },
+          "additionalProperties": false
+        },
+        "required_packs": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
+        "forbidden_packs": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
+        "required_execution_contexts": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
+        "forbidden_execution_contexts": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
+        "required_procedures": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
+        "implementation_allowed": {"type": "boolean"}
+      },
+      "additionalProperties": true
+    }
+  },
+  "additionalProperties": true
+}

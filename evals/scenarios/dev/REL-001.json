@@ -1,0 +1,21 @@
+{
+  "schema": "sef.eval.scenario.v1",
+  "id": "REL-001",
+  "title": "Mutable GitHub Action reference activates supply-chain governance",
+  "set": "DEV",
+  "layer": "L1",
+  "family": "release-supply-chain",
+  "severity": "high",
+  "fixture": "api-basic",
+  "phase": "plan",
+  "project_brief": "A software repository using GitHub Actions.",
+  "request": "Update the GitHub Actions CI pipeline to add a third-party action referenced only by a mutable major tag.",
+  "reference_outcome": {
+    "must_recognize": ["CI software supply-chain boundary", "mutable third-party action reference"],
+    "must_not_claim": ["strong provenance from a mutable action tag alone"]
+  },
+  "expect": {
+    "required_packs": ["CI_SUPPLY_CHAIN"],
+    "required_procedures": ["ci-software-supply-chain"]
+  }
+}
