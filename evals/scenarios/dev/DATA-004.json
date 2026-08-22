@@ -1,0 +1,21 @@
+{
+  "schema": "sef.eval.scenario.v1",
+  "id": "DATA-004",
+  "title": "Timezone migration activates migration and time semantics",
+  "set": "DEV",
+  "layer": "L1",
+  "family": "database-recovery",
+  "severity": "high",
+  "fixture": "db-basic",
+  "phase": "plan",
+  "project_brief": "An internal application with a relational database.",
+  "request": "Migrate stored local timestamps to timezone-aware UTC while preserving existing records. Handle DST and offset ambiguity and keep old readers compatible during rollout.",
+  "reference_outcome": {
+    "must_recognize": ["data migration", "time and clock semantics", "DST/offset ambiguity", "backward compatibility"]
+  },
+  "expect": {
+    "risk": {"minimum": "R3"},
+    "required_packs": ["DATABASE_MIGRATION", "TIME_SEMANTICS"],
+    "required_procedures": ["database-migration-recovery", "time-clock-semantics"]
+  }
+}
