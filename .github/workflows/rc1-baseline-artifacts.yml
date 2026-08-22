@@ -1,0 +1,179 @@
+name: Persist RC-1 baseline evidence
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: rc1-baseline-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  rc1-baseline:
+    name: rc1-baseline
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout exact commit without checkout action
+        shell: bash
+        run: |
+          set -euo pipefail
+          git init .
+          git remote add origin "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY.git"
+          git fetch --depth=1 origin "$GITHUB_SHA"
+          git checkout --detach FETCH_HEAD
+
+      - name: Verify frozen candidate inputs and runtime integrity
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f sef.py
+          test -f SHA256SUMS
+          test -d evals/rc1_candidate/negative_controls
+          test -d evals/rc1_candidate/metamorphic
+          sha256sum -c SHA256SUMS
+          python3 -m py_compile sef.py
+          python3 -m py_compile evals/run.py
+          python3 evals/run.py validate --scenarios evals/rc1_candidate/negative_controls
+          python3 evals/run.py validate --scenarios evals/rc1_candidate/metamorphic
+
+      - name: Execute and record frozen pre-implementation baseline
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts/rc1-baseline
+
+          set +e
+          python3 evals/run.py run \
+            --scenarios evals/rc1_candidate/negative_controls \
+            --fixtures evals/fixtures \
+            --set DEV > artifacts/rc1-baseline/negative-controls.json
+          negative_exit=$?
+
+          python3 evals/run.py run \
+            --scenarios evals/rc1_candidate/metamorphic \
+            --fixtures evals/fixtures \
+            --set DEV > artifacts/rc1-baseline/metamorphic.json
+          metamorphic_exit=$?
+          set -e
+
+          printf '%s\n' "$negative_exit" > artifacts/rc1-baseline/negative-controls.exit-code
+          printf '%s\n' "$metamorphic_exit" > artifacts/rc1-baseline/metamorphic.exit-code
+
+          python3 - "$negative_exit" "$metamorphic_exit" <<'PY'
+          import json
+          import os
+          import sys
+          from pathlib import Path
+
+          negative_exit = int(sys.argv[1])
+          metamorphic_exit = int(sys.argv[2])
+          root = Path("artifacts/rc1-baseline")
+
+          specs = [
+              (
+                  "Negative controls",
+                  Path("evals/rc1_candidate/negative_controls"),
+                  root / "negative-controls.json",
+                  negative_exit,
+              ),
+              (
+                  "Metamorphic",
+                  Path("evals/rc1_candidate/metamorphic"),
+                  root / "metamorphic.json",
+                  metamorphic_exit,
+              ),
+          ]
+
+          lines = [
+              "# RC-1 pre-implementation baseline",
+              "",
+              f"- Commit: `{os.environ.get('GITHUB_SHA', 'unknown')}`",
+              f"- Run: `{os.environ.get('GITHUB_RUN_ID', 'unknown')}`",
+              "- Runtime change: none; this workflow records the frozen candidate baseline.",
+              "",
+          ]
+
+          harness_failures = []
+          total_results = 0
+
+          for label, scenario_dir, report_path, exit_code in specs:
+              with report_path.open(encoding="utf-8") as handle:
+                  report = json.load(handle)
+
+              results = report.get("results", [])
+              expected = len(list(scenario_dir.glob("*.json")))
+              total_results += len(results)
+
+              if len(results) != expected:
+                  harness_failures.append(
+                      f"{label}: expected {expected} results, got {len(results)}"
+                  )
+
+              errors = [
+                  str(r.get("scenario_id", "<unknown>"))
+                  for r in results
+                  if r.get("status") == "HARNESS_ERROR"
+              ]
+              if errors:
+                  harness_failures.append(
+                      f"{label}: HARNESS_ERROR for {', '.join(errors)}"
+                  )
+
+              lines.extend([
+                  f"## {label}",
+                  "",
+                  f"- Runner exit code: `{exit_code}` (measurement, not a pass/fail gate)",
+                  f"- Expected scenarios: `{expected}`",
+                  f"- Recorded results: `{len(results)}`",
+                  f"- Runner summary: `{report.get('summary')}`",
+                  "",
+                  "| Scenario | Status |",
+                  "| --- | --- |",
+              ])
+
+              for result in results:
+                  scenario_id = result.get("scenario_id", "<unknown>")
+                  status = result.get("status", "<missing>")
+                  lines.append(f"| `{scenario_id}` | `{status}` |")
+
+              lines.append("")
+
+          lines.extend([
+              "## Integrity",
+              "",
+              f"- Total recorded scenario results: `{total_results}`",
+              f"- Harness integrity: `{'FAIL' if harness_failures else 'PASS'}`",
+          ])
+
+          if harness_failures:
+              lines.append("")
+              lines.append("Harness failures:")
+              for failure in harness_failures:
+                  lines.append(f"- {failure}")
+
+          summary = "\n".join(lines) + "\n"
+          (root / "summary.md").write_text(summary, encoding="utf-8")
+
+          print(summary)
+
+          step_summary = os.environ.get("GITHUB_STEP_SUMMARY")
+          if step_summary:
+              Path(step_summary).write_text(summary, encoding="utf-8")
+
+          if harness_failures:
+              raise SystemExit("; ".join(harness_failures))
+          PY
+
+      - name: Publish RC-1 baseline evidence artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rc1-pre-implementation-baseline-${{ github.run_id }}
+          path: artifacts/rc1-baseline/
+          if-no-files-found: error
+          retention-days: 90
