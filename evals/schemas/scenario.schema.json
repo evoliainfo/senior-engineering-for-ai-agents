@@ -29,7 +29,25 @@
     "project_brief": {"type": "string"},
     "request": {"type": "string", "minLength": 1},
     "reference_outcome": {"type": "object"},
-    "expect": {
+    "plan_expect": {"$ref": "#/$defs/expectation"},
+    "mutations": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["action", "path"],
+        "properties": {
+          "action": {"enum": ["write", "append", "delete"]},
+          "path": {"type": "string", "minLength": 1},
+          "content": {"type": "string"}
+        },
+        "additionalProperties": false
+      }
+    },
+    "expect": {"$ref": "#/$defs/expectation"}
+  },
+  "$defs": {
+    "expectation": {
       "type": "object",
       "properties": {
         "risk": {
@@ -45,6 +63,11 @@
         "required_execution_contexts": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
         "forbidden_execution_contexts": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
         "required_procedures": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
+        "required_new_procedures": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
+        "required_triggers": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
+        "forbidden_triggers": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
+        "required_changed_paths": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
+        "forbidden_changed_paths": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
         "implementation_allowed": {"type": "boolean"}
       },
       "additionalProperties": true
