@@ -17,15 +17,19 @@ jobs:
     name: rc1-baseline
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    env:
+      BASELINE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+      VALIDATION_SHA: ${{ github.sha }}
     steps:
-      - name: Checkout exact commit without checkout action
+      - name: Checkout exact candidate head without checkout action
         shell: bash
         run: |
           set -euo pipefail
           git init .
           git remote add origin "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY.git"
-          git fetch --depth=1 origin "$GITHUB_SHA"
+          git fetch --depth=1 origin "$BASELINE_SHA"
           git checkout --detach FETCH_HEAD
+          test "$(git rev-parse HEAD)" = "$BASELINE_SHA"
 
       - name: Verify frozen candidate inputs and runtime integrity
         shell: bash
@@ -92,7 +96,8 @@ jobs:
           lines = [
               "# RC-1 pre-implementation baseline",
               "",
-              f"- Commit: `{os.environ.get('GITHUB_SHA', 'unknown')}`",
+              f"- Candidate head SHA: `{os.environ.get('BASELINE_SHA', 'unknown')}`",
+              f"- GitHub validation SHA: `{os.environ.get('VALIDATION_SHA', 'unknown')}`",
               f"- Run: `{os.environ.get('GITHUB_RUN_ID', 'unknown')}`",
               "- Runtime change: none; this workflow records the frozen candidate baseline.",
               "",
