@@ -1,0 +1,50 @@
+name: RC-2 shadow generalization gate
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  generalization:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Evaluate frozen metamorphic corpus with unchanged shadow annotator
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import importlib.util, json, os
+          from pathlib import Path
+          mod_path=Path('evals/diagnostic/rc2_polarity/shadow_polarity.py')
+          spec=importlib.util.spec_from_file_location('shadow',mod_path)
+          shadow=importlib.util.module_from_spec(spec); spec.loader.exec_module(shadow)
+          cases=json.loads(Path('evals/diagnostic/rc2_polarity/metamorphic/generalization_cases.json').read_text())
+          out=Path('artifacts/rc2-shadow-generalization'); out.mkdir(parents=True,exist_ok=True)
+          rows=[]; failures=[]
+          for case in cases:
+            obs=shadow.annotate(case['request'])
+            actual=any(c['polarity']=='NON_GOAL' for c in obs['clauses'])
+            ok=(actual is bool(case['expected_non_goal']) and actual==case['expected_non_goal'])
+            rows.append({'id':case['id'],'expected_non_goal':case['expected_non_goal'],'actual_non_goal':actual,'status':'PASS' if ok else 'FAIL','observation':obs})
+            if not ok: failures.append(case['id'])
+          (out/'results.json').write_text(json.dumps(rows,ensure_ascii=False,indent=2))
+          lines=['# RC-2 shadow generalization','','| Case | Expected non-goal | Actual non-goal | Status |','| --- | --- | --- | --- |']
+          for r in rows: lines.append(f"| `{r['id']}` | `{r['expected_non_goal']}` | `{r['actual_non_goal']}` | `{r['status']}` |")
+          lines += ['',f"- Cases: `{len(rows)}`",f"- PASS: `{sum(r['status']=='PASS' for r in rows)}`",f"- FAIL: `{sum(r['status']=='FAIL' for r in rows)}`",'- Routing effect: `NONE (shadow only)`']
+          summary='\n'.join(lines)+'\n'; (out/'summary.md').write_text(summary); print(summary)
+          step=os.environ.get('GITHUB_STEP_SUMMARY')
+          if step: Path(step).write_text(summary)
+          # Fail this diagnostic workflow on classification failure; this does not alter routing.
+          if failures: raise SystemExit('generalization failures: '+', '.join(failures))
+          PY
+      - name: Publish generalization evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rc2-shadow-generalization-${{ github.run_id }}
+          path: artifacts/rc2-shadow-generalization/
+          if-no-files-found: error
+          retention-days: 90
