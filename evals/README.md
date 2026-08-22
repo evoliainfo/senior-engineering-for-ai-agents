@@ -62,7 +62,7 @@ Against the exact v1.4 runtime SHA-256
 `31e3dfc1b1a173c83f0a85e2aad6fe4080f33899f328261aa2129a060f5ac68e`,
 the 11-scenario plan-level bootstrap currently records **10 PASS / 1 FAIL**.
 
-The observed failure is `WEB-001`: a public company website is correctly routed to frontend + SEO, but implementation is blocked by an inferred material context. This is retained as baseline evidence rather than weakened to make v1.4 score green.
+The observed failure is `WEB-001`: the public company website is correctly routed to frontend + SEO, but the plan is blocked by an inferred material context even though the scenario supplies no organization/workspace/tenant product semantics. This is retained as baseline evidence rather than weakened to make v1.4 score green.
 
 This is a partial bootstrap measurement, not the final 48-scenario v1.4 benchmark score.
 
