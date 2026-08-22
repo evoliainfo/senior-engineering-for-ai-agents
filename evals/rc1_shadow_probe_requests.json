@@ -14,7 +14,7 @@
     {"request": "Plan the office migration to the third floor."},
     {"request": "Display webhook documentation as static text."},
     {"request": "Show the supplier name in a footer label."},
-    {"request": "Change the background color of the jobs page."},
+    {"request": "Change the jobs page background color and spacing."},
     {"request": "Add an internal search box for signed-in users."}
   ]
 }
