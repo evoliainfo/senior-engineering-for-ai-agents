@@ -1,0 +1,37 @@
+{
+  "schema": "sef.eval.scenario.v1",
+  "id": "DIFF-001",
+  "title": "CSS-only plan expands into analytics instrumentation",
+  "set": "DEV",
+  "layer": "L1",
+  "family": "actual-diff",
+  "severity": "high",
+  "fixture": "web-basic",
+  "phase": "verify",
+  "project_brief": "A small public website with no analytics requirement.",
+  "request": "Change only the CSS button color from blue to green.",
+  "reference_outcome": {
+    "must_recognize": [
+      "the actual diff adds analytics instrumentation not present in the plan"
+    ],
+    "must_not_claim": [
+      "the original CSS-only plan remains sufficient"
+    ]
+  },
+  "plan_expect": {
+    "risk": {"exact": "R0"},
+    "forbidden_execution_contexts": ["ANALYTICS_CONVERSION"]
+  },
+  "mutations": [
+    {
+      "action": "write",
+      "path": "analytics.js",
+      "content": "window.dataLayer = window.dataLayer || [];\nfunction gtag(){dataLayer.push(arguments);}\ngtag('event', 'signup_click', {conversion_tracking: true});\n"
+    }
+  ],
+  "expect": {
+    "required_execution_contexts": ["ANALYTICS_CONVERSION"],
+    "required_new_procedures": ["analytics-conversion-instrumentation"],
+    "required_changed_paths": ["analytics.js"]
+  }
+}

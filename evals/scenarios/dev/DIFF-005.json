@@ -1,0 +1,51 @@
+{
+  "schema": "sef.eval.scenario.v1",
+  "id": "DIFF-005",
+  "title": "Harmless CSS plan remains harmless after exact localized diff",
+  "set": "DEV",
+  "layer": "L1",
+  "family": "actual-diff",
+  "severity": "standard",
+  "fixture": "web-basic",
+  "phase": "verify",
+  "project_brief": "A small existing website.",
+  "request": "Change only the visual spacing of the existing button.",
+  "reference_outcome": {
+    "must_recognize": [
+      "actual diff matches the harmless localized plan"
+    ],
+    "must_not_activate": [
+      "unrelated heavyweight specialist routes"
+    ]
+  },
+  "plan_expect": {
+    "risk": {"exact": "R0"}
+  },
+  "mutations": [
+    {
+      "action": "append",
+      "path": "styles.css",
+      "content": "\n.button { margin: 2rem; }\n"
+    }
+  ],
+  "expect": {
+    "risk": {"exact": "R0"},
+    "forbidden_packs": [
+      "AUTH_PROTOCOL",
+      "AUTHORIZATION",
+      "DATABASE_MIGRATION",
+      "PRIVACY",
+      "REGULATED_DOMAIN",
+      "RELEASE_ENGINEERING",
+      "CI_SUPPLY_CHAIN",
+      "INFRASTRUCTURE_IAC",
+      "CONTAINER_ENGINEERING"
+    ],
+    "forbidden_execution_contexts": [
+      "SEO_WEB_DISCOVERABILITY",
+      "AI_DISCOVERABILITY",
+      "ANALYTICS_CONVERSION"
+    ],
+    "required_changed_paths": ["styles.css"]
+  }
+}
