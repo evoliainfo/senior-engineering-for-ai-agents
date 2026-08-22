@@ -1,0 +1,20 @@
+{
+  "schema": "sef.rc1.shadow.probes.v1",
+  "purpose": "Additional non-routing probes for concept morphology and lexical near-misses.",
+  "positive": [
+    {"concept": "AUTHORIZATION", "request": "An authorised operator may access another customer's record."},
+    {"concept": "DATABASE_MIGRATION", "request": "Migrate existing customer records to the new identifier format."},
+    {"concept": "WEBHOOK_TRUST", "request": "Receive provider events through webhooks and verify the inbound payload."},
+    {"concept": "EXTERNAL_SUPPLIER", "request": "The feature depends on a third-party vendor service for verification."},
+    {"concept": "BACKGROUND_JOB", "request": "A worker processes retryable jobs in the background."},
+    {"concept": "SEO_WEB_DISCOVERABILITY", "request": "Make the public page discoverable through search engines."}
+  ],
+  "negative": [
+    {"request": "Rename the Admin Summit conference page."},
+    {"request": "Plan the office migration to the third floor."},
+    {"request": "Display webhook documentation as static text."},
+    {"request": "Show the supplier name in a footer label."},
+    {"request": "Change the background color of the jobs page."},
+    {"request": "Add an internal search box for signed-in users."}
+  ]
+}
