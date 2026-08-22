@@ -1,0 +1,17 @@
+{
+  "schema": "sef.rc1.shadow.expected.v1",
+  "metamorphic": {
+    "MET-001": "AUTHORIZATION",
+    "MET-002": "AUTHORIZATION",
+    "MET-003": "DATABASE_MIGRATION",
+    "MET-004": "DATABASE_MIGRATION",
+    "MET-005": "WEBHOOK_TRUST",
+    "MET-006": "WEBHOOK_TRUST",
+    "MET-007": "EXTERNAL_SUPPLIER",
+    "MET-008": "EXTERNAL_SUPPLIER",
+    "MET-009": "BACKGROUND_JOB",
+    "MET-010": "BACKGROUND_JOB",
+    "MET-011": "SEO_WEB_DISCOVERABILITY",
+    "MET-012": "SEO_WEB_DISCOVERABILITY"
+  }
+}
