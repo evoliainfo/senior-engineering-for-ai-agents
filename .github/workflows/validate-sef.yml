@@ -44,12 +44,13 @@ jobs:
         shell: bash
         run: python3 --version
 
-      - name: Compile runtime and evaluation runner
+      - name: Compile runtime and evaluation runners
         shell: bash
         run: |
           set -euo pipefail
           python3 -m py_compile sef.py
           python3 -m py_compile evals/run.py
+          python3 -m py_compile evals/run_evidence_release.py
 
       - name: Run embedded SEF self-test
         shell: bash
@@ -57,9 +58,12 @@ jobs:
 
       - name: Validate evaluation scenario contracts
         shell: bash
-        run: python3 evals/run.py validate
+        run: |
+          set -euo pipefail
+          python3 evals/run.py validate
+          python3 evals/run_evidence_release.py validate
 
-      - name: Record deterministic evaluation baseline without gating harness health
+      - name: Record deterministic routing and actual-diff baseline
         shell: bash
         run: |
           set -uo pipefail
@@ -85,4 +89,32 @@ jobs:
               raise SystemExit(f"Harness error scenarios: {harness_errors}")
           print(f"Benchmark exit code: {benchmark_exit} (non-gating baseline measurement)")
           print(f"Baseline summary: {report.get('summary')}")
+          PY
+
+      - name: Record deterministic evidence and release baseline
+        shell: bash
+        run: |
+          set -uo pipefail
+          report="$RUNNER_TEMP/sef-evidence-release.json"
+          set +e
+          python3 evals/run_evidence_release.py run --set DEV > "$report"
+          benchmark_exit=$?
+          set -e
+          cat "$report"
+          python3 - "$report" "$benchmark_exit" <<'PY'
+          import json, sys
+          from pathlib import Path
+
+          path, benchmark_exit = sys.argv[1], int(sys.argv[2])
+          with open(path, encoding="utf-8") as handle:
+              report = json.load(handle)
+          results = report.get("results", [])
+          expected = len(list(Path("evals/evidence_release/scenarios/dev").glob("*.json")))
+          if len(results) != expected:
+              raise SystemExit(f"Harness error: expected {expected} evidence/release DEV results, got {len(results)}")
+          harness_errors = [r.get("scenario_id") for r in results if r.get("status") == "HARNESS_ERROR"]
+          if harness_errors:
+              raise SystemExit(f"Evidence/release harness error scenarios: {harness_errors}")
+          print(f"Evidence/release benchmark exit code: {benchmark_exit} (non-gating baseline measurement)")
+          print(f"Evidence/release baseline summary: {report.get('summary')}")
           PY
