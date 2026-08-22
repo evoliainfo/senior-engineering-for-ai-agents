@@ -1,6 +1,0 @@
-request -> normalize_text -> concept rules -> observations/evidence -> artifact
-                                                    |
-                                                    +-> NO ROUTING EFFECT
-
-Authoritative path remains unchanged:
-request -> sef.py request detection -> embedded policy normalize/assess -> packs/contexts/risk
