@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import copy
 import importlib.util
+import re
 import shutil
 import sys
 from pathlib import Path
@@ -33,7 +34,18 @@ sef = _load_module("sef_rc1_base", BASE_PATH)
 shadow = _load_module("sef_rc1_shadow", SHADOW_PATH)
 
 _ORIGINAL_REQUEST_CHANGE = sef._request_change
+_ORIGINAL_ASSESS_REQUEST = sef._assess_request
 _ORIGINAL_INSTALL = sef.install
+
+
+def _stateful_database_companion(request: str) -> bool:
+    """Recognize explicit persistent-state writes attached to background work."""
+    text = shadow.normalize_text(request)
+    return bool(re.search(
+        r"\bdatabase\b|\bledger\s+state\b|\bwrite(?:s|ing)?\b.{0,50}\b(?:ledger|state|record|records|row|rows|database)\b",
+        text,
+        re.I,
+    ))
 
 
 def _rc1_request_change(profile, request):
@@ -58,13 +70,17 @@ def _rc1_request_change(profile, request):
             contexts.update({"INBOUND_WEBHOOK", "PUBLIC_API"})
             execution_contexts.update({"INBOUND_WEBHOOK", "PUBLIC_API"})
         elif concept == "EXTERNAL_SUPPLIER":
-            # Existing v1.4 policy already models supplier governance from the
-            # EXTERNAL_SAAS context; RC-1 only supplies the missing request signal.
+            # The canonical policy has an EXTERNAL_SUPPLIER pack but v1.4 has no
+            # request trigger that selects it from EXTERNAL_SAAS alone. The pack
+            # is therefore added in the compatibility adapter after assessment.
             contexts.add("EXTERNAL_SAAS")
             execution_contexts.add("EXTERNAL_SAAS")
         elif concept == "BACKGROUND_JOB":
             contexts.add("BACKGROUND_JOB")
             execution_contexts.add("BACKGROUND_JOB")
+            if _stateful_database_companion(request):
+                contexts.add("DATABASE")
+                execution_contexts.add("DATABASE")
         elif concept == "SEO_WEB_DISCOVERABILITY":
             execution_contexts.add("SEO_WEB_DISCOVERABILITY")
         else:
@@ -92,6 +108,17 @@ def _rc1_request_change(profile, request):
     return change
 
 
+def _rc1_assess_request(repo, request):
+    """Apply the one pack mapping absent from the v1.4 request policy."""
+    result = copy.deepcopy(_ORIGINAL_ASSESS_REQUEST(repo, request))
+    concepts = shadow.detected_ids(shadow.detect_concepts(request))
+    if "EXTERNAL_SUPPLIER" in concepts:
+        packs = set(result.get("required_context_packs", []))
+        packs.add("EXTERNAL_SUPPLIER")
+        result["required_context_packs"] = sorted(packs)
+    return result
+
+
 def _candidate_install(repo, github=False, brief="", mode="ADOPT"):
     """Install the candidate wrapper while retaining the canonical base runtime."""
     result = _ORIGINAL_INSTALL(repo, github=github, brief=brief, mode=mode)
@@ -112,6 +139,7 @@ def _candidate_install(repo, github=False, brief="", mode="ADOPT"):
 
 
 sef._request_change = _rc1_request_change
+sef._assess_request = _rc1_assess_request
 sef.install = _candidate_install
 # init_project/adopt_project resolve the module-global ``install`` at call time,
 # so replacing sef.install is sufficient for fixture installation.
