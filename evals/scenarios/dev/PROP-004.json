@@ -1,0 +1,24 @@
+{
+  "schema": "sef.eval.scenario.v1",
+  "id": "PROP-004",
+  "title": "Static public marketing section routes frontend and SEO only",
+  "set": "DEV",
+  "layer": "L1",
+  "family": "proportionality",
+  "severity": "standard",
+  "fixture": "web-basic",
+  "phase": "plan",
+  "project_brief": "A public company marketing website intended to be discoverable in search.",
+  "request": "Add a static public 'How it works' marketing section. Do not add forms, conversion tracking, authentication or dynamic data.",
+  "reference_outcome": {
+    "must_recognize": ["public frontend change", "search discoverability relevance"],
+    "must_not_activate": ["analytics solely from ordinary marketing content", "unrelated auth or database governance"]
+  },
+  "expect": {
+    "required_execution_contexts": ["WEB_UI", "SEO_WEB_DISCOVERABILITY"],
+    "forbidden_execution_contexts": ["ANALYTICS_CONVERSION", "AI_DISCOVERABILITY"],
+    "forbidden_packs": ["AUTH_PROTOCOL", "AUTHORIZATION", "DATABASE_MIGRATION"],
+    "implementation_allowed": true,
+    "required_procedures": ["frontend-application-engineering", "seo-web-discoverability-engineering"]
+  }
+}
