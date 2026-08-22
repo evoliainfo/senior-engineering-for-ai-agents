@@ -8,7 +8,7 @@
   "severity": "standard",
   "fixture": "web-basic",
   "phase": "plan",
-  "project_brief": "A small existing company website.",
+  "project_brief": "A small existing website.",
   "request": "Change only the CSS button color from blue to green.",
   "reference_outcome": {
     "must_recognize": ["pure visual style change"],
@@ -16,6 +16,7 @@
   },
   "expect": {
     "risk": {"exact": "R0"},
+    "implementation_allowed": true,
     "forbidden_packs": [
       "AUTH_PROTOCOL",
       "AUTHORIZATION",
