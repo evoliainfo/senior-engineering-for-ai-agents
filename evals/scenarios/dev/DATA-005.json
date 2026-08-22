@@ -1,0 +1,21 @@
+{
+  "schema": "sef.eval.scenario.v1",
+  "id": "DATA-005",
+  "title": "Retryable stateful background work requires integrity safeguards",
+  "set": "DEV",
+  "layer": "L1",
+  "family": "database-recovery",
+  "severity": "high",
+  "fixture": "db-basic",
+  "phase": "plan",
+  "project_brief": "An internal application with a relational database and background processing.",
+  "request": "Add a retryable background worker that writes billing-like ledger state to the database. Reprocessing the same job must not duplicate a charge or ledger side effect.",
+  "reference_outcome": {
+    "must_recognize": ["background execution", "stateful database write", "idempotency and duplicate-side-effect risk"]
+  },
+  "expect": {
+    "risk": {"minimum": "R2"},
+    "required_execution_contexts": ["BACKGROUND_JOB", "DATABASE"],
+    "required_procedures": ["backend-api-service-engineering", "reliability-observability-engineering"]
+  }
+}
