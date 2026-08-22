@@ -1,0 +1,118 @@
+name: RC-1 one-time single-file promotion
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: rc1-promote-single-file-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  promote:
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.head_ref == 'feat/rc1-concept-normalization-additive'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout exact PR head
+        shell: bash
+        env:
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          git init .
+          git remote add origin "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY.git"
+          git fetch --depth=1 origin "$PR_HEAD_SHA"
+          git checkout --detach FETCH_HEAD
+          printf 'tested_head=%s\n' "$PR_HEAD_SHA" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Stop if canonical runtime is already promoted
+        id: state
+        shell: bash
+        run: |
+          set -euo pipefail
+          if grep -q 'RC1_CONCEPT_NORMALIZATION_ADDITIVE_V1' sef.py; then
+            echo 'already=true' >> "$GITHUB_OUTPUT"
+            echo 'Canonical runtime already contains RC-1 integration; no write performed.' >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo 'already=false' >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Generate and verify exact single-file candidate
+        if: steps.state.outputs.already == 'false'
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/rc1-promote
+          python3 tools/build_rc1_integrated_sef.py --input sef.py --output /tmp/rc1-promote/sef.py
+          python3 -m py_compile /tmp/rc1-promote/sef.py
+          python3 /tmp/rc1-promote/sef.py self-test
+
+          run_measurement() {
+            local output="$1"; shift
+            set +e
+            "$@" > "$output"
+            local code=$?
+            set -e
+            printf '%s\n' "$code" > "${output%.json}.exit-code"
+          }
+
+          run_measurement /tmp/rc1-promote/official.json \
+            python3 evals/run.py run --sef /tmp/rc1-promote/sef.py --scenarios evals/scenarios/dev --fixtures evals/fixtures --set DEV
+          run_measurement /tmp/rc1-promote/negative.json \
+            python3 evals/run.py run --sef /tmp/rc1-promote/sef.py --scenarios evals/rc1_candidate/negative_controls --fixtures evals/fixtures --set DEV
+          run_measurement /tmp/rc1-promote/metamorphic.json \
+            python3 evals/run.py run --sef /tmp/rc1-promote/sef.py --scenarios evals/rc1_candidate/metamorphic --fixtures evals/fixtures --set DEV
+          run_measurement /tmp/rc1-promote/probes.json \
+            python3 evals/run.py run --sef /tmp/rc1-promote/sef.py --scenarios evals/probes/root_cause/routing --fixtures evals/fixtures --set DEV
+          run_measurement /tmp/rc1-promote/evidence.json \
+            python3 evals/run_evidence_release.py run --sef /tmp/rc1-promote/sef.py --set DEV
+
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          root=Path('/tmp/rc1-promote')
+          expected={
+              'official': {'PASS':22,'FAIL':2},
+              'negative': {'PASS':10,'FAIL':2},
+              'metamorphic': {'PASS':12},
+              'probes': {'PASS':12,'FAIL':4},
+              'evidence': {'PASS':2,'FAIL':2},
+          }
+          failures=[]
+          for name,want in expected.items():
+              report=json.loads((root/f'{name}.json').read_text())
+              counts=report.get('summary',{}).get('counts',{})
+              if counts != want: failures.append(f'{name}: expected {want}, got {counts}')
+              if any(r.get('status')=='HARNESS_ERROR' for r in report.get('results',[])):
+                  failures.append(f'{name}: HARNESS_ERROR present')
+          official=json.loads((root/'official.json').read_text())
+          bad=[r.get('scenario_id') for r in official.get('results',[]) if r.get('status')!='PASS']
+          if sorted(bad)!=['DIFF-004','WEB-001']:
+              failures.append(f'official residual failures changed: {bad}')
+          if failures: raise SystemExit('\n'.join(failures))
+          print('RC-1 single-file promotion gate PASS')
+          PY
+
+      - name: Commit exact tested runtime and checksum to PR branch
+        if: steps.state.outputs.already == 'false'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          HEAD_REF: ${{ github.head_ref }}
+        run: |
+          set -euo pipefail
+          cp /tmp/rc1-promote/sef.py sef.py
+          sha256sum sef.py > SHA256SUMS
+          test "$(cut -d' ' -f1 SHA256SUMS)" = '8a945162c5d63bdf75d8e3c1ef56c191fa1df45f02ec727729bd27f932e45703'
+          git config user.name 'SEF CI Promotion'
+          git config user.email 'sef-ci@users.noreply.github.com'
+          git add sef.py SHA256SUMS
+          git commit --no-gpg-sign -m 'feat: integrate RC-1 additive concept routing into sef runtime'
+          git remote set-url origin "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          git push origin "HEAD:${HEAD_REF}"
