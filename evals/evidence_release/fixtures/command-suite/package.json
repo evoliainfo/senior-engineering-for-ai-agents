@@ -1,0 +1,13 @@
+{
+  "name": "sef-evidence-command-suite",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "lint": "python3 checks.py lint",
+    "typecheck": "python3 checks.py typecheck",
+    "test": "python3 checks.py unit",
+    "build": "python3 checks.py build",
+    "test:integration": "python3 checks.py integration",
+    "test:e2e": "python3 checks.py e2e"
+  }
+}
