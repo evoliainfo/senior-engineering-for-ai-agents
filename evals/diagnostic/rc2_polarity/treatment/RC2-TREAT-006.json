@@ -1,0 +1,24 @@
+{
+  "schema": "sef.eval.scenario.v1",
+  "id": "RC2-TREAT-006",
+  "title": "Mixed positive authorization and negative deployment scope",
+  "set": "DEV",
+  "layer": "L1",
+  "family": "request-polarity",
+  "severity": "high",
+  "fixture": "api-basic",
+  "phase": "plan",
+  "project_brief": "A small internal utility repository.",
+  "request": "Change the API and authorization, but do not change deployment.",
+  "expect": {
+    "required_packs": [
+      "AUTHORIZATION"
+    ],
+    "forbidden_packs": [
+      "CONTAINER_ENGINEERING",
+      "CI_SUPPLY_CHAIN",
+      "INFRASTRUCTURE_IAC",
+      "RELEASE_ENGINEERING"
+    ]
+  }
+}

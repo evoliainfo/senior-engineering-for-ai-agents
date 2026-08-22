@@ -1,0 +1,52 @@
+name: RC-2 shadow polarity observations
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  shadow-polarity:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Audit frozen RC-2 corpus without changing routing
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import importlib.util, json
+          from pathlib import Path
+          p=Path('evals/diagnostic/rc2_polarity/shadow_polarity.py')
+          spec=importlib.util.spec_from_file_location('shadow',p); m=importlib.util.module_from_spec(spec); spec.loader.exec_module(m)
+          rows=[]; failures=[]
+          for group in ('treatment','control'):
+            for path in sorted(Path('evals/diagnostic/rc2_polarity',group).glob('*.json')):
+              s=json.loads(path.read_text())
+              obs=m.annotate(s['request'])
+              non_goal=sum(c['polarity']=='NON_GOAL' for c in obs['clauses'])
+              guards=sum(c['polarity']=='POSITIVE_GUARD' for c in obs['clauses'])
+              # Treatment 001-006 contain an explicit bounded non-goal. 007-008
+              # are positive security requirements despite negative wording.
+              n=int(s['id'].rsplit('-',1)[1])
+              expected_non_goal=(group=='treatment' and n<=6)
+              ok=(non_goal>0)==expected_non_goal
+              rows.append((s['id'],non_goal,guards,ok,obs))
+              if not ok: failures.append(s['id'])
+          out=Path('artifacts/rc2-shadow'); out.mkdir(parents=True,exist_ok=True)
+          (out/'observations.json').write_text(json.dumps([r[4] | {'scenario_id':r[0]} for r in rows],ensure_ascii=False,indent=2))
+          lines=['# RC-2 shadow polarity audit','','| Scenario | Non-goal clauses | Positive guards | Expected classification |','| --- | ---: | ---: | --- |']
+          for sid,ng,g,ok,_ in rows: lines.append(f'| `{sid}` | {ng} | {g} | `{"PASS" if ok else "FAIL"}` |')
+          lines += ['',f'- Corpus: `{len(rows)}/16`',f'- Classification gate: `{"PASS" if not failures else "FAIL"}`','- Routing effect: `NONE (shadow only)`']
+          summary='\n'.join(lines)+'\n'; (out/'summary.md').write_text(summary); print(summary)
+          if failures: raise SystemExit('shadow classification failures: '+', '.join(failures))
+          PY
+      - name: Publish shadow observations
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rc2-shadow-polarity-${{ github.run_id }}
+          path: artifacts/rc2-shadow/
+          if-no-files-found: error
+          retention-days: 90

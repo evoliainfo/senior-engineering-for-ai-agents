@@ -1,0 +1,18 @@
+{
+  "schema": "sef.eval.scenario.v1",
+  "id": "RC2-CTRL-005",
+  "title": "Do-not-forget migration remains positive routing",
+  "set": "DEV",
+  "layer": "L1",
+  "family": "request-polarity-control",
+  "severity": "high",
+  "fixture": "api-basic",
+  "phase": "plan",
+  "project_brief": "A small internal utility repository.",
+  "request": "Do not forget to add the database migration.",
+  "expect": {
+    "required_packs": [
+      "DATABASE_MIGRATION"
+    ]
+  }
+}

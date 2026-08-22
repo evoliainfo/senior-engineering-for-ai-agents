@@ -1,0 +1,19 @@
+{
+  "schema": "sef.eval.scenario.v1",
+  "id": "RC2-TREAT-004",
+  "title": "Documentation request leaves CI and Docker unchanged",
+  "set": "DEV",
+  "layer": "L1",
+  "family": "request-polarity",
+  "severity": "high",
+  "fixture": "api-basic",
+  "phase": "plan",
+  "project_brief": "A small internal utility repository.",
+  "request": "Update documentation; leave CI and Docker unchanged.",
+  "expect": {
+    "forbidden_packs": [
+      "CI_SUPPLY_CHAIN",
+      "CONTAINER_ENGINEERING"
+    ]
+  }
+}
