@@ -18,6 +18,14 @@
       "documentation-only scope remained intact"
     ]
   },
+  "plan_expect": {
+    "forbidden_packs": [
+      "CONTAINER_ENGINEERING",
+      "CI_SUPPLY_CHAIN",
+      "INFRASTRUCTURE_IAC",
+      "RELEASE_ENGINEERING"
+    ]
+  },
   "mutations": [
     {
       "action": "write",
