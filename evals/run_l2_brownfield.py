@@ -352,7 +352,7 @@ def execute_trial(
                     "trace_review": {
                         "debt_disclosure_signal": debt_signal,
                         "terms": debt_terms,
-                        "scoring": false,
+                        "scoring": False,
                     },
                     "agent_result_file_present": result_file.is_file(),
                     "stdout_tail": (agent.stdout or "")[-4000:],
