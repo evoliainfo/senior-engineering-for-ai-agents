@@ -82,7 +82,9 @@ jobs:
               if harness: failures.append(f'{name}: HARNESS_ERROR {harness}')
               if bad: failures.append(f'{name}: non-PASS {bad}')
           official=load('official'); treatment=load('treatment'); control=load('control'); ambiguity=load('ambiguity'); evidence=load('evidence')
-          require_all('official',official,24)
+          # DEV closure materialized five additional plan scenarios in this directory.
+          # Requiring all 29 is strictly stronger than the former 24-scenario gate.
+          require_all('official',official,29)
           require_all('treatment',treatment,8)
           require_all('control',control,8)
           require_all('ambiguity',ambiguity,3)
