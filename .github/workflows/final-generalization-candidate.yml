@@ -1,0 +1,117 @@
+name: Final generalization remediation candidate
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  final-candidate:
+    if: github.event.pull_request.head.ref == 'integration/final-generalization-remediation'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Build exact candidate from frozen B2/B3 runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(sha256sum sef.py | awk '{print $1}')" = 'bfeda790cd70c78ceb9fae862441df35c9bfe819001c0d429c09c0dde2a0c2bd'
+          python3 evals/apply_final_generalization.py --source sef.py --output /tmp/final-sef.py | tee /tmp/final-candidate-sha.txt
+          python3 -m py_compile /tmp/final-sef.py evals/run_final_generalization_controls.py
+          sha256sum /tmp/final-sef.py
+
+      - name: Run historical deterministic closure
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 evals/run_dev_closure_all.py --sef /tmp/final-sef.py --output final-dev.json
+          python3 evals/run_b1_acceptance.py --sef /tmp/final-sef.py --output final-b1.json
+          python3 evals/run_b2_acceptance.py --sef /tmp/final-sef.py --output final-b2.json
+          python3 evals/run_rc8_controls_round2_candidate.py --sef /tmp/final-sef.py --output final-rc8.json
+          python3 evals/run_consumed_challenge_regression.py --sef /tmp/final-sef.py --output final-consumed-v1.json
+
+      - name: Run new final-cycle controls
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 evals/run_final_generalization_controls.py --sef /tmp/final-sef.py --output final-generalization.json
+
+      - name: Replay consumed CHALLENGE v2 as regression only
+        shell: bash
+        run: |
+          set -euo pipefail
+          evidence_commit='a155c46367999845e4c6361bb83a4d5bcb2e11a6'
+          git fetch origin eval/challenge-v2-4132711f
+          git cat-file -e "$evidence_commit^{commit}"
+          mkdir -p /tmp/consumed-v2
+          ids='V2-AUTH-001,V2-DATA-001,V2-TRUST-001,V2-REL-001,V2-REG-001,V2-EXT-001,V2-EXT-002,V2-DIFF-001,V2-DIFF-002,V2-PROP-001'
+          for id in ${ids//,/ }; do
+            git show "$evidence_commit:evals/scenarios/challenge_v2/$id.json" > "/tmp/consumed-v2/$id.json"
+          done
+          python3 - <<'PY'
+          import hashlib,json
+          from pathlib import Path
+          scenarios=[json.load(open(p,encoding='utf-8')) for p in Path('/tmp/consumed-v2').glob('*.json')]
+          canonical=''.join(json.dumps(s,sort_keys=True,separators=(',',':'),ensure_ascii=False) for s in sorted(scenarios,key=lambda x:x['id']))
+          got=hashlib.sha256(canonical.encode()).hexdigest()
+          assert got=='9372dec1460c43d96cdca688113fa1a8bf2ca7a74b04008b387d694eb720f041',got
+          PY
+          candidate_sha="$(sha256sum /tmp/final-sef.py | awk '{print $1}')"
+          python3 evals/run_challenge_standard.py --sef /tmp/final-sef.py --scenarios /tmp/consumed-v2 --ids "$ids" --expected-sef-sha256 "$candidate_sha" --output final-consumed-v2.json
+          python3 - <<'PY'
+          import json
+          r=json.load(open('final-consumed-v2.json',encoding='utf-8'))
+          results=r.get('results') or []
+          counts={}
+          for x in results: counts[x.get('status','UNKNOWN')]=counts.get(x.get('status','UNKNOWN'),0)+1
+          assert len(results)==10 and counts=={'PASS':10},counts
+          assert not [x for x in results if x.get('status')=='HARNESS_ERROR']
+          print('Consumed CHALLENGE v2 regression:',counts)
+          PY
+
+      - name: Prove all gates used one exact candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import hashlib,json
+          from pathlib import Path
+          expected=hashlib.sha256(Path('/tmp/final-sef.py').read_bytes()).hexdigest()
+          checks=[
+            ('final-dev.json','sef_source_sha256'),
+            ('final-b1.json','sef_source_sha256'),
+            ('final-b2.json','sef_source_sha256'),
+            ('final-rc8.json','sef_source_sha256'),
+            ('final-consumed-v1.json','sef_source_sha256'),
+            ('final-generalization.json','sef_source_sha256'),
+            ('final-consumed-v2.json','sef_source_sha256'),
+          ]
+          for path,key in checks:
+            obj=json.load(open(path,encoding='utf-8'))
+            got=obj.get(key)
+            if got!=expected: raise SystemExit(f'{path}: runtime mismatch {got} != {expected}')
+          print('Exact candidate SHA-256:',expected)
+          PY
+
+      - name: Publish final candidate evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: final-generalization-${{ github.run_id }}
+          path: |
+            /tmp/final-sef.py
+            final-dev.json
+            final-b1.json
+            final-b2.json
+            final-rc8.json
+            final-consumed-v1.json
+            final-consumed-v2.json
+            final-generalization.json
+          if-no-files-found: error
+          retention-days: 90
