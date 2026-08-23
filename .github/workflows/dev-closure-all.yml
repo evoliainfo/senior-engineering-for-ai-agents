@@ -17,7 +17,7 @@ jobs:
         run: |
           set -euo pipefail
           sha256sum -c SHA256SUMS
-          python3 -m py_compile sef.py evals/run.py evals/run_evidence_release.py evals/run_dev_closure_extra.py evals/run_dev_closure_state.py evals/run_dev_closure_all.py
+          python3 -m py_compile sef.py evals/run.py evals/run_evidence_release.py evals/run_dev_closure_evidence.py evals/run_dev_closure_extra.py evals/run_dev_closure_state.py evals/run_dev_closure_all.py
           python3 evals/run.py validate --scenarios evals/scenarios/dev
           python3 evals/run_evidence_release.py validate
           set +e
