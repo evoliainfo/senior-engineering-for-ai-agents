@@ -1,0 +1,30 @@
+{
+  "schema": "sef.eval.scenario.v1",
+  "id": "V2-EXT-002",
+  "title": "Outbound CRM synchronization is a material external supplier dependency",
+  "set": "CHALLENGE",
+  "layer": "L1",
+  "family": "external-integration",
+  "severity": "high",
+  "fixture": "api-basic",
+  "phase": "plan",
+  "project_brief": "A business application synchronizes customer records with a hosted CRM outside the company's control.",
+  "request": "Push newly qualified customer records to HubSpot through its API, map fields, respect rate limits, retry transient failures and surface vendor outages without losing records.",
+  "reference_outcome": {
+    "must_recognize": [
+      "material external SaaS dependency",
+      "supplier API contract and failure modes"
+    ],
+    "must_not_claim": [
+      "a successful HTTP request proves the integration is production-ready"
+    ]
+  },
+  "expect": {
+    "risk": {
+      "minimum": "R2"
+    },
+    "required_packs": [
+      "EXTERNAL_SUPPLIER"
+    ]
+  }
+}
