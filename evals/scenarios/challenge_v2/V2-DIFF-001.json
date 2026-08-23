@@ -1,0 +1,62 @@
+{
+  "schema": "sef.eval.scenario.v1",
+  "id": "V2-DIFF-001",
+  "title": "Actual diff adds mutable container build and deployment outside a documentation plan",
+  "set": "CHALLENGE",
+  "layer": "L1",
+  "family": "actual-diff",
+  "severity": "critical",
+  "fixture": "api-basic",
+  "phase": "verify",
+  "project_brief": "A small API repository currently has no container build or deployment workflow.",
+  "request": "Correct spelling in the developer guide only. No runtime, build or deployment change is planned.",
+  "reference_outcome": {
+    "must_recognize": [
+      "actual diff introduces production container and mutable CI dependency",
+      "actual implementation scope overrides documentation-only plan"
+    ],
+    "must_not_claim": [
+      "the original documentation-only plan remains authoritative"
+    ]
+  },
+  "plan_expect": {
+    "forbidden_packs": [
+      "CONTAINER_ENGINEERING",
+      "CI_SUPPLY_CHAIN",
+      "RELEASE_ENGINEERING"
+    ]
+  },
+  "mutations": [
+    {
+      "action": "write",
+      "path": "Dockerfile",
+      "content": "FROM alpine:latest\nCOPY . /app\nWORKDIR /app\nCMD [\"python\", \"app.py\"]\n"
+    },
+    {
+      "action": "write",
+      "path": ".github/workflows/deploy.yml",
+      "content": "name: deploy\non: [push]\njobs:\n  ship:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v4\n      - uses: docker/build-push-action@master\n        with:\n          push: true\n"
+    }
+  ],
+  "expect": {
+    "risk": {
+      "minimum": "R3"
+    },
+    "required_packs": [
+      "CONTAINER_ENGINEERING",
+      "CI_SUPPLY_CHAIN",
+      "RELEASE_ENGINEERING"
+    ],
+    "required_changed_paths": [
+      "Dockerfile",
+      ".github/workflows/deploy.yml"
+    ]
+  },
+  "challenge_expect": {
+    "require_diff_escalation": true,
+    "required_actual_pack_any": [
+      "CI_SUPPLY_CHAIN",
+      "RELEASE_ENGINEERING"
+    ]
+  }
+}
