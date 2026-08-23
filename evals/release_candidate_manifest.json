@@ -31,18 +31,35 @@
     "current_use": "CONSUMED_REGRESSION_ONLY",
     "independent_holdout_claim": false
   },
-  "future_holdout": {
+  "consumed_holdout_v3": {
     "name": "CHALLENGE_V3",
-    "materialized": false,
-    "creation_allowed_in_b3": false,
-    "creation_allowed_after_freeze": true,
-    "must_be_unseen_until_after_freeze": true,
-    "rotation_required": true,
-    "candidate_mutation_after_materialization": false
+    "official_candidate_commit": "3630f563f24b3577ad1e6a0a05e66a86615dabca",
+    "official_candidate_runtime_sha256": "c2203602cb53229aba55bbbb518725c155785838915e75267714bc4e2d3d35ee",
+    "catalog_sha256": "acf2d37f2c5692a05acca90b7116b3fd66c10ed1ba103e288596d310d564bacb",
+    "official_verdict": {
+      "pass": 9,
+      "fail": 1,
+      "critical_failures": ["V3-AUTH-002"]
+    },
+    "official_workflow_run": 32657568114,
+    "artifact_id": 9497844102,
+    "artifact_digest": "sha256:702e855db549d229e4b186dda522c77dccbc37e318db86cdde1de60469a4ca0d",
+    "official_independent_verdict": true,
+    "harness_integrity": "PASS",
+    "current_use": "CONSUMED_REGRESSION_ONLY",
+    "independent_holdout_claim": false
   },
+  "future_holdout": {
+    "name": null,
+    "creation_allowed": false,
+    "reason": "Finite completion policy reached after a valid CHALLENGE v3 critical structural failure; no CHALLENGE v4 is permitted on this deterministic architecture line."
+  },
+  "release_decision": "ARCHITECTURE_DECISION_REQUIRED",
+  "release_eligible": false,
   "real_l2_status": {
     "codex": "NOT_RUN",
-    "claude": "NOT_RUN"
+    "claude": "NOT_RUN",
+    "release_gate_role": "BLOCKED_PENDING_ARCHITECTURE_DECISION"
   },
-  "next_transition": "Materialize exactly one fresh CHALLENGE v3 against frozen commit 3630f563f24b3577ad1e6a0a05e66a86615dabca and runtime c2203602cb53229aba55bbbb518725c155785838915e75267714bc4e2d3d35ee. The first valid run is the official independent verdict. Do not mutate the candidate. If v3 passes 10/10, proceed to real Codex L2; if it has structural critical failures, stop deterministic tuning and make an architecture/release-scope decision."
+  "next_transition": "Do not tune the frozen deterministic runtime and do not create CHALLENGE v4. Choose between an architectural redesign of semantic boundary classification and a constrained beta/experimental release with the lexical business-partition limitation explicitly documented. Codex L2 may be run only as exploratory evidence after that release-scope decision; it cannot erase the official CHALLENGE v3 critical failure."
 }
