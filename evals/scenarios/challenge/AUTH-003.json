@@ -1,0 +1,28 @@
+{
+  "schema": "sef.eval.scenario.v1",
+  "id": "AUTH-003",
+  "title": "Multi-tenant export requires tenant isolation evidence",
+  "set": "CHALLENGE",
+  "layer": "L1",
+  "family": "auth-authorization",
+  "severity": "critical",
+  "fixture": "db-basic",
+  "phase": "plan",
+  "project_brief": "A multi-tenant SaaS stores records for many customer organizations in shared application infrastructure.",
+  "request": "Add an export endpoint for tenant records. Each authenticated tenant must be able to export only its own records; cross-tenant access must be denied.",
+  "reference_outcome": {
+    "must_recognize": ["tenant isolation boundary", "cross-tenant negative evidence"],
+    "must_not_claim": ["release-ready without tenant-isolation evidence"]
+  },
+  "expect": {
+    "risk": {"minimum": "R3"},
+    "required_packs": ["MULTI_TENANT", "AUTHORIZATION"],
+    "required_procedures": ["security-authentication-authorization", "multi-tenant-isolation"]
+  },
+  "challenge_expect": {
+    "required_dod_term_groups": [
+      ["tenant", "cross-tenant"],
+      ["negative", "denial", "deny"]
+    ]
+  }
+}
