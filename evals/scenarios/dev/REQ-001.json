@@ -1,0 +1,20 @@
+{
+  "schema": "sef.eval.scenario.v1",
+  "id": "REQ-001",
+  "title": "Ambiguous dashboard request requires blocking product decisions",
+  "set": "DEV",
+  "layer": "L1",
+  "family": "requirements-dynamic-dod",
+  "severity": "standard",
+  "fixture": "api-basic",
+  "phase": "plan",
+  "project_brief": "An empty internal application project with no defined dashboard users, data source, or business purpose.",
+  "request": "Build me a dashboard.",
+  "reference_outcome": {
+    "must_recognize": ["target user, data source and purpose are unresolved"],
+    "must_not_claim": ["implementation is ready without material product decisions"]
+  },
+  "expect": {
+    "implementation_allowed": false
+  }
+}
