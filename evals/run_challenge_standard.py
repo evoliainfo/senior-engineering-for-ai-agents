@@ -9,11 +9,13 @@ from __future__ import annotations
 
 import argparse
 import json
+import shutil
+import sys
+import tempfile
 from pathlib import Path
 from typing import Any
 
 import run as core
-import run_dev_closure_extra as semantic
 
 SCHEMA = "sef.eval.challenge-standard-report.v1"
 
@@ -24,9 +26,77 @@ def _text(value: Any) -> str:
     return json.dumps(value, ensure_ascii=False, sort_keys=True)
 
 
-def _group_match(text: str, terms: list[Any]) -> bool:
-    low = text.lower()
-    return any(str(term).lower() in low for term in terms)
+def _plan_evidence_text(observed: dict[str, Any]) -> str:
+    fields = (
+        "definition_of_done",
+        "implicit_professional_requirements",
+        "architecture_questions",
+        "implementation_guardrails",
+        "verification_strategy",
+        "procedures",
+        "human_decisions_needed",
+    )
+    return "\n".join(_text(observed.get(field, [])) for field in fields)
+
+
+def _evaluate_plan(sef: Path, scenario_path: Path, fixtures: Path) -> dict[str, Any]:
+    scenario = core.load_json(scenario_path)
+    validation = core.validate_scenario(scenario, scenario_path)
+    if validation:
+        return {"schema": "sef.eval.challenge-standard-result.v1", "scenario_id": scenario.get("id"), "status": "HARNESS_ERROR", "assertions": [], "limitations": validation}
+    fixture = fixtures / str(scenario["fixture"])
+    if not fixture.is_dir():
+        return {"schema": "sef.eval.challenge-standard-result.v1", "scenario_id": scenario["id"], "status": "HARNESS_ERROR", "assertions": [], "limitations": [f"fixture not found: {fixture}"]}
+    source_hash = core.sha256_file(sef)
+    fixture_hash = core.sha256_tree(fixture)
+    with tempfile.TemporaryDirectory(prefix=f"sef-challenge-{scenario['id'].lower()}-") as tmp:
+        repo = Path(tmp) / "repo"
+        shutil.copytree(fixture, repo)
+        try:
+            init = core.run_json([sys.executable, str(sef), "init", str(repo), "--brief", str(scenario.get("project_brief") or "Challenge fixture project.")])
+            if init.get("status") != "PASS":
+                raise RuntimeError(f"SEF init failed: {init}")
+            installed = repo / ".sef/sef.py"
+            runtime = core.run_json([sys.executable, str(installed), "runtime-info"])
+            payload = core.run_json([sys.executable, str(installed), "plan", str(repo), "--request", str(scenario["request"]), "--save"])
+            assertions, observed = core.grade_plan(scenario, payload)
+            plan = payload.get("plan") if isinstance(payload.get("plan"), dict) else {}
+            observed.update({
+                "implicit_professional_requirements": plan.get("implicit_professional_requirements", []),
+                "architecture_questions": plan.get("architecture_questions", []),
+                "implementation_guardrails": plan.get("implementation_guardrails", []),
+                "verification_strategy": plan.get("verification_strategy", []),
+                "human_decisions_needed": plan.get("human_decisions_needed", []),
+                "implementation_gate": plan.get("implementation_gate"),
+            })
+            return {
+                "schema": "sef.eval.challenge-standard-result.v1",
+                "scenario_id": scenario["id"],
+                "scenario_set": "CHALLENGE",
+                "layer": scenario["layer"],
+                "severity": scenario["severity"],
+                "sef_framework_version": runtime.get("framework_version"),
+                "sef_source_sha256": source_hash,
+                "fixture_revision": f"sha256:{fixture_hash}",
+                "status": core.scenario_status(assertions),
+                "observed": observed,
+                "assertions": assertions,
+                "limitations": [],
+            }
+        except Exception as exc:
+            return {
+                "schema": "sef.eval.challenge-standard-result.v1",
+                "scenario_id": scenario.get("id"),
+                "scenario_set": "CHALLENGE",
+                "layer": scenario.get("layer"),
+                "severity": scenario.get("severity"),
+                "sef_source_sha256": source_hash,
+                "fixture_revision": f"sha256:{fixture_hash}",
+                "status": "HARNESS_ERROR",
+                "observed": {},
+                "assertions": [],
+                "limitations": [f"{type(exc).__name__}: {exc}"],
+            }
 
 
 def _custom_assertions(scenario: dict[str, Any], result: dict[str, Any]) -> list[dict[str, Any]]:
@@ -41,20 +111,20 @@ def _custom_assertions(scenario: dict[str, Any], result: dict[str, Any]) -> list
         plan_observed = observed
     else:
         plan_observed = observed.get("initial_plan") if isinstance(observed.get("initial_plan"), dict) else {}
-    dod_text = _text(plan_observed.get("definition_of_done", []))
+    evidence_text = _plan_evidence_text(plan_observed)
 
     for index, group in enumerate(custom.get("required_dod_term_groups", []), 1):
         terms = list(group) if isinstance(group, list) else []
-        matched = [str(term) for term in terms if str(term).lower() in dod_text.lower()]
+        matched = [str(term) for term in terms if str(term).lower() in evidence_text.lower()]
         assertions.append(core.assertion(
-            f"challenge-dod-group-{index}",
+            f"challenge-plan-obligation-group-{index}",
             bool(terms) and bool(matched),
             {"any_of": terms},
             {"matched": matched},
             critical,
         ))
 
-    human_text = _text(observed.get("human_decisions_needed", []))
+    human_text = _text(plan_observed.get("human_decisions_needed", []))
     for term in custom.get("required_human_decision_terms", []):
         present = str(term).lower() in human_text.lower()
         assertions.append(core.assertion(
@@ -113,10 +183,7 @@ def evaluate(sef: Path, scenario_path: Path, fixtures: Path) -> dict[str, Any]:
             "assertions": [],
             "limitations": ["standard challenge runner accepts CHALLENGE scenarios only"],
         }
-    if scenario.get("phase") == "plan":
-        result = semantic.evaluate_plan(sef, scenario_path, fixtures)
-    else:
-        result = core.evaluate_scenario(sef, scenario_path, fixtures)
+    result = _evaluate_plan(sef, scenario_path, fixtures) if scenario.get("phase") == "plan" else core.evaluate_scenario(sef, scenario_path, fixtures)
     if result.get("status") == "HARNESS_ERROR":
         return result
     assertions = list(result.get("assertions") or [])
