@@ -26,7 +26,6 @@ def run_report(command:list[str],output:Path)->tuple[int,dict[str,Any]]:
 def main()->int:
     p=argparse.ArgumentParser(); p.add_argument('--sef',default=str(ROOT.parent/'sef.py')); p.add_argument('--manifest',default=str(ROOT/'dev_coverage_manifest.json')); p.add_argument('--output',default='dev-closure-all.json'); a=p.parse_args()
     sef=str(Path(a.sef).resolve()); manifest=load(Path(a.manifest)); harnesses=manifest['harnesses']
-    commands=[]
     with tempfile.TemporaryDirectory(prefix='sef-dev-closure-all-') as tmp:
         t=Path(tmp)
         core_ids=','.join(harnesses['general_core']['ids'])
@@ -34,13 +33,13 @@ def main()->int:
         state_ids=','.join(harnesses['stateful_brownfield']['ids'])
         commands=[
             ('general_core',[sys.executable,str(ROOT/'run.py'),'run','--sef',sef,'--set','DEV','--ids',core_ids,'--output',str(t/'general.json')],t/'general.json'),
-            ('evidence_release',[sys.executable,str(ROOT/'run_evidence_release.py'),'run','--sef',sef,'--set','DEV','--output',str(t/'evidence.json')],t/'evidence.json'),
+            ('evidence_release',[sys.executable,str(ROOT/'run_dev_closure_evidence.py'),'--sef',sef,'--output',str(t/'evidence.json')],t/'evidence.json'),
             ('semantic_requirements',[sys.executable,str(ROOT/'run_dev_closure_extra.py'),'--sef',sef,'--ids',semantic_ids,'--output',str(t/'semantic.json')],t/'semantic.json'),
             ('stateful_brownfield',[sys.executable,str(ROOT/'run_dev_closure_state.py'),'--sef',sef,'--ids',state_ids,'--output',str(t/'stateful.json')],t/'stateful.json'),
         ]
-        raw={}; runner_exit_codes={}; all_results=[]; harness_errors=[]
+        runner_exit_codes={}; all_results=[]; harness_errors=[]
         for name,cmd,out in commands:
-            code,report=run_report(cmd,out); runner_exit_codes[name]=code; raw[name]=report
+            code,report=run_report(cmd,out); runner_exit_codes[name]=code
             rs=report.get('results',[])
             if not isinstance(rs,list): harness_errors.append(f'{name}: results is not a list'); rs=[]
             for r in rs:
@@ -80,7 +79,6 @@ def main()->int:
         }
         Path(a.output).write_text(json.dumps(report,indent=2,sort_keys=True)+'\n',encoding='utf-8')
         print(json.dumps({k:report[k] for k in ('challenge_status','sef_source_sha256','accounting','harness_integrity','harness_errors','benchmark','known_l2_followups')},indent=2,sort_keys=True))
-        # Exit 2 only for invalid measurement. Benchmark failures intentionally exit 1.
         if harness_errors: return 2
         return 0 if not failures else 1
 
