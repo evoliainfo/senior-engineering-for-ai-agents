@@ -1088,6 +1088,26 @@ def _rc5_observable_requirement_dod(request):
         out.append("Robustness/resilience acceptance criteria must define observable failure, fault and error behavior and be verified with applicable tests/evidence; 'robust' is not itself a passed criterion.")
     return out
 
+def _rc5_observable_requirement_dod(request):
+    """Translate vague quality language into observable DoD without inventing targets."""
+    text=str(request or '')
+    low=text.lower()
+    out=[]
+
+    perf_signal=re.search(r"\b(fast|faster|performant|performance|responsive|low[- ]latency|latency|throughput|optimi[sz](?:e|ation|ing)?)\b",low,re.I)
+    measurable_perf=re.search(r"(?:\b(?:p50|p90|p95|p99|rps|qps|tps)\b|\b\d+(?:\.\d+)?\s*(?:ms|milliseconds?|s|seconds?|rps|qps|tps|req(?:uests?)?/s)\b|\b(?:latency|response time|throughput)\s*(?:target|budget|slo)\b)",low,re.I)
+    if perf_signal and not measurable_perf:
+        out.append("Performance success requires an explicit measurable target (for example applicable latency, response-time, throughput or capacity criteria) rather than the adjective alone; do not invent the target.")
+        out.append("Benchmark, load-test or equivalent measurement evidence must demonstrate the agreed performance target before claiming the API is fast or performance-successful.")
+
+    vague_secure=bool(re.search(r"\bsecure\b",low,re.I))
+    vague_robust=bool(re.search(r"\b(?:robust|resilien(?:t|ce)|reliable)\b",low,re.I))
+    if vague_secure:
+        out.append("Security acceptance criteria must be observable for the affected trust/access boundaries, with applicable negative or abuse-path tests and verification evidence; 'secure' is not itself a passed criterion.")
+    if vague_robust:
+        out.append("Robustness/resilience acceptance criteria must define observable failure, fault and error behavior and be verified with applicable tests/evidence; 'robust' is not itself a passed criterion.")
+    return out
+
 def task_plan(repo,request,save=False):
     repo=Path(repo).resolve(); baseline=_load_json(repo/".sef/project-baseline.json",{}); assessment=_assess_request(repo,request)
     risk=assessment.get("risk","R1"); packs=assessment.get("required_context_packs",[])
@@ -1100,6 +1120,7 @@ def task_plan(repo,request,save=False):
       "Actual diff is re-assessed and does not reveal unhandled higher risk.",
       "Known residual risk and follow-up debt are explicit rather than hidden."
     ]
+    dod += _rc5_observable_requirement_dod(request)
     dod += _rc5_observable_requirement_dod(request)
     if RISK_ORDER.get(risk,1)>=3: dod += ["Independent/machine evidence is present for hard specialist gates; agent observation alone is insufficient."]
     if "RELEASE_ENGINEERING" in packs or "PRODUCTION" in assessment.get("contexts",[]): dod += ["Exact release revision/artifact and rollback/roll-forward strategy are identified before production eligibility."]
