@@ -1,0 +1,115 @@
+name: RC-3 task-materiality regression gate
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: rc3-routing-regression-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  rc3-routing-regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout exact tested revision
+        shell: bash
+        env:
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          git init .
+          git remote add origin "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY.git"
+          target_sha="${PR_HEAD_SHA:-$GITHUB_SHA}"
+          git fetch --depth=1 origin "$target_sha"
+          git checkout --detach FETCH_HEAD
+          printf 'tested_head=%s\n' "$target_sha" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Verify canonical runtime integrity
+        run: |
+          set -euo pipefail
+          sha256sum -c SHA256SUMS
+          python3 -m py_compile sef.py evals/run.py evals/run_evidence_release.py
+          python3 sef.py self-test
+
+      - name: Execute RC-3 regression corpus
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts/rc3-regression
+          run_measurement() {
+            local output="$1"; shift
+            set +e
+            "$@" > "$output"
+            local code=$?
+            set -e
+            printf '%s\n' "$code" > "${output%.json}.exit-code"
+          }
+          run_measurement artifacts/rc3-regression/official.json \
+            python3 evals/run.py run --sef sef.py --scenarios evals/scenarios/dev --fixtures evals/fixtures --set DEV
+          run_measurement artifacts/rc3-regression/treatment.json \
+            python3 evals/run.py run --sef sef.py --scenarios evals/diagnostic/rc3_materiality/treatment --fixtures evals/fixtures --set DEV
+          run_measurement artifacts/rc3-regression/control.json \
+            python3 evals/run.py run --sef sef.py --scenarios evals/diagnostic/rc3_materiality/control --fixtures evals/fixtures --set DEV
+          run_measurement artifacts/rc3-regression/ambiguity.json \
+            python3 evals/run.py run --sef sef.py --scenarios evals/diagnostic/rc3_materiality/ambiguity --fixtures evals/fixtures --set DEV
+          run_measurement artifacts/rc3-regression/evidence.json \
+            python3 evals/run_evidence_release.py run --sef sef.py --set DEV
+
+      - name: Enforce frozen RC-3 gates
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          root=Path('artifacts/rc3-regression')
+          failures=[]
+          def load(name): return json.loads((root/f'{name}.json').read_text())
+          def rows(report): return {str(x.get('scenario_id')):x for x in report.get('results',[])}
+          def require_all(name,report,expected):
+              rs=rows(report)
+              bad=sorted(sid for sid,row in rs.items() if row.get('status')!='PASS')
+              harness=sorted(sid for sid,row in rs.items() if row.get('status')=='HARNESS_ERROR')
+              if len(rs)!=expected: failures.append(f'{name}: expected {expected} scenarios, got {len(rs)}')
+              if harness: failures.append(f'{name}: HARNESS_ERROR {harness}')
+              if bad: failures.append(f'{name}: non-PASS {bad}')
+          official=load('official'); treatment=load('treatment'); control=load('control'); ambiguity=load('ambiguity'); evidence=load('evidence')
+          require_all('official',official,24)
+          require_all('treatment',treatment,8)
+          require_all('control',control,8)
+          require_all('ambiguity',ambiguity,3)
+          evidence_rows=rows(evidence)
+          harness=sorted(sid for sid,row in evidence_rows.items() if row.get('status')=='HARNESS_ERROR')
+          if harness: failures.append(f'evidence: HARNESS_ERROR {harness}')
+          unexpected=sorted(sid for sid,row in evidence_rows.items() if row.get('status')!='PASS' and sid not in {'EVID-003','REL-004'})
+          if unexpected: failures.append(f'evidence/release regressions: {unexpected}')
+          summary={
+            'official':official.get('summary',{}),
+            'treatment':treatment.get('summary',{}),
+            'control':control.get('summary',{}),
+            'ambiguity':ambiguity.get('summary',{}),
+            'evidence':evidence.get('summary',{}),
+            'gate':'FAIL' if failures else 'PASS',
+            'failures':failures,
+          }
+          (root/'summary.json').write_text(json.dumps(summary,indent=2,sort_keys=True)+'\n')
+          print(json.dumps(summary,indent=2,sort_keys=True))
+          if failures: raise SystemExit('\n'.join(failures))
+          PY
+
+      - name: Publish RC-3 regression evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rc3-routing-regression-${{ github.run_id }}
+          path: artifacts/rc3-regression/
+          if-no-files-found: error
+          retention-days: 90
