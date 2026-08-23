@@ -1,0 +1,35 @@
+{
+  "schema": "sef.eval.release-candidate.v1",
+  "stage": "PRE_FREEZE_B3",
+  "source_main_commit": "4ba20e299786eb61b718b855df5d397e48090ac1",
+  "freeze_commit": null,
+  "candidate_runtime_sha256": "bfeda790cd70c78ceb9fae862441df35c9bfe819001c0d429c09c0dde2a0c2bd",
+  "runtime_mutation_allowed_in_b3": false,
+  "required_gates": {
+    "dev_closure": {"expected_pass": 38},
+    "b1_acceptance": {"expected_pass": 10},
+    "b2_acceptance": {"expected_pass": 10},
+    "rc8_calibrated_controls": {"expected_pass": 14},
+    "consumed_challenge_regression": {"expected_pass": 10}
+  },
+  "consumed_holdout": {
+    "name": "CHALLENGE_7302914E",
+    "official_candidate_commit": "7302914ef8ed098a8c3d1e6ae5a0c4a811f49837",
+    "official_candidate_runtime_sha256": "c5fdbcf6a1a8428663c25e15247c481c1268849a2c747de8766bc0946544d6b4",
+    "official_verdict": {"pass": 3, "fail": 7},
+    "current_use": "CONSUMED_REGRESSION_ONLY",
+    "independent_holdout_claim": false
+  },
+  "future_holdout": {
+    "name": "CHALLENGE_V2",
+    "materialized": false,
+    "creation_allowed_in_b3": false,
+    "must_remain_unseen_until_after_freeze": true,
+    "rotation_required": true
+  },
+  "real_l2_status": {
+    "codex": "NOT_RUN",
+    "claude": "NOT_RUN"
+  },
+  "next_transition": "After B3 merge, freeze the exact repository commit and runtime identity without runtime tuning. Only after that freeze may a fresh CHALLENGE v2 be materialized under evaluator separation."
+}
