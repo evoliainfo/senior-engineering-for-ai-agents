@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
-"""Aggregate deterministic release-candidate evidence without opening a fresh holdout.
+"""Aggregate deterministic evidence for the frozen SEF candidate.
 
-The runner is valid immediately before the final freeze and after a candidate has
-been frozen. It executes only DEV/regression surfaces already available for tuning
-and never discovers or executes CHALLENGE v3 content.
+A PASS from this runner means the recorded evidence is internally consistent and
+all deterministic regression surfaces still pass on the exact frozen runtime.
+It does NOT imply release eligibility. After the official CHALLENGE v3 critical
+failure the manifest may deliberately report ARCHITECTURE_DECISION_REQUIRED and
+release_eligible=false while this evidence-consistency gate remains green.
 """
 from __future__ import annotations
 
@@ -89,9 +91,7 @@ def main() -> int:
     if dev_manifest.get("dev_total") != 38 or dev_manifest.get("challenge_total") != 10:
         blockers.append("DEV/CHALLENGE accounting is not 38+10")
     if dev_manifest.get("challenge_independent_holdout_status") != "CONSUMED":
-        blockers.append("DEV coverage manifest does not explicitly mark historical holdout evidence consumed")
-    if dev_manifest.get("future_independent_holdout_required") != "CHALLENGE_V3":
-        blockers.append("DEV coverage manifest does not require rotated CHALLENGE v3")
+        blockers.append("historical independent holdout state is not CONSUMED")
 
     if first_challenge.get("candidate_commit") != manifest.get("consumed_holdout", {}).get("official_candidate_commit"):
         blockers.append("first challenge candidate commit no longer matches immutable historical evidence")
@@ -106,23 +106,49 @@ def main() -> int:
     if consumed_v2.get("current_use") != "CONSUMED_REGRESSION_ONLY":
         blockers.append("CHALLENGE v2 current use is not regression-only")
 
-    future = manifest.get("future_holdout", {})
-    if future.get("name") != "CHALLENGE_V3":
-        blockers.append("release candidate manifest does not identify CHALLENGE v3 as the next holdout")
-    if future.get("materialized") is not False:
-        blockers.append("release candidate manifest does not keep CHALLENGE v3 unmaterialized")
-    if stage == "PRE_FREEZE_B3" and future.get("creation_allowed_in_b3") is not False:
-        blockers.append("PRE_FREEZE_B3 manifest does not forbid CHALLENGE v3 creation before freeze")
-    if stage == "FROZEN" and future.get("creation_allowed_after_freeze") is not True:
-        blockers.append("FROZEN manifest does not explicitly permit fresh holdout creation after freeze")
+    release_decision = manifest.get("release_decision")
+    if release_decision == "ARCHITECTURE_DECISION_REQUIRED":
+        consumed_v3 = manifest.get("consumed_holdout_v3", {})
+        verdict = consumed_v3.get("official_verdict") or {}
+        if consumed_v3.get("name") != "CHALLENGE_V3":
+            blockers.append("terminal manifest is missing CHALLENGE v3 evidence")
+        if consumed_v3.get("official_candidate_commit") != manifest.get("freeze_commit"):
+            blockers.append("CHALLENGE v3 did not execute the frozen candidate commit")
+        if consumed_v3.get("official_candidate_runtime_sha256") != expected_sha:
+            blockers.append("CHALLENGE v3 runtime identity differs from frozen runtime")
+        if consumed_v3.get("catalog_sha256") != "acf2d37f2c5692a05acca90b7116b3fd66c10ed1ba103e288596d310d564bacb":
+            blockers.append("CHALLENGE v3 catalog identity mismatch")
+        if verdict.get("pass") != 9 or verdict.get("fail") != 1 or verdict.get("critical_failures") != ["V3-AUTH-002"]:
+            blockers.append("CHALLENGE v3 official verdict is not the recorded 9/10 critical-failure result")
+        if consumed_v3.get("harness_integrity") != "PASS" or consumed_v3.get("official_independent_verdict") is not True:
+            blockers.append("CHALLENGE v3 is not recorded as a valid official independent verdict")
+        if consumed_v3.get("current_use") != "CONSUMED_REGRESSION_ONLY" or consumed_v3.get("independent_holdout_claim") is not False:
+            blockers.append("CHALLENGE v3 post-run reuse semantics are not regression-only")
+        if consumed_v3.get("official_workflow_run") != 32657568114 or consumed_v3.get("artifact_id") != 9497844102:
+            blockers.append("CHALLENGE v3 workflow/artifact evidence identity mismatch")
+        if consumed_v3.get("artifact_digest") != "sha256:702e855db549d229e4b186dda522c77dccbc37e318db86cdde1de60469a4ca0d":
+            blockers.append("CHALLENGE v3 artifact digest mismatch")
+        if manifest.get("release_eligible") is not False:
+            blockers.append("terminal manifest must explicitly block release eligibility")
+        if dev_manifest.get("future_independent_holdout_required") is not None:
+            blockers.append("finite holdout program incorrectly requests another independent holdout")
+        if dev_manifest.get("independent_holdout_program_state") != "STOPPED_AFTER_V3_CRITICAL_STRUCTURAL_FAILURE":
+            blockers.append("DEV coverage manifest does not record terminal holdout state")
+        future = manifest.get("future_holdout", {})
+        if future.get("name") is not None or future.get("creation_allowed") is not False:
+            blockers.append("terminal manifest does not explicitly forbid CHALLENGE v4")
+    else:
+        future = manifest.get("future_holdout", {})
+        if future.get("name") != "CHALLENGE_V3":
+            blockers.append("pre-terminal manifest does not identify CHALLENGE v3 as the next holdout")
 
-    forbidden_future_paths: list[str] = []
+    forbidden_v4_paths: list[str] = []
     for path in EVALS.rglob("*"):
         rel = path.relative_to(ROOT).as_posix().lower()
-        if any(token in rel for token in ("challenge_v3", "challenge-v3", "challenge3")):
-            forbidden_future_paths.append(rel)
-    if forbidden_future_paths:
-        blockers.append("CHALLENGE v3 content is already materialized under evals: " + ", ".join(sorted(forbidden_future_paths)))
+        if any(token in rel for token in ("challenge_v4", "challenge-v4", "challenge4")):
+            forbidden_v4_paths.append(rel)
+    if forbidden_v4_paths:
+        blockers.append("CHALLENGE v4 content exists despite finite completion policy: " + ", ".join(sorted(forbidden_v4_paths)))
 
     with tempfile.TemporaryDirectory(prefix="sef-release-candidate-") as tmp:
         t = Path(tmp)
@@ -201,30 +227,37 @@ def main() -> int:
             blockers.append(f"{name}: suite did not execute exact candidate runtime")
 
     readme = (EVALS / "README.md").read_text(encoding="utf-8")
-    for required_text in (expected_sha, "38/38 PASS", "10/10 PASS", "14/14 PASS", "CONSUMED_REGRESSION_ONLY", "CHALLENGE v3"):
+    required_markers = [expected_sha, "38/38 PASS", "10/10 PASS", "14/14 PASS", "CONSUMED_REGRESSION_ONLY"]
+    if release_decision == "ARCHITECTURE_DECISION_REQUIRED":
+        required_markers.extend(["CHALLENGE v3", "9/10 PASS", "V3-AUTH-002", "ARCHITECTURE_DECISION_REQUIRED"])
+    for required_text in required_markers:
         if required_text not in readme:
             blockers.append(f"evals/README.md missing current release-state marker: {required_text}")
 
+    evidence_consistent = not blockers
     output = {
         "schema": "sef.eval.release-candidate-gate.v1",
-        "status": "PASS" if not blockers else "FAIL",
+        "status": "PASS" if evidence_consistent else "FAIL",
+        "meaning": "evidence consistency and frozen-runtime regression status; not a release approval",
         "stage": stage,
         "candidate_runtime_sha256": actual_sha,
         "source_main_commit": manifest.get("source_main_commit"),
         "freeze_commit": manifest.get("freeze_commit"),
         "runtime_mutation_allowed_in_b3": manifest.get("runtime_mutation_allowed_in_b3"),
         "runtime_mutation_allowed_after_freeze": manifest.get("runtime_mutation_allowed_after_freeze"),
-        "future_holdout_materialized": bool(forbidden_future_paths),
-        "first_challenge_evidence_class": "CONSUMED_REGRESSION_ONLY",
+        "release_decision": release_decision,
+        "release_eligible": manifest.get("release_eligible"),
+        "architecture_decision_required": release_decision == "ARCHITECTURE_DECISION_REQUIRED",
         "independent_holdout_claim": False,
         "suites": normalized,
         "known_l2_status": manifest.get("real_l2_status"),
         "blockers": blockers,
-        "freeze_ready": not blockers,
+        "evidence_consistent": evidence_consistent,
+        "freeze_ready": evidence_consistent and release_decision is None,
     }
     Path(args.output).write_text(json.dumps(output, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     print(json.dumps(output, indent=2, sort_keys=True))
-    return 0 if not blockers else 1
+    return 0 if evidence_consistent else 1
 
 
 if __name__ == "__main__":

@@ -4,9 +4,21 @@
   "dev_total": 38,
   "challenge_total": 10,
   "challenge_status": "SEALED",
-  "challenge_partition_semantics": "The 10 original CHALLENGE IDs remain excluded from DEV discovery. SEALED here describes partition/discovery isolation only; it does not mean either consumed holdout remains independent after remediation used its outcomes.",
+  "challenge_partition_semantics": "The 10 original CHALLENGE IDs remain excluded from DEV discovery. SEALED describes partition/discovery isolation only; all three executed independent holdouts are now consumed historical evidence.",
   "challenge_independent_holdout_status": "CONSUMED",
-  "future_independent_holdout_required": "CHALLENGE_V3",
+  "future_independent_holdout_required": null,
+  "independent_holdout_program_state": "STOPPED_AFTER_V3_CRITICAL_STRUCTURAL_FAILURE",
+  "challenge_v3_official_result": {
+    "candidate_commit": "3630f563f24b3577ad1e6a0a05e66a86615dabca",
+    "runtime_sha256": "c2203602cb53229aba55bbbb518725c155785838915e75267714bc4e2d3d35ee",
+    "catalog_sha256": "acf2d37f2c5692a05acca90b7116b3fd66c10ed1ba103e288596d310d564bacb",
+    "pass": 9,
+    "fail": 1,
+    "critical_failures": ["V3-AUTH-002"],
+    "harness_integrity": "PASS",
+    "workflow_run": 32657568114,
+    "current_use": "CONSUMED_REGRESSION_ONLY"
+  },
   "harnesses": {
     "general_core": {
       "runner": "evals/run.py",
@@ -41,7 +53,7 @@
   "known_l2_followups": [
     {
       "ids": ["BROWN-001","BROWN-003"],
-      "reason": "L1 can grade planning proportionality, but preserving concrete naming/architecture/test conventions requires an agent-in-the-loop L2 execution trial before a full brownfield claim."
+      "reason": "L1 can grade planning proportionality, but preserving concrete naming/architecture/test conventions requires an agent-in-the-loop L2 execution trial before a full brownfield claim. L2 is not a substitute for the failed independent deterministic generalization gate."
     }
   ],
   "accounting": {
