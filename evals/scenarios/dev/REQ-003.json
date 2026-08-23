@@ -1,0 +1,24 @@
+{
+  "schema": "sef.eval.scenario.v1",
+  "id": "REQ-003",
+  "title": "Vague performance request requires measurable target",
+  "set": "DEV",
+  "layer": "L1",
+  "family": "requirements-dynamic-dod",
+  "severity": "standard",
+  "fixture": "api-basic",
+  "phase": "plan",
+  "project_brief": "An API service with no documented latency SLO, workload model, or performance target.",
+  "request": "Make the API fast.",
+  "reference_outcome": {
+    "must_recognize": ["performance target is not measurable as stated"],
+    "must_not_claim": ["performance success without a measurable target or evidence"]
+  },
+  "expect": {},
+  "dev_closure_expect": {
+    "block_or_dod_term_groups": [
+      ["latency", "throughput", "performance", "response time"],
+      ["benchmark", "load test", "measure", "target", "evidence"]
+    ]
+  }
+}

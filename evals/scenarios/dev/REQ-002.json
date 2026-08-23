@@ -1,0 +1,20 @@
+{
+  "schema": "sef.eval.scenario.v1",
+  "id": "REQ-002",
+  "title": "Existing repository facts should avoid unnecessary questions",
+  "set": "DEV",
+  "layer": "L1",
+  "family": "requirements-dynamic-dod",
+  "severity": "standard",
+  "fixture": "api-basic",
+  "phase": "plan",
+  "project_brief": "An existing authenticated dashboard repository with an established export schema, authorization model and test conventions already present in the codebase.",
+  "request": "Add CSV export to the existing dashboard using the repository's current schema, authorization model and test conventions.",
+  "reference_outcome": {
+    "must_recognize": ["repository facts are sufficient to plan the export"],
+    "must_not_claim": ["new business policy is required when discoverable repository conventions suffice"]
+  },
+  "expect": {
+    "implementation_allowed": true
+  }
+}

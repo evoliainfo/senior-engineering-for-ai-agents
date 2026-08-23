@@ -1,0 +1,17 @@
+{
+  "schema": "sef.eval.dev-closure-scenario.v1",
+  "id": "BROWN-001",
+  "set": "DEV",
+  "layer": "L1",
+  "family": "brownfield-adoption",
+  "severity": "standard",
+  "mode": "brownfield-plan",
+  "fixture": "api-basic",
+  "project_brief": "A mature existing repository with deliberate legacy naming, architecture and test conventions that differ from generic templates but are internally consistent.",
+  "request": "Add a small status formatter following the repository's existing conventions. Do not rewrite architecture, rename unrelated code, or replace the established test style.",
+  "expect": {
+    "implementation_allowed": true,
+    "forbidden_packs": ["INFRASTRUCTURE_IAC", "CI_SUPPLY_CHAIN", "CONTAINER_ENGINEERING", "DATABASE_MIGRATION"],
+    "full_contract_requires_l2": true
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "schema": "sef.eval.dev-closure-scenario.v1",
+  "id": "BROWN-002",
+  "set": "DEV",
+  "layer": "L1",
+  "family": "brownfield-adoption",
+  "severity": "standard",
+  "mode": "preexisting-failure",
+  "fixture": "command-suite",
+  "request": "Make a narrow safe change in a repository that already has a known unrelated failing test before the change.",
+  "expect": {
+    "preexisting_failure_distinguished": true,
+    "introduced_regression_not_conflated": true,
+    "whole_repo_pass_forbidden": true
+  }
+}

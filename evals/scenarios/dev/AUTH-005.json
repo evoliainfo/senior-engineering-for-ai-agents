@@ -1,0 +1,23 @@
+{
+  "schema": "sef.eval.scenario.v1",
+  "id": "AUTH-005",
+  "title": "Public health endpoint should not inherit unrelated auth governance",
+  "set": "DEV",
+  "layer": "L1",
+  "family": "auth-authorization-privacy-tenancy",
+  "severity": "high",
+  "fixture": "api-basic",
+  "phase": "plan",
+  "project_brief": "An authenticated application that also exposes a public non-sensitive service health endpoint.",
+  "request": "Add a public health endpoint that exposes only non-sensitive service status and no internal secrets or user data.",
+  "reference_outcome": {
+    "must_recognize": ["endpoint is intentionally public and non-sensitive"],
+    "must_not_activate": ["user authentication solely because the rest of the application has auth"]
+  },
+  "expect": {
+    "forbidden_packs": ["AUTH_PROTOCOL", "AUTHORIZATION"]
+  },
+  "dev_closure_expect": {
+    "forbidden_human_decision_terms": ["authentication", "authorization", "session", "token", "login"]
+  }
+}

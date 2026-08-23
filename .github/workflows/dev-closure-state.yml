@@ -1,0 +1,34 @@
+name: DEV closure stateful contracts (exploratory)
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  stateful:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run exploratory stateful and brownfield DEV slice
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m py_compile evals/run_dev_closure_state.py
+          set +e
+          python3 evals/run_dev_closure_state.py --output dev-closure-state.json
+          code=$?
+          set -e
+          echo "Exploratory benchmark exit: $code (full DEV closure workflow is authoritative)."
+          python3 - <<'PY'
+          import json
+          r=json.load(open('dev-closure-state.json'))
+          print(json.dumps(r['summary'],indent=2))
+          PY
+      - name: Publish stateful evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dev-closure-state-${{ github.run_id }}
+          path: dev-closure-state.json
+          if-no-files-found: error
+          retention-days: 90

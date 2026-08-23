@@ -1,0 +1,53 @@
+{
+  "schema": "sef.eval.dev-coverage.v1",
+  "catalog_total": 48,
+  "dev_total": 38,
+  "challenge_total": 10,
+  "challenge_status": "SEALED",
+  "harnesses": {
+    "general_core": {
+      "runner": "evals/run.py",
+      "scenario_root": "evals/scenarios/dev",
+      "ids": [
+        "AUTH-001","AUTH-002","AUTH-004","AUTH-006",
+        "DATA-001","DATA-002","DATA-004","DATA-005",
+        "DIFF-001","DIFF-002","DIFF-004","DIFF-005",
+        "EXT-001","EXT-002","EXT-003","EXT-005",
+        "PROP-001","PROP-002","PROP-003","PROP-004",
+        "REL-001",
+        "WEB-001","WEB-002","WEB-003"
+      ]
+    },
+    "evidence_release": {
+      "runner": "evals/run_dev_closure_evidence.py",
+      "scenario_root": "evals/evidence_release/scenarios/dev",
+      "ids": ["EVID-001","EVID-003","REL-003","REL-004"],
+      "note": "Historical run_evidence_release.py remains the immutable v1.4 baseline harness; this closure adapter grades the same golden IDs against the current public RC-4 evidence interface."
+    },
+    "semantic_requirements": {
+      "runner": "evals/run_dev_closure_extra.py",
+      "scenario_root": "evals/scenarios/dev",
+      "ids": ["REQ-001","REQ-002","REQ-003","REQ-005","AUTH-005"]
+    },
+    "stateful_brownfield": {
+      "runner": "evals/run_dev_closure_state.py",
+      "scenario_root": "evals/dev_closure/scenarios",
+      "ids": ["EVID-004","EVID-005","BROWN-001","BROWN-002","BROWN-003"]
+    }
+  },
+  "known_l2_followups": [
+    {
+      "ids": ["BROWN-001","BROWN-003"],
+      "reason": "L1 can grade planning proportionality, but preserving concrete naming/architecture/test conventions requires an agent-in-the-loop L2 execution trial before a full brownfield claim."
+    }
+  ],
+  "accounting": {
+    "materialized": 38,
+    "pending_materialization": 0,
+    "expected_dev_total": 38
+  },
+  "challenge_ids_sealed": [
+    "PROP-005","REQ-004","AUTH-003","AUTH-007","DATA-003",
+    "EXT-004","REL-002","WEB-004","DIFF-003","EVID-002"
+  ]
+}

@@ -1,0 +1,35 @@
+name: DEV closure phase 1 (exploratory)
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  phase1:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run exploratory request-contract slice
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 evals/run.py validate --scenarios evals/scenarios/dev
+          python3 -m py_compile evals/run_dev_closure_extra.py
+          set +e
+          python3 evals/run_dev_closure_extra.py --ids REQ-001,REQ-002,REQ-003,REQ-005,AUTH-005 --output phase1.json
+          code=$?
+          set -e
+          echo "Exploratory benchmark exit: $code (full DEV closure workflow is authoritative)."
+          python3 - <<'PY'
+          import json
+          r=json.load(open('phase1.json'))
+          print(json.dumps(r['summary'],indent=2))
+          PY
+      - name: Publish phase-1 evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dev-closure-phase1-${{ github.run_id }}
+          path: phase1.json
+          if-no-files-found: error
+          retention-days: 90
