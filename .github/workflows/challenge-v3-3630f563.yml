@@ -1,0 +1,157 @@
+name: Frozen candidate CHALLENGE v3 one-shot
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  challenge-v3:
+    if: github.event.pull_request.head.ref == 'eval/challenge-v3-3630f563'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Prove freeze and sealed v3 contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          candidate='3630f563f24b3577ad1e6a0a05e66a86615dabca'
+          expected='c2203602cb53229aba55bbbb518725c155785838915e75267714bc4e2d3d35ee'
+          ref='candidate/frozen-3630f563'
+          git fetch origin "refs/heads/$ref:refs/remotes/origin/$ref"
+          test "$(git rev-parse refs/remotes/origin/$ref)" = "$candidate"
+          git cat-file -e "$candidate^{commit}"
+          git diff --exit-code "$candidate" -- sef.py SHA256SUMS
+          git show "$candidate:sef.py" > /tmp/challenge-v3-sef.py
+          actual="$(sha256sum /tmp/challenge-v3-sef.py | awk '{print $1}')"
+          test "$actual" = "$expected"
+          test "$(git show "$candidate:SHA256SUMS" | awk '{print $1}')" = "$expected"
+          python3 -m py_compile /tmp/challenge-v3-sef.py evals/run.py evals/run_challenge_standard.py
+          python3 evals/run.py validate --scenarios evals/scenarios/challenge_v3
+          python3 - <<'PY'
+          import hashlib, json
+          from pathlib import Path
+          m=json.load(open('evals/challenge_v3_manifest.json',encoding='utf-8'))
+          assert m['schema']=='sef.eval.challenge-v3-manifest.v1'
+          assert m['state']=='SEALED_UNEXECUTED'
+          assert m['materialized_after_freeze'] is True
+          assert m['candidate_ref']=='candidate/frozen-3630f563'
+          assert m['candidate_commit']=='3630f563f24b3577ad1e6a0a05e66a86615dabca'
+          assert m['candidate_runtime_sha256']=='c2203602cb53229aba55bbbb518725c155785838915e75267714bc4e2d3d35ee'
+          assert m['runtime_mutation_allowed'] is False
+          assert m['first_valid_run_is_official'] is True
+          assert m['challenge_total']==10
+          assert m['state_runner_ids']==[]
+          files=sorted(Path('evals/scenarios/challenge_v3').glob('*.json'))
+          scenarios=[json.load(open(p,encoding='utf-8')) for p in files]
+          ids=[s['id'] for s in scenarios]
+          assert len(files)==10 and len(ids)==len(set(ids))==10
+          assert set(ids)==set(m['expected_ids'])==set(m['standard_runner_ids'])
+          prior_1={'PROP-005','REQ-004','AUTH-003','AUTH-007','DATA-003','EXT-004','REL-002','WEB-004','DIFF-003','EVID-002'}
+          prior_2={'V2-AUTH-001','V2-DATA-001','V2-TRUST-001','V2-REL-001','V2-REG-001','V2-EXT-001','V2-EXT-002','V2-DIFF-001','V2-DIFF-002','V2-PROP-001'}
+          assert set(ids).isdisjoint(prior_1 | prior_2)
+          canonical=''.join(json.dumps(s,sort_keys=True,separators=(',',':'),ensure_ascii=False) for s in sorted(scenarios,key=lambda x:x['id']))
+          digest=hashlib.sha256(canonical.encode()).hexdigest()
+          assert digest==m['catalog_sha256'],(digest,m['catalog_sha256'])
+          print('CHALLENGE v3 sealed catalog:', digest)
+          print('IDs:', ', '.join(m['expected_ids']))
+          PY
+
+      - name: Execute first valid CHALLENGE v3 run
+        id: challenge_run
+        shell: bash
+        run: |
+          set +e
+          ids="$(python3 - <<'PY'
+          import json
+          print(','.join(json.load(open('evals/challenge_v3_manifest.json'))['standard_runner_ids']))
+          PY
+          )"
+          python3 evals/run_challenge_standard.py \
+            --sef /tmp/challenge-v3-sef.py \
+            --scenarios evals/scenarios/challenge_v3 \
+            --ids "$ids" \
+            --expected-sef-sha256 c2203602cb53229aba55bbbb518725c155785838915e75267714bc4e2d3d35ee \
+            --output challenge-v3-standard.json
+          code=$?
+          set -e
+          echo "runner_exit_code=$code" >> "$GITHUB_OUTPUT"
+          if [ "$code" -eq 2 ]; then
+            echo 'Invalid CHALLENGE v3 measurement: harness integrity failed.' >&2
+            exit 2
+          fi
+
+      - name: Lock official v3 verdict
+        if: steps.challenge_run.outcome == 'success' || steps.challenge_run.outcome == 'failure'
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import json
+          m=json.load(open('evals/challenge_v3_manifest.json',encoding='utf-8'))
+          r=json.load(open('challenge-v3-standard.json',encoding='utf-8'))
+          results=r.get('results') or []
+          observed=[str(x.get('scenario_id')) for x in results]
+          expected=list(m['expected_ids'])
+          duplicates=sorted({x for x in observed if observed.count(x)>1})
+          missing=sorted(set(expected)-set(observed))
+          unexpected=sorted(set(observed)-set(expected))
+          harness_errors=[x for x in results if x.get('status')=='HARNESS_ERROR']
+          accounting={'expected':10,'observed':len(results),'unique_observed':len(set(observed)),'missing':missing,'unexpected':unexpected,'duplicates':duplicates}
+          valid=(len(results)==10 and not missing and not unexpected and not duplicates and not harness_errors and r.get('sef_source_sha256')==m['candidate_runtime_sha256'])
+          if not valid:
+              report={'schema':'sef.eval.challenge-v3-report.v1','valid_run':False,'harness_integrity':'FAIL','accounting':accounting,'harness_errors':[x.get('limitations') for x in harness_errors],'candidate_commit':m['candidate_commit'],'sef_source_sha256':r.get('sef_source_sha256'),'catalog_sha256':m['catalog_sha256']}
+              json.dump(report,open('challenge-v3-report.json','w'),indent=2,sort_keys=True); print(json.dumps(report,indent=2)); raise SystemExit(2)
+          counts={}
+          for x in results: counts[x.get('status','UNKNOWN')]=counts.get(x.get('status','UNKNOWN'),0)+1
+          failures=sorted(x['scenario_id'] for x in results if x.get('status')!='PASS')
+          critical_failures=sorted(x['scenario_id'] for x in results if x.get('status')!='PASS' and x.get('severity')=='critical')
+          report={
+            'schema':'sef.eval.challenge-v3-report.v1',
+            'valid_run':True,
+            'official_independent_verdict':True,
+            'candidate_ref':m['candidate_ref'],
+            'candidate_commit':m['candidate_commit'],
+            'sef_source_sha256':m['candidate_runtime_sha256'],
+            'catalog_sha256':m['catalog_sha256'],
+            'holdout_status':'OPENED_EXECUTED',
+            'holdout_reuse_status':'CONSUMED_CONTAMINATED_FOR_FUTURE_TUNING',
+            'accounting':accounting,
+            'harness_integrity':'PASS',
+            'harness_errors':[],
+            'benchmark':{'status':'PASS' if counts=={'PASS':10} else 'FAIL','counts':counts,'failures':failures,'critical_failures':critical_failures,'target':'10/10 PASS'},
+            'decision':'PROCEED_TO_CODEX_L2' if counts=={'PASS':10} else ('STOP_DETERMINISTIC_TUNING_ARCHITECTURE_DECISION' if critical_failures else 'STOP_DETERMINISTIC_TUNING_RELEASE_SCOPE_DECISION'),
+            'real_l2_status':{'codex':'NOT_RUN','claude':'NOT_RUN'},
+            'results':results,
+          }
+          json.dump(report,open('challenge-v3-report.json','w'),indent=2,sort_keys=True)
+          print(json.dumps({k:report[k] for k in ('candidate_commit','sef_source_sha256','catalog_sha256','holdout_status','holdout_reuse_status','accounting','harness_integrity','benchmark','decision','real_l2_status')},indent=2))
+          PY
+
+      - name: Publish immutable CHALLENGE v3 evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: frozen-challenge-v3-3630f563-${{ github.run_id }}
+          path: |
+            challenge-v3-standard.json
+            challenge-v3-report.json
+          if-no-files-found: error
+          retention-days: 90
+
+      - name: Enforce benchmark target
+        if: always()
+        shell: bash
+        run: |
+          test -f challenge-v3-report.json
+          python3 - <<'PY'
+          import json
+          r=json.load(open('challenge-v3-report.json',encoding='utf-8'))
+          if not r.get('valid_run') or r.get('harness_integrity')!='PASS': raise SystemExit(2)
+          raise SystemExit(0 if (r.get('benchmark') or {}).get('status')=='PASS' else 1)
+          PY
