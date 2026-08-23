@@ -1,0 +1,56 @@
+{
+  "schema": "sef.eval.challenge-v2-manifest.v1",
+  "holdout_name": "CHALLENGE_V2",
+  "state": "SEALED_UNEXECUTED",
+  "materialized_after_freeze": true,
+  "freeze_id": "FZ-2026-08-23-4132711F",
+  "candidate_ref": "candidate/frozen-4132711f",
+  "candidate_commit": "4132711f9d0ad74ff41b26deff7b9966d6e54e94",
+  "candidate_runtime_sha256": "bfeda790cd70c78ceb9fae862441df35c9bfe819001c0d429c09c0dde2a0c2bd",
+  "evaluator_branch": "eval/challenge-v2-4132711f",
+  "challenge_total": 10,
+  "expected_ids": [
+    "V2-AUTH-001",
+    "V2-DATA-001",
+    "V2-TRUST-001",
+    "V2-REL-001",
+    "V2-REG-001",
+    "V2-EXT-001",
+    "V2-EXT-002",
+    "V2-DIFF-001",
+    "V2-DIFF-002",
+    "V2-PROP-001"
+  ],
+  "standard_runner_ids": [
+    "V2-AUTH-001",
+    "V2-DATA-001",
+    "V2-TRUST-001",
+    "V2-REL-001",
+    "V2-REG-001",
+    "V2-EXT-001",
+    "V2-EXT-002",
+    "V2-DIFF-001",
+    "V2-DIFF-002",
+    "V2-PROP-001"
+  ],
+  "state_runner_ids": [],
+  "catalog_sha256": "68dd98fd419266c6f2f0de78c766aa43377c101eda7c33698b834facc23ce7ad",
+  "runtime_mutation_allowed": false,
+  "first_valid_run_is_official": true,
+  "reuse_after_first_valid_run": "CONSUMED_CONTAMINATED_FOR_FUTURE_TUNING",
+  "success_threshold": {
+    "pass": 10,
+    "fail": 0,
+    "harness_errors": 0
+  },
+  "design_constraints": [
+    "No scenario is copied or directly paraphrased from CHALLENGE #1.",
+    "No candidate output was observed before this catalog and its expectations were committed.",
+    "The frozen runtime is loaded from candidate/frozen-4132711f, not from evaluator-branch working-tree changes.",
+    "Any invalid run caused by harness integrity may be rerun only after a harness-only correction that cannot change scenario semantics or candidate runtime."
+  ],
+  "real_l2_status": {
+    "codex": "NOT_RUN",
+    "claude": "NOT_RUN"
+  }
+}
