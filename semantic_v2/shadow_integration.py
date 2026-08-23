@@ -13,9 +13,15 @@ import json
 from typing import Any, Mapping
 
 from .contracts import REVIEW_REQUIRED, Extractor, PolicyComposer, semantic_ir_digest
+from .policy_composer import COMPOSITION_RULES, FACT_POLICY_RULES
 
 SHADOW_SCHEMA = "sef.semantic-shadow.v1"
 RISK_ORDER = {"R0": 0, "R1": 1, "R2": 2, "R3": 3, "R4": 4}
+COMPARABLE_PROCEDURES = {
+    str(procedure)
+    for rule in [*FACT_POLICY_RULES.values(), *COMPOSITION_RULES]
+    for procedure in rule.get("procedures", [])
+}
 
 
 def _canonical_digest(value: Any) -> str:
@@ -24,17 +30,27 @@ def _canonical_digest(value: Any) -> str:
 
 
 def _legacy_policy(assessment: Mapping[str, Any]) -> dict[str, Any]:
-    """Normalize the public v1.5 evaluation surface without inventing semantics."""
+    """Normalize the public v1.5 evaluation surface without inventing semantics.
+
+    v1.5 may emit baseline procedures unrelated to the semantic rule families that
+    S3 currently composes. Those remain in canonical evidence but are excluded from
+    downgrade comparison until a v2 semantic rule owns them.
+    """
     packs = assessment.get("packs")
     if not isinstance(packs, list):
         packs = assessment.get("required_packs")
     procedures = assessment.get("procedures")
     if not isinstance(procedures, list):
         procedures = assessment.get("required_procedures")
+    governed_procedures = {
+        str(v)
+        for v in (procedures or [])
+        if isinstance(v, str) and str(v) in COMPARABLE_PROCEDURES
+    }
     return {
         "risk": assessment.get("risk") if assessment.get("risk") in RISK_ORDER else None,
         "packs": sorted({str(v) for v in (packs or []) if isinstance(v, str)}),
-        "procedures": sorted({str(v) for v in (procedures or []) if isinstance(v, str)}),
+        "procedures": sorted(governed_procedures),
         "implementation_allowed": assessment.get("implementation_allowed")
         if isinstance(assessment.get("implementation_allowed"), bool)
         else None,
