@@ -92,6 +92,42 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Preflight exact OpenAI semantic provider contract
+        if: ${{ env.OPENAI_API_KEY != '' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          PYTHONPATH=. python3 - <<'PY'
+          import os
+          from semantic_v2.model_extractor import ModelAssistedExtractor
+          from semantic_v2.openai_responses_provider import OpenAIResponsesSemanticProvider
+
+          provider = OpenAIResponsesSemanticProvider(
+              model=os.environ["OPENAI_MODEL"],
+              reasoning_effort=os.environ["OPENAI_REASONING_EFFORT"],
+          )
+          contract = ModelAssistedExtractor(
+              provider,
+              provider_name=f"openai-responses:{os.environ['OPENAI_MODEL']}",
+          ).provider_contract()
+          try:
+              provider.extract_semantics(
+                  "Rename a local display label in documentation only. No permissions, external calls, production data, deployment, or consequential decisions change.",
+                  {"evaluation": "S5-provider-preflight", "development_only": True},
+                  contract,
+              )
+          except Exception as exc:
+              # Provider exceptions contain HTTP status / OpenAI error bodies but never the API key.
+              print(f"OPENAI_SEMANTIC_PREFLIGHT_FAILED: {type(exc).__name__}: {exc}")
+              raise
+          print(
+              "OPENAI_SEMANTIC_PREFLIGHT_OK",
+              f"response_id={provider.last_response_id}",
+              f"model={provider.last_model}",
+              f"total_tokens={(provider.last_usage or {}).get('total_tokens')}",
+          )
+          PY
+
       - name: Run live OpenAI Semantic DEV qualification when credential exists
         shell: bash
         run: |
