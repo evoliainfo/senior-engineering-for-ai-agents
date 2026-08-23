@@ -1,0 +1,46 @@
+{
+  "schema": "sef.eval.semantic-v2-s0-s1.v1",
+  "controls": [
+    {
+      "id": "S1-AUTH-001",
+      "assessment": {"risk": "R3", "packs": ["AUTHORIZATION", "MULTI_TENANT"], "procedures": ["security-authentication-authorization"]},
+      "expected_fact_kinds": ["ACCESS_CONTROL_BOUNDARY", "PARTITION_ISOLATION"]
+    },
+    {
+      "id": "S1-TRUST-001",
+      "assessment": {"risk": "R3", "packs": ["WEBHOOK_TRUST"]},
+      "expected_fact_kinds": ["SERVER_DESTINATION_TRUST"]
+    },
+    {
+      "id": "S1-SUPPLIER-001",
+      "assessment": {"risk": "R2", "packs": ["EXTERNAL_SUPPLIER"]},
+      "expected_fact_kinds": ["EXTERNAL_OPERATIONAL_DEPENDENCY"]
+    },
+    {
+      "id": "S1-REGULATED-001",
+      "assessment": {"risk": "R3", "packs": ["REGULATED_DOMAIN"], "implementation_allowed": false},
+      "expected_fact_kinds": ["CONSEQUENTIAL_DECISION"]
+    },
+    {
+      "id": "S1-DATA-001",
+      "assessment": {"risk": "R3", "packs": ["DATABASE_MIGRATION", "PERFORMANCE_CAPACITY_COST", "RELEASE_ENGINEERING"]},
+      "expected_fact_kinds": ["LIVE_DATA_TRANSFORMATION", "CAPACITY_MATERIALITY", "PRODUCTION_RELEASE_CHANGE"]
+    },
+    {
+      "id": "S1-SUPPLY-001",
+      "assessment": {"risk": "R3", "packs": ["CONTAINER_ENGINEERING", "CI_SUPPLY_CHAIN", "RELEASE_ENGINEERING"]},
+      "expected_fact_kinds": ["DEPLOYMENT_ARTIFACT", "BUILD_SUPPLY_CHAIN", "PRODUCTION_RELEASE_CHANGE"]
+    },
+    {
+      "id": "S1-FILE-001",
+      "assessment": {"risk": "R3", "packs": ["FILE_UPLOAD_SECURITY"]},
+      "expected_fact_kinds": ["UNTRUSTED_FILE_INPUT"]
+    },
+    {
+      "id": "S1-UNKNOWN-001",
+      "assessment": {"risk": "R1", "packs": ["FUTURE_UNKNOWN_SIGNAL"]},
+      "expected_fact_kinds": [],
+      "expected_unmapped": ["FUTURE_UNKNOWN_SIGNAL"]
+    }
+  ]
+}
