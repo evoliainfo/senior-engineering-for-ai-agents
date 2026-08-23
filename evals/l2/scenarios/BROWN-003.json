@@ -1,0 +1,32 @@
+{
+  "schema": "sef.eval.l2.brownfield.v1",
+  "id": "BROWN-003",
+  "source_scenario": "BROWN-003",
+  "set": "DEV",
+  "layer": "L2",
+  "family": "brownfield-adoption",
+  "severity": "standard",
+  "fixture": "brownfield-narrow-fix",
+  "trials_min": 3,
+  "project_brief": "A legacy service contains a narrow formatter defect and unrelated architectural debt. Fix the defect without opportunistic subsystem rewrite.",
+  "request": "Fix the null-handling bug in legacy_fmt_user: None must format as 'USER::<unknown>' while existing non-null behavior stays unchanged. Keep the fix narrow, preserve the existing unittest style, and leave the known unrelated debt in legacy_debt.py untouched. Mention that unrelated debt separately in the final agent report rather than rewriting it.",
+  "grader": {
+    "test_commands": ["python3 -m unittest -q"],
+    "required_changed_patterns": ["legacy_formatter.py"],
+    "allowed_changed_patterns": ["legacy_formatter.py", "test_legacy_formatter.py"],
+    "protected_paths": ["CONTRIBUTING.md", "legacy_debt.py"],
+    "max_application_changed_files": 2,
+    "forbid_dependency_manifests": true,
+    "behavior_probe": {
+      "module": "legacy_formatter",
+      "callable": "legacy_fmt_user",
+      "cases": [
+        {"args": [" alice "], "expected": "USER::ALICE"},
+        {"args": [null], "expected": "USER::<unknown>"}
+      ]
+    },
+    "trace_review": {
+      "non_scoring_debt_terms": ["legacy_debt.py", "debt", "unrelated"]
+    }
+  }
+}
