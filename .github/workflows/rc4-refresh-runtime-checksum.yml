@@ -1,0 +1,27 @@
+name: Refresh RC-4 runtime checksum
+on:
+  push:
+    branches: [integration/rc4-evidence-release]
+permissions:
+  contents: write
+jobs:
+  refresh:
+    if: ${{ github.actor != 'github-actions[bot]' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Recompute integrity manifest
+        run: sha256sum sef.py > SHA256SUMS
+      - name: Verify manifest immediately
+        run: sha256sum -c SHA256SUMS
+      - name: Remove one-shot workflow and commit checksum
+        run: |
+          rm -f .github/workflows/rc4-refresh-runtime-checksum.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add SHA256SUMS .github/workflows/rc4-refresh-runtime-checksum.yml
+          git commit -m "chore: refresh RC-4 runtime integrity checksum"
+          git push origin HEAD:integration/rc4-evidence-release
