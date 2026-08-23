@@ -1,10 +1,10 @@
 {
   "schema": "sef.eval.release-candidate.v1",
-  "stage": "FROZEN",
-  "source_main_commit": "4132711f9d0ad74ff41b26deff7b9966d6e54e94",
-  "freeze_commit": "4132711f9d0ad74ff41b26deff7b9966d6e54e94",
-  "candidate_ref": "candidate/frozen-4132711f",
-  "candidate_runtime_sha256": "bfeda790cd70c78ceb9fae862441df35c9bfe819001c0d429c09c0dde2a0c2bd",
+  "stage": "PRE_FREEZE_B3",
+  "source_main_commit": "95e1be4d3eaa1b4e9c3f852e9772a3d817ced601",
+  "freeze_commit": null,
+  "candidate_ref": "integration/final-generalization-remediation",
+  "candidate_runtime_sha256": "c2203602cb53229aba55bbbb518725c155785838915e75267714bc4e2d3d35ee",
   "runtime_mutation_allowed_in_b3": false,
   "runtime_mutation_allowed_after_freeze": false,
   "required_gates": {
@@ -22,9 +22,19 @@
     "current_use": "CONSUMED_REGRESSION_ONLY",
     "independent_holdout_claim": false
   },
-  "future_holdout": {
+  "consumed_holdout_v2": {
     "name": "CHALLENGE_V2",
+    "official_candidate_commit": "4132711f9d0ad74ff41b26deff7b9966d6e54e94",
+    "official_candidate_runtime_sha256": "bfeda790cd70c78ceb9fae862441df35c9bfe819001c0d429c09c0dde2a0c2bd",
+    "official_verdict": {"pass": 4, "fail": 6},
+    "official_workflow_run": 32650180190,
+    "current_use": "CONSUMED_REGRESSION_ONLY",
+    "independent_holdout_claim": false
+  },
+  "future_holdout": {
+    "name": "CHALLENGE_V3",
     "materialized": false,
+    "creation_allowed_in_b3": false,
     "creation_allowed_after_freeze": true,
     "must_be_unseen_until_after_freeze": true,
     "rotation_required": true,
@@ -34,5 +44,5 @@
     "codex": "NOT_RUN",
     "claude": "NOT_RUN"
   },
-  "next_transition": "Materialize a fresh CHALLENGE v2 against candidate commit 4132711f9d0ad74ff41b26deff7b9966d6e54e94. The first valid run is the independent verdict. Do not tune or mutate the frozen candidate before or during that run."
+  "next_transition": "Merge the exact canonical runtime without further mutation, bind the resulting main commit as the new freeze identity, then materialize one fresh CHALLENGE v3. If v3 has structural critical failures, stop deterministic tuning; if it passes 10/10, proceed to the real Codex L2 trial."
 }
