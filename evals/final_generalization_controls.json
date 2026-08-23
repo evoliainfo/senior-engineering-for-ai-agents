@@ -1,0 +1,86 @@
+{
+  "schema": "sef.eval.final-generalization-controls.v1",
+  "purpose": "Last-cycle positive/negative controls derived from CHALLENGE v2 root causes but deliberately using neighboring language and domains. These are DEV regressions, never an independent holdout.",
+  "scenarios": [
+    {
+      "schema":"sef.eval.scenario.v1","id":"FGR-AUTH-P1","title":"Dealer-group report boundary routes tenancy and authorization","set":"DEV","layer":"L1","family":"final-boundary","severity":"critical","fixture":"api-basic","phase":"plan",
+      "project_brief":"One platform serves many independently operated dealer groups.",
+      "request":"A sales analyst belongs to one dealer group and may view inventory reports only for locations assigned to that group. Supplying another dealer group's identifier must never expose that group's reports.",
+      "expect":{"risk":{"minimum":"R3"},"required_packs":["MULTI_TENANT","AUTHORIZATION"],"required_procedures":["multi-tenant-isolation","security-authentication-authorization"]}
+    },
+    {
+      "schema":"sef.eval.scenario.v1","id":"FGR-AUTH-N1","title":"Public partner-group copy does not invent data isolation","set":"DEV","layer":"L1","family":"final-boundary","severity":"standard","fixture":"web-basic","phase":"plan",
+      "project_brief":"A public website describes partner programs.",
+      "request":"Change the public page heading from Partner Network to Partner Groups. This is marketing copy only.",
+      "expect":{"forbidden_packs":["MULTI_TENANT","AUTHORIZATION"]},"plan_expect":{"risk":{"maximum":"R1"}}
+    },
+    {
+      "schema":"sef.eval.scenario.v1","id":"FGR-TRUST-P1","title":"Partner-controlled asset endpoint routes server destination trust","set":"DEV","layer":"L1","family":"final-trust","severity":"critical","fixture":"api-basic","phase":"plan",
+      "project_brief":"A backend import worker can reach public and private network destinations.",
+      "request":"Partners submit an asset_endpoint value. The backend worker opens a connection to that endpoint, downloads the payload and parses metadata before storing the result.",
+      "expect":{"risk":{"minimum":"R3"},"required_packs":["WEBHOOK_TRUST"],"required_procedures":["webhook-external-input-trust"]}
+    },
+    {
+      "schema":"sef.eval.scenario.v1","id":"FGR-TRUST-N1","title":"Browser-displayed address does not route privileged server trust","set":"DEV","layer":"L1","family":"final-trust","severity":"standard","fixture":"web-basic","phase":"plan",
+      "project_brief":"A static browser page has no backend proxy.",
+      "request":"Display a customer-provided external address as plain text in the browser. The application server must not connect to or download anything from that address.",
+      "expect":{"forbidden_packs":["WEBHOOK_TRUST"]}
+    },
+    {
+      "schema":"sef.eval.scenario.v1","id":"FGR-REG-P1","title":"Insurance claim recommendation is regulated high-impact work","set":"DEV","layer":"L1","family":"final-regulated","severity":"critical","fixture":"api-basic","phase":"plan",
+      "project_brief":"An insurer is adding automated decision support; jurisdiction and qualified approval policy are unresolved.",
+      "request":"Add a model recommendation that tells a claims reviewer whether to approve or deny an insurance claim using claimant and policy data.",
+      "expect":{"risk":{"minimum":"R3"},"required_packs":["REGULATED_DOMAIN"],"implementation_allowed":false},
+      "challenge_expect":{"required_human_decision_terms":["REGULATED_DOMAIN"],"required_dod_term_groups":[["qualified","authority"],["jurisdiction","regulatory"]]}
+    },
+    {
+      "schema":"sef.eval.scenario.v1","id":"FGR-REG-N1","title":"Mortgage repayment arithmetic does not become approval governance","set":"DEV","layer":"L1","family":"final-regulated","severity":"standard","fixture":"api-basic","phase":"plan",
+      "project_brief":"A public financial education calculator performs deterministic arithmetic only.",
+      "request":"Calculate the monthly repayment from principal, interest rate and term. Do not determine eligibility, approve, decline or recommend a mortgage application.",
+      "expect":{"forbidden_packs":["REGULATED_DOMAIN"]}
+    },
+    {
+      "schema":"sef.eval.scenario.v1","id":"FGR-SUP-P1","title":"Hosted support API with quota and vendor outages routes supplier governance","set":"DEV","layer":"L1","family":"final-supplier","severity":"high","fixture":"api-basic","phase":"plan",
+      "project_brief":"Customer tickets must be synchronized to a hosted support platform operated outside the application team.",
+      "request":"Sync newly created tickets to the hosted support platform through its REST API, respect rate limits, retry transient errors and surface vendor outages without losing tickets.",
+      "expect":{"risk":{"minimum":"R2"},"required_packs":["EXTERNAL_SUPPLIER"],"required_procedures":["external-supplier-saas-governance"]}
+    },
+    {
+      "schema":"sef.eval.scenario.v1","id":"FGR-SUP-N1","title":"Internal service API does not invent supplier governance","set":"DEV","layer":"L1","family":"final-supplier","severity":"standard","fixture":"api-basic","phase":"plan",
+      "project_brief":"Both services are owned and deployed by the same application team in the same repository.",
+      "request":"Send the normalized item record to the internal inventory API after validation.",
+      "expect":{"forbidden_packs":["EXTERNAL_SUPPLIER"]}
+    },
+    {
+      "schema":"sef.eval.scenario.v1","id":"FGR-POL-P1","title":"Security-feature marketing copy respects explicit implementation non-goals","set":"DEV","layer":"L1","family":"final-polarity","severity":"high","fixture":"web-basic","phase":"plan",
+      "project_brief":"A public product page describes enterprise features but contains no identity service.",
+      "request":"Change the pricing-page sentence to say that enterprise plans support RBAC. This is wording only; do not implement permissions, login, deployment or backend changes.",
+      "expect":{"forbidden_packs":["AUTHORIZATION","AUTH_PROTOCOL","RELEASE_ENGINEERING","MULTI_TENANT"]},"plan_expect":{"risk":{"maximum":"R1"}}
+    },
+    {
+      "schema":"sef.eval.scenario.v1","id":"FGR-POL-P2","title":"Prohibitive authorization requirement is not suppressed as a non-goal","set":"DEV","layer":"L1","family":"final-polarity","severity":"critical","fixture":"api-basic","phase":"plan",
+      "project_brief":"An authenticated API exposes invoice records.",
+      "request":"Update the invoice endpoint so unauthorized users must not access invoices belonging to another account.",
+      "expect":{"risk":{"minimum":"R3"},"required_packs":["AUTHORIZATION"]}
+    },
+    {
+      "schema":"sef.eval.scenario.v1","id":"FGR-DIFF-P1","title":"Actual publish workflow composes release governance outside a copy-only plan","set":"DEV","layer":"L1","family":"final-actual-diff","severity":"critical","fixture":"api-basic","phase":"verify",
+      "project_brief":"A small service currently has no production delivery workflow.",
+      "request":"Fix one sentence in the contributor guide. No build or deployment change is planned.",
+      "plan_expect":{"forbidden_packs":["CONTAINER_ENGINEERING","CI_SUPPLY_CHAIN","RELEASE_ENGINEERING"],"risk":{"maximum":"R1"}},
+      "mutations":[
+        {"action":"write","path":"Dockerfile","content":"FROM python:3.13-slim\nCOPY . /app\n"},
+        {"action":"write","path":".github/workflows/publish-prod.yml","content":"name: publish prod\non: [push]\njobs:\n  publish:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v4\n      - uses: docker/build-push-action@master\n        with:\n          push: true\n"}
+      ],
+      "expect":{"risk":{"minimum":"R3"},"required_packs":["CONTAINER_ENGINEERING","CI_SUPPLY_CHAIN","RELEASE_ENGINEERING"],"required_changed_paths":["Dockerfile",".github/workflows/publish-prod.yml"]}
+    },
+    {
+      "schema":"sef.eval.scenario.v1","id":"FGR-DIFF-N1","title":"Lint-only CI workflow does not automatically become a release","set":"DEV","layer":"L1","family":"final-actual-diff","severity":"standard","fixture":"api-basic","phase":"verify",
+      "project_brief":"CI runs static checks only and does not publish or deploy artifacts.",
+      "request":"Update the contributor documentation about local linting.",
+      "plan_expect":{"forbidden_packs":["RELEASE_ENGINEERING"]},
+      "mutations":[{"action":"write","path":".github/workflows/lint.yml","content":"name: lint\non: [pull_request]\njobs:\n  lint:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v4\n      - run: python -m compileall .\n"}],
+      "expect":{"forbidden_packs":["RELEASE_ENGINEERING"],"required_changed_paths":[".github/workflows/lint.yml"]}
+    }
+  ]
+}
