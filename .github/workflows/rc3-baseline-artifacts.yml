@@ -1,0 +1,79 @@
+name: Persist RC-3 baseline evidence
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  rc3-baseline:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    env:
+      BASELINE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+      VALIDATION_SHA: ${{ github.sha }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate runtime and RC-3 scenarios
+        run: |
+          set -euo pipefail
+          sha256sum -c SHA256SUMS
+          python3 -m py_compile sef.py evals/run.py
+          python3 sef.py self-test
+          python3 evals/run.py validate --scenarios evals/diagnostic/rc3_materiality/treatment
+          python3 evals/run.py validate --scenarios evals/diagnostic/rc3_materiality/control
+          python3 evals/run.py validate --scenarios evals/diagnostic/rc3_materiality/ambiguity
+      - name: Execute frozen RC-3 baseline
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts/rc3-baseline
+          run_suite() {
+            name="$1"; scenarios="$2"
+            set +e
+            python3 evals/run.py run --sef sef.py --scenarios "$scenarios" --fixtures evals/fixtures --set DEV > "artifacts/rc3-baseline/${name}.json"
+            code=$?
+            set -e
+            printf '%s\n' "$code" > "artifacts/rc3-baseline/${name}.exit-code"
+          }
+          run_suite treatment evals/diagnostic/rc3_materiality/treatment
+          run_suite control evals/diagnostic/rc3_materiality/control
+          run_suite ambiguity evals/diagnostic/rc3_materiality/ambiguity
+      - name: Summarize baseline
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json, os
+          from pathlib import Path
+          root=Path('artifacts/rc3-baseline')
+          specs=[('Treatment','treatment'),('Controls','control'),('Ambiguity','ambiguity')]
+          lines=['# RC-3 pre-implementation baseline','',f"- Candidate head SHA: `{os.environ.get('BASELINE_SHA')}`",f"- GitHub validation SHA: `{os.environ.get('VALIDATION_SHA')}`",'- Runtime behavior change: none.','']
+          failures=[]; total=0
+          for label,name in specs:
+            report=json.loads((root/f'{name}.json').read_text())
+            results=report.get('results',[]); total+=len(results)
+            errors=[r.get('scenario_id') for r in results if r.get('status')=='HARNESS_ERROR']
+            if errors: failures.append(f'{label}: HARNESS_ERROR {errors}')
+            p=sum(r.get('status')=='PASS' for r in results); f=sum(r.get('status')=='FAIL' for r in results)
+            lines += [f'## {label}','',f'- PASS: `{p}`',f'- FAIL: `{f}`','','| Scenario | Status |','| --- | --- |']
+            for r in results: lines.append(f"| `{r.get('scenario_id')}` | `{r.get('status')}` |")
+            lines.append('')
+          lines += ['## Integrity','',f'- Total recorded: `{total}`',f"- Harness integrity: `{'FAIL' if failures else 'PASS'}`"]
+          if failures: lines += ['', *[f'- {x}' for x in failures]]
+          summary='\n'.join(lines)+'\n'; (root/'summary.md').write_text(summary); print(summary)
+          step=os.environ.get('GITHUB_STEP_SUMMARY')
+          if step: Path(step).write_text(summary)
+          if failures: raise SystemExit('; '.join(failures))
+          PY
+      - name: Publish RC-3 baseline artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rc3-pre-implementation-baseline-${{ github.run_id }}
+          path: artifacts/rc3-baseline/
+          if-no-files-found: error
+          retention-days: 90

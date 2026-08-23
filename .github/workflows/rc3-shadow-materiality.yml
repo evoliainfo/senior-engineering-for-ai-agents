@@ -1,0 +1,53 @@
+name: RC-3 shadow task materiality
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  shadow-materiality:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Audit frozen RC-3 corpus without changing planning
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import importlib.util, json
+          from pathlib import Path
+          p=Path('evals/diagnostic/rc3_materiality/shadow_materiality.py')
+          spec=importlib.util.spec_from_file_location('shadow_materiality',p)
+          m=importlib.util.module_from_spec(spec); spec.loader.exec_module(m)
+          groups={
+            'treatment':'PROJECT_ONLY',
+            'control':'TASK_MATERIAL',
+            'ambiguity':'UNCERTAIN',
+          }
+          rows=[]; failures=[]
+          for group,expected in groups.items():
+            for path in sorted(Path('evals/diagnostic/rc3_materiality',group).glob('*.json')):
+              s=json.loads(path.read_text())
+              obs=m.classify(s['request'],s.get('project_brief',''))
+              ok=obs['task_materiality']==expected
+              rows.append((s['id'],group,expected,obs['task_materiality'],ok,obs))
+              if not ok: failures.append(f"{s['id']}: expected {expected}, got {obs['task_materiality']}")
+          out=Path('artifacts/rc3-shadow'); out.mkdir(parents=True,exist_ok=True)
+          (out/'observations.json').write_text(json.dumps([r[5] | {'scenario_id':r[0],'group':r[1],'expected':r[2]} for r in rows],ensure_ascii=False,indent=2))
+          lines=['# RC-3 shadow task-materiality audit','','| Scenario | Group | Expected | Observed | Gate |','| --- | --- | --- | --- | --- |']
+          for sid,group,expected,observed,ok,_ in rows:
+            lines.append(f'| `{sid}` | `{group}` | `{expected}` | `{observed}` | `{"PASS" if ok else "FAIL"}` |')
+          lines += ['',f'- Corpus: `{len(rows)}/19`',f'- Classification gate: `{"PASS" if not failures else "FAIL"}`','- Runtime/planning effect: `NONE (shadow only)`']
+          summary='\n'.join(lines)+'\n'; (out/'summary.md').write_text(summary); print(summary)
+          if failures: raise SystemExit('; '.join(failures))
+          PY
+      - name: Publish shadow observations
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rc3-shadow-materiality-${{ github.run_id }}
+          path: artifacts/rc3-shadow/
+          if-no-files-found: error
+          retention-days: 90

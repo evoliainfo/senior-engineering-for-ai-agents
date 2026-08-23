@@ -1,0 +1,1 @@
+{"schema":"sef.eval.scenario.v1","id":"RC3-AMB-003","title":"Workspace management remains conservative","set":"DEV","layer":"L1","family":"task-materiality-ambiguity","severity":"high","fixture":"api-basic","phase":"plan","project_brief":"A company SaaS with possible workspaces.","request":"Add workspace management.","expect":{"implementation_allowed":false}}

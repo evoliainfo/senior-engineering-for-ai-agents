@@ -1,0 +1,1 @@
+{"schema":"sef.eval.scenario.v1","id":"RC3-AMB-002","title":"Organization settings remain conservative","set":"DEV","layer":"L1","family":"task-materiality-ambiguity","severity":"high","fixture":"api-basic","phase":"plan","project_brief":"A B2B application used by organizations.","request":"Implement organization settings.","expect":{"implementation_allowed":false}}

@@ -1,0 +1,29 @@
+[
+{"id":"RC3-GEN-P01","expected":"PROJECT_ONLY","project_brief":"A company product with multiple teams.","request":"Improve the homepage title tags and canonical metadata for search engines."},
+{"id":"RC3-GEN-P02","expected":"PROJECT_ONLY","project_brief":"A B2B organization platform.","request":"Replace the hero illustration on the public pricing page."},
+{"id":"RC3-GEN-P03","expected":"PROJECT_ONLY","project_brief":"A workspace-based SaaS.","request":"Correct spelling and headings in the public documentation."},
+{"id":"RC3-GEN-P04","expected":"PROJECT_ONLY","project_brief":"A company application.","request":"Generate robots.txt and a sitemap for the marketing site."},
+{"id":"RC3-GEN-P05","expected":"PROJECT_ONLY","project_brief":"A multi-organization product.","request":"Refactor a deterministic date-formatting helper that receives only a timestamp and locale."},
+{"id":"RC3-GEN-P06","expected":"PROJECT_ONLY","project_brief":"A B2B company service.","request":"Adjust spacing and font sizes on the public contact page."},
+{"id":"RC3-GEN-P07","expected":"PROJECT_ONLY","project_brief":"A product for customer organizations.","request":"Publish a public article about our new API."},
+{"id":"RC3-GEN-P08","expected":"PROJECT_ONLY","project_brief":"A tenant-aware application.","request":"Update the copyright notice in the public website footer."},
+
+{"id":"RC3-GEN-M01","expected":"TASK_MATERIAL","project_brief":"A B2B application for organizations.","request":"Ensure every account can query records belonging only to its own tenant."},
+{"id":"RC3-GEN-M02","expected":"TASK_MATERIAL","project_brief":"A company SaaS.","request":"Namespace uploaded files by customer account so one customer cannot address another customer's objects."},
+{"id":"RC3-GEN-M03","expected":"TASK_MATERIAL","project_brief":"A platform for many organizations.","request":"Make database reads organization-aware and prevent records from leaking between organizations."},
+{"id":"RC3-GEN-M04","expected":"TASK_MATERIAL","project_brief":"A workspace product.","request":"Scope Redis cache entries to the active workspace."},
+{"id":"RC3-GEN-M05","expected":"TASK_MATERIAL","project_brief":"A B2B service.","request":"Run invoice processing independently for every customer account."},
+{"id":"RC3-GEN-M06","expected":"TASK_MATERIAL","project_brief":"A multi-company application.","request":"Let an authenticated user change from one organization to another without mixing their data."},
+{"id":"RC3-GEN-M07","expected":"TASK_MATERIAL","project_brief":"An organization platform.","request":"Build a report that aggregates metrics across tenant boundaries for a super-admin."},
+{"id":"RC3-GEN-M08","expected":"TASK_MATERIAL","project_brief":"A customer workspace application.","request":"Partition job queues and storage prefixes according to the owning account."},
+
+{"id":"RC3-GEN-A01","expected":"UNCERTAIN","project_brief":"A B2B organization platform.","request":"Redesign the organization dashboard."},
+{"id":"RC3-GEN-A02","expected":"UNCERTAIN","project_brief":"A workspace-based application.","request":"Add workspace preferences."},
+{"id":"RC3-GEN-A03","expected":"UNCERTAIN","project_brief":"A company product.","request":"Create the company administration screen."},
+{"id":"RC3-GEN-A04","expected":"UNCERTAIN","project_brief":"A tenant-aware product.","request":"Improve tenant management."},
+
+{"id":"RC3-GEN-X01","expected":"TASK_MATERIAL","project_brief":"A multi-tenant company platform.","request":"Improve SEO metadata on the public homepage and add an admin endpoint that can read a selected tenant's records."},
+{"id":"RC3-GEN-X02","expected":"TASK_MATERIAL","project_brief":"A B2B organization service.","request":"Fix typography on the public landing page, then make uploaded documents isolated for each customer."},
+{"id":"RC3-GEN-X03","expected":"TASK_MATERIAL","project_brief":"A workspace SaaS.","request":"Update the public footer and scope cache keys to the active workspace."},
+{"id":"RC3-GEN-X04","expected":"TASK_MATERIAL","project_brief":"A company platform.","request":"Publish a public blog post and allow users to switch between companies while preserving data isolation."}
+]

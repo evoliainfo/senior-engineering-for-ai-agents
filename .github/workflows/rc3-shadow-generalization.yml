@@ -1,0 +1,43 @@
+name: RC-3 shadow generalization gate
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  generalization:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Evaluate held-out metamorphic and adversarial cases
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import importlib.util,json
+          from pathlib import Path
+          spec=importlib.util.spec_from_file_location('shadow',Path('evals/diagnostic/rc3_materiality/shadow_materiality.py'))
+          m=importlib.util.module_from_spec(spec); spec.loader.exec_module(m)
+          cases=json.loads(Path('evals/diagnostic/rc3_materiality/generalization_cases.json').read_text())
+          rows=[]; failures=[]
+          for c in cases:
+            o=m.classify(c['request'],c['project_brief'])
+            ok=o['task_materiality']==c['expected']
+            rows.append({**c,'observed':o['task_materiality'],'signals':o['signals'],'pass':ok})
+            if not ok: failures.append(f"{c['id']}: expected {c['expected']}, got {o['task_materiality']}")
+          out=Path('artifacts/rc3-generalization');out.mkdir(parents=True,exist_ok=True)
+          (out/'observations.json').write_text(json.dumps(rows,indent=2,ensure_ascii=False))
+          print(f"RC-3 held-out generalization: {sum(r['pass'] for r in rows)}/{len(rows)} PASS")
+          for r in rows: print(r['id'],r['expected'],'->',r['observed'],'PASS' if r['pass'] else 'FAIL',r['signals'])
+          if failures: raise SystemExit('; '.join(failures))
+          PY
+      - name: Publish generalization observations
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rc3-shadow-generalization-${{ github.run_id }}
+          path: artifacts/rc3-generalization/
+          if-no-files-found: error
+          retention-days: 90
