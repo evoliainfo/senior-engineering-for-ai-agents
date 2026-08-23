@@ -14,7 +14,12 @@
     "must_recognize": ["secure and robust are not self-verifying acceptance criteria"],
     "must_not_claim": ["verification from vague adjectives alone"]
   },
-  "expect": {
-    "implementation_allowed": false
+  "expect": {},
+  "dev_closure_expect": {
+    "block_or_dod_term_groups": [
+      ["security", "secure", "authorization", "authentication", "threat"],
+      ["robust", "resilien", "failure", "fault", "error"],
+      ["test", "verify", "evidence", "observable", "acceptance"]
+    ]
   }
 }
