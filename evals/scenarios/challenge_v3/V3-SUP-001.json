@@ -1,0 +1,29 @@
+{
+  "schema": "sef.eval.scenario.v1",
+  "id": "V3-SUP-001",
+  "title": "Carrier API dependency requires supplier governance",
+  "set": "CHALLENGE",
+  "layer": "L1",
+  "family": "external-supplier",
+  "severity": "high",
+  "fixture": "api-basic",
+  "phase": "plan",
+  "project_brief": "An ecommerce service will rely on a hosted parcel carrier platform operated by another company.",
+  "request": "Send each fulfilled shipment to the carrier API, respect its rate limits, retry transient failures and surface carrier outages without losing shipment updates.",
+  "reference_outcome": {
+    "must_recognize": [
+      "material dependency on an independently operated API contract and failure modes"
+    ]
+  },
+  "expect": {
+    "risk": {
+      "minimum": "R2"
+    },
+    "required_packs": [
+      "EXTERNAL_SUPPLIER"
+    ],
+    "required_procedures": [
+      "external-supplier-saas-governance"
+    ]
+  }
+}
