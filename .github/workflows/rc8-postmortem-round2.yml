@@ -1,0 +1,35 @@
+name: RC-8 calibrated postmortem controls round 2
+on:
+  pull_request:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  rc8-controls-round2:
+    if: github.event.pull_request.head.ref == 'research/rc8-challenge-postmortem'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Prove research-only scope
+        shell: bash
+        run: |
+          set -euo pipefail
+          git diff --exit-code "${{ github.event.pull_request.base.sha }}" -- sef.py SHA256SUMS
+          sha256sum -c SHA256SUMS
+          python3 -m py_compile sef.py evals/run.py evals/run_rc8_controls.py evals/run_rc8_controls_round2.py
+      - name: Measure calibrated controls
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 evals/run_rc8_controls_round2.py --output rc8-control-baseline-round2.json
+      - name: Publish RC-8 round-2 evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rc8-calibrated-controls-${{ github.run_id }}
+          path: rc8-control-baseline-round2.json
+          if-no-files-found: error
+          retention-days: 90

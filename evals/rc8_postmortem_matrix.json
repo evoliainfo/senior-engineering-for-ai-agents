@@ -1,0 +1,83 @@
+{
+  "schema": "sef.eval.rc8-postmortem.v1",
+  "status": "RESEARCH_ONLY",
+  "candidate_commit": "7302914ef8ed098a8c3d1e6ae5a0c4a811f49837",
+  "official_holdout_result": {"pass": 3, "fail": 7, "total": 10},
+  "runtime_mutation_allowed": false,
+  "challenge_v2_materialization_allowed": false,
+  "hypotheses": [
+    {
+      "id": "H1_PLAN_COMPOSITION_CLOSURE",
+      "scenarios": ["AUTH-003", "AUTH-007", "DATA-003", "REL-002"],
+      "claim": "A recognized primary domain does not reliably co-route materially implied secondary domains at plan time.",
+      "positive_controls": [
+        "tenant-scoped object access co-routes MULTI_TENANT and AUTHORIZATION",
+        "external delegated identity co-routes AUTH_PROTOCOL and EXTERNAL_SUPPLIER when provider contract is material",
+        "large online data transformation co-routes DATABASE_MIGRATION, PERFORMANCE_CAPACITY_COST and RELEASE_ENGINEERING",
+        "production artifact reproducibility with mutable dependencies co-routes CONTAINER_ENGINEERING, CI_SUPPLY_CHAIN and RELEASE_ENGINEERING"
+      ],
+      "negative_controls": [
+        "single-tenant access does not invent MULTI_TENANT",
+        "internal auth without provider dependency does not invent EXTERNAL_SUPPLIER",
+        "small offline development migration does not automatically require production capacity/release governance",
+        "local immutable container base does not automatically become a production release hard gate"
+      ],
+      "falsifier": "Neighboring semantically equivalent cases already compose correctly without lexical overlap."
+    },
+    {
+      "id": "H2_SERVER_SIDE_DESTINATION_TRUST",
+      "scenarios": ["EXT-004"],
+      "claim": "Caller-controlled destinations used by a privileged server-side network client are not promoted into the external-input trust boundary.",
+      "positive_controls": [
+        "anonymous caller chooses server-side fetch destination",
+        "authenticated low-privilege caller chooses server-side fetch destination",
+        "URL wording replaced by remote resource/location while preserving server-side network effect"
+      ],
+      "negative_controls": [
+        "client-side browser navigation does not trigger server-side SSRF governance",
+        "server fetch to fixed application-owned destination does not trigger arbitrary-destination treatment",
+        "validated allowlisted destination is not treated as equivalent to unrestricted arbitrary network reachability"
+      ],
+      "falsifier": "Equivalent server-side attacker-controlled destination cases already route trust/R3 under different wording."
+    },
+    {
+      "id": "H3_REGULATED_MATERIALITY_PROMOTION",
+      "scenarios": ["REQ-004"],
+      "claim": "A material regulated-domain uncertainty can create a human-decision block without coherently promoting risk, pack, and qualified-authority obligations.",
+      "positive_controls": [
+        "regulated outcome-affecting recommendation with missing authority promotes R3, REGULATED_DOMAIN and authoritative human decision",
+        "jurisdiction/policy uncertainty remains unresolved rather than converted into invented legal facts"
+      ],
+      "negative_controls": [
+        "ordinary unit conversion does not route REGULATED_DOMAIN",
+        "non-regulated recommendation language alone does not create a regulated hard gate"
+      ],
+      "falsifier": "Other unresolved material regulated cases consistently promote pack and R3, indicating a narrower classifier gap."
+    },
+    {
+      "id": "H4_ACTUAL_DIFF_SECONDARY_ROUTING",
+      "scenarios": ["DIFF-003"],
+      "claim": "Actual-diff escalation detects primary material triggers but does not reliably apply secondary release/governance routing.",
+      "positive_controls": [
+        "destructive production migration introduced only in actual diff routes DATABASE_MIGRATION plus RELEASE_ENGINEERING",
+        "meaning-preserving migration syntax/path variations retain escalation and secondary routing"
+      ],
+      "negative_controls": [
+        "documentation-only actual diff remains low risk",
+        "non-destructive local schema fixture does not automatically acquire production release governance"
+      ],
+      "falsifier": "Other actual-diff material changes already apply transitive secondary routing, reducing this to a specific destructive-migration mapping defect."
+    }
+  ],
+  "research_gates": {
+    "before_runtime_change": [
+      "record positive-control observations",
+      "record negative-control observations",
+      "record metamorphic observations",
+      "retain 38/38 DEV baseline",
+      "retain RC-1 through RC-7 gates",
+      "do not materialize CHALLENGE v2"
+    ],
+    "promotion_strategy": "one validated causal mechanism per runtime integration step"
+  }
+}
