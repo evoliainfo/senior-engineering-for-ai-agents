@@ -43,8 +43,6 @@ def test_raw_eviction_cannot_launder_failure():
 def test_explicit_unavailable_not_stderr_guessing():
     assert sef._rc4_normalize_evidence_state(2,"UNAVAILABLE")=="UNAVAILABLE"
     assert sef._rc4_normalize_evidence_state(2)=="FAIL"
-    # Classification API has no stderr input by design.
-    assert sef._rc4_normalize_evidence_state(2)=="FAIL"
 
 
 def test_stale_revision_not_proof():
@@ -74,7 +72,7 @@ def _release_fixture(state,profile=None):
     td=tempfile.TemporaryDirectory(); repo=Path(td.name)
     _write_json(repo/".sef/project-baseline.json",{"project":{"brief":"test project"},"discovery":{"context_confirmations_needed":[]}})
     _write_json(repo/".sef/project-profile.json",profile or {"context_candidates":[]})
-    _write_json(repo/".sef/state.json",state)
+    _write_json(repo/".sef/project-state.json",state)
     return td,repo
 
 
@@ -145,7 +143,7 @@ def test_adapter_ingestion_is_revision_bound():
         out=sef.record_verification_evidence(repo,"observability-provider","UNAVAILABLE",True,"provider timeout","adapter")
         assert out["status"]=="PASS"
         assert out["aggregate"]["state"]=="UNAVAILABLE"
-        persisted=json.loads((repo/".sef/state.json").read_text(encoding="utf-8"))
+        persisted=json.loads((repo/".sef/project-state.json").read_text(encoding="utf-8"))
         assert persisted["verification_evidence_index"]["r1"]["observability-provider"]["seen_states"]==["UNAVAILABLE"]
     finally:
         sef._git_head=old_head; td.cleanup()
