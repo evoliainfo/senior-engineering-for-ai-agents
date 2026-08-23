@@ -1,0 +1,42 @@
+{
+  "schema": "sef.eval.dev-coverage.v1",
+  "catalog_total": 48,
+  "dev_total": 38,
+  "challenge_total": 10,
+  "challenge_status": "SEALED",
+  "harnesses": {
+    "general": {
+      "runner": "evals/run.py",
+      "scenario_root": "evals/scenarios/dev",
+      "ids": [
+        "AUTH-001","AUTH-002","AUTH-004","AUTH-006",
+        "DATA-001","DATA-002","DATA-004","DATA-005",
+        "DIFF-001","DIFF-002","DIFF-004","DIFF-005",
+        "EXT-001","EXT-002","EXT-003","EXT-005",
+        "PROP-001","PROP-002","PROP-003","PROP-004",
+        "REL-001",
+        "WEB-001","WEB-002","WEB-003"
+      ]
+    },
+    "evidence_release": {
+      "runner": "evals/run_evidence_release.py",
+      "scenario_root": "evals/evidence_release/scenarios/dev",
+      "ids": ["EVID-001","EVID-003","REL-003","REL-004"]
+    }
+  },
+  "pending_materialization": {
+    "requirements_dynamic_dod": ["REQ-001","REQ-002","REQ-003","REQ-005"],
+    "auth_negative_control": ["AUTH-005"],
+    "evidence_honesty": ["EVID-004","EVID-005"],
+    "brownfield_adoption": ["BROWN-001","BROWN-002","BROWN-003"]
+  },
+  "accounting": {
+    "executable_now": 28,
+    "pending": 10,
+    "expected_dev_total": 38
+  },
+  "challenge_ids_sealed": [
+    "PROP-005","REQ-004","AUTH-003","AUTH-007","DATA-003",
+    "EXT-004","REL-002","WEB-004","DIFF-003","EVID-002"
+  ]
+}
