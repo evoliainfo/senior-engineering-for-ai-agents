@@ -17,8 +17,9 @@ jobs:
         run: |
           set -euo pipefail
           python3 evals/run.py validate --scenarios evals/scenarios/dev
+          python3 -m py_compile evals/run_dev_closure_extra.py
           set +e
-          python3 evals/run.py run --set DEV --ids REQ-001,REQ-002,REQ-003,REQ-005,AUTH-005 --output phase1.json
+          python3 evals/run_dev_closure_extra.py --ids REQ-001,REQ-002,REQ-003,REQ-005,AUTH-005 --output phase1.json
           code=$?
           set -e
           python3 - <<'PY'
