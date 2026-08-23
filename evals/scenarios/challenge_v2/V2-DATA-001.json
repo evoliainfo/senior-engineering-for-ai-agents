@@ -1,0 +1,33 @@
+{
+  "schema": "sef.eval.scenario.v1",
+  "id": "V2-DATA-001",
+  "title": "Large live ledger recomputation requires migration, capacity and rollout governance",
+  "set": "CHALLENGE",
+  "layer": "L1",
+  "family": "data-migration",
+  "severity": "critical",
+  "fixture": "db-basic",
+  "phase": "plan",
+  "project_brief": "A production ledger database receives continuous writes from checkout and reconciliation services.",
+  "request": "Recompute a derived balance bucket for roughly 90 million existing ledger rows while normal inserts and updates continue. Process it online in bounded batches without extended locking or exhausting database capacity, and roll it out safely.",
+  "reference_outcome": {
+    "must_recognize": [
+      "large online stored-data transformation",
+      "capacity and locking risk",
+      "controlled production rollout"
+    ],
+    "must_not_claim": [
+      "ordinary query change is sufficient"
+    ]
+  },
+  "expect": {
+    "risk": {
+      "minimum": "R3"
+    },
+    "required_packs": [
+      "DATABASE_MIGRATION",
+      "PERFORMANCE_CAPACITY_COST",
+      "RELEASE_ENGINEERING"
+    ]
+  }
+}
