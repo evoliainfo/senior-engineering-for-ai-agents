@@ -173,9 +173,27 @@ def scan(repo):
     try: return _load_bootstrap(root).scan_repo(repo)
     finally: td.cleanup()
 
+
+# ---------- B2 actual-diff composition closure ----------
+def _b2_actual_diff_composition(assessment):
+    if not isinstance(assessment,dict): return assessment
+    triggers=set(assessment.get("triggers",[]))
+    packs=set(assessment.get("required_context_packs",[]))
+    evidence=list(assessment.get("b2_actual_diff_composition",[])) if isinstance(assessment.get("b2_actual_diff_composition",[]),list) else []
+    if "DESTRUCTIVE_DATA_CHANGE" in triggers and "DATABASE_MIGRATION" in packs:
+        if "RELEASE_ENGINEERING" not in packs:
+            packs.add("RELEASE_ENGINEERING")
+            evidence.append({"pack":"RELEASE_ENGINEERING","reason":"destructive migration discovered in actual diff requires release/recovery governance","source":"b2_actual_diff"})
+    assessment["required_context_packs"]=sorted(packs)
+    assessment["b2_actual_diff_composition"]=evidence
+    return assessment
+
+
 def assess(repo,base="HEAD"):
     repo=Path(repo).resolve(); td,root=_runtime_root()
-    try: return _load_bootstrap(root).assess_git(repo,base,True)
+    try:
+        result=_load_bootstrap(root).assess_git(repo,base,True)
+        return _b2_actual_diff_composition(result)
     finally: td.cleanup()
 
 def guidance(repo,base="HEAD",assessment=None):
@@ -950,7 +968,7 @@ def _b1_semantic_materiality(original_request,positive_request):
     # are all required, which keeps local fixture generation out.
     data_objects=has(r"\b(?:rows?|records?|stored data|database entries|existing data)\b")
     transformation=has(r"\b(?:transform|populate|rewrite|recompute|convert|update|change)\w*\b")
-    large_scale=has(r"\b(?:\d+(?:\.\d+)?\s*(?:million|billion)|millions? of|billions? of|very large|large[- ]scale|tens of millions?)\b")
+    large_scale=has(r"\b(?:\d+(?:\.\d+)?\s*(?:million|billion)|(?:one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety|hundred)\s+(?:million|billion)|millions? of|billions? of|very large|large[- ]scale|tens of millions?)\b")
     live_pressure=has(r"\b(?:live traffic|normal writes|writes continue|online|without downtime|locking|database load|bound .*load|rollout risk|production traffic)\b")
     if data_objects and transformation and large_scale and live_pressure:
         add("LARGE_ONLINE_DATA_TRANSFORMATION","DATABASE_MIGRATION","R3","large mutation of existing stored rows under live traffic has migration semantics")
@@ -968,7 +986,7 @@ def _b1_semantic_materiality(original_request,positive_request):
     # SSRF-like trust boundary: a lower-privilege caller controls where a more
     # privileged backend network client connects. No URL keyword is required.
     backend_actor=has(r"\b(?:backend|server|server-side|service|http client)\b")
-    caller_control=has(r"\b(?:caller|user|client)\b.{0,80}\b(?:suppl(?:y|ies|ied)|provide|provided|choose|chooses|selected?|control(?:s|led)?)\b") or has(r"\b(?:user-provided|caller-provided|caller-selected|user-selected)\b")
+    caller_control=(has(r"\b(?:caller|user|client)\b.{0,80}\b(?:suppl(?:y|ies|ied)|provide|provided|choose|chooses|selected?|control(?:s|led)?)\b") or has(r"\b(?:user-provided|caller-provided|caller-selected|user-selected)\b") or has(r"\b(?:accept|accepts|receive|receives|take|takes)\b.{0,90}\b(?:from|by)\s+(?:the\s+)?(?:caller|user|client)\b") or has(r"\b(?:url|uri|remote resource|remote location|destination|target address|network location|external location)\b.{0,90}\b(?:from|by)\s+(?:the\s+)?(?:caller|user|client)\b"))
     remote_destination=has(r"\b(?:url|uri|remote resource|remote location|destination|target address|network location|external location)\b")
     server_fetch=has(r"\b(?:fetch|retrieve|download|request|connect|open|load)\w*\b")
     if backend_actor and caller_control and remote_destination and server_fetch:
@@ -1118,6 +1136,73 @@ def _request_change(profile,request):
         if len(app)>=2: task_contexts.update(app)
     return {"summary":original_request,"risk":risk,"action_class":"A1","contexts":sorted(contexts),"execution_contexts":sorted(task_contexts),"triggers":sorted(triggers),"profiles":sorted(profiles),"environment":"LOCAL","request_detection":evidence,"b1_primary_packs":b1_observation.get("primary_packs",[]),"b1_human_decisions":b1_observation.get("human_decisions",[]),"b1_semantic_materiality":b1_observation}
 
+
+# ---------- B2 bounded request composition closure ----------
+def _b2_request_composition(request,change,result):
+    positive,_,_=_rc2_positive_request_text(request)
+    text=_rc1_normalize_text(positive)
+    packs=set(result.get("required_context_packs",[]))
+    b1=change.get("b1_semantic_materiality",{}) if isinstance(change,dict) else {}
+    concepts=set(b1.get("concepts",[]))
+    obligations=[]; evidence=[]
+
+    def has(pattern): return re.search(pattern,text,re.I) is not None
+    def add_pack(pack,reason):
+        if pack not in packs:
+            packs.add(pack)
+            evidence.append({"pack":pack,"reason":reason,"source":"b2_composition"})
+    def add_obligation(obligation):
+        if obligation not in obligations: obligations.append(obligation)
+
+    # External identity protocol + material provider contract => supplier governance.
+    # Local authentication remains outside this composition.
+    auth_protocol=has(r"\b(?:oauth(?:\s*2(?:\.0)?)?|oidc|openid(?: connect)?|saml|authorization[- ]code)\b")
+    external_identity=(
+        has(r"\b(?:external|third[- ]party|federated|enterprise)\b.{0,90}\b(?:identity provider|identity service|idp|provider)\b")
+        or has(r"\b(?:identity provider|identity service|idp)\b.{0,90}\b(?:external|third[- ]party|federated|enterprise)\b")
+    )
+    callback_flow=has(r"\b(?:callback|redirect|authorization[- ]code|auth code|session establishment|establish(?:ing)? (?:the )?session)\b")
+    if "AUTH_PROTOCOL" in packs and auth_protocol and external_identity:
+        add_pack("EXTERNAL_SUPPLIER","authentication correctness materially depends on an external identity-provider contract")
+        if callback_flow:
+            add_obligation("EXTERNAL_AUTH_CALLBACK_INTEGRITY")
+
+    # Large online data work => capacity and release governance in addition to migration.
+    large_scale=has(r"\b(?:\d+(?:\.\d+)?\s*(?:million|billion)|(?:one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety|hundred)\s+(?:million|billion)|millions? of|billions? of|tens of millions?|very large|large[- ]scale)\b")
+    live_pressure=has(r"\b(?:live traffic|traffic continues?|normal writes|writes continue|service remains online|remain(?:s|ing)? online|online|without downtime|locking|database load|bound .*load|rollout risk|blast radius|production traffic)\b")
+    large_online=("LARGE_ONLINE_DATA_TRANSFORMATION" in concepts) or ("DATABASE_MIGRATION" in packs and large_scale and live_pressure)
+    if large_online:
+        add_pack("DATABASE_MIGRATION","large online stored-data transformation has migration semantics")
+        add_pack("PERFORMANCE_CAPACITY_COST","large online transformation creates material load/locking/capacity pressure")
+        add_pack("RELEASE_ENGINEERING","large online transformation requires staged rollout and recovery-aware release control")
+        add_obligation("BOUNDED_ONLINE_DATA_TRANSFORMATION")
+
+    # Mutable production build inputs invalidate reproducibility without provenance.
+    mutable_source=has(r"(?:\:[ ]*latest\b|\b(?:floating|unpinned|mutable)\s+(?:tag|version|base|dependency|reference|source)\b|\b(?:default|main|master)\s+branch\b|\bfrom\s+(?:the\s+)?default\s+branch\b)")
+    production_artifact=(
+        "CONTAINER_ENGINEERING" in packs
+        or "PRODUCTION_IMAGE_BUILD" in concepts
+        or has(r"\b(?:production|release)\s+(?:container|image|artifact)\b")
+    )
+    reproducibility=has(r"\b(?:reproducib|reproducible|provenance|publish|promote|release|artifact identity)\w*\b")
+    image_surface=has(r"\b(?:container|production image|container image|runtime image|oci image|image build|resulting image)\b")
+    if mutable_source and production_artifact and reproducibility:
+        if image_surface: add_pack("CONTAINER_ENGINEERING","mutable input participates in a production image/artifact build")
+        add_pack("CI_SUPPLY_CHAIN","mutable production build input makes provenance and reproducibility a supply-chain concern")
+        add_pack("RELEASE_ENGINEERING","reproducibility claim is material to a promoted release artifact")
+        add_obligation("MUTABLE_PRODUCTION_BUILD_INPUT")
+
+    # B1 owns primary SSRF/trust recognition; B2 adds the concrete derived obligation.
+    if "SERVER_SIDE_DESTINATION_TRUST" in concepts:
+        add_obligation("CALLER_CONTROLLED_SERVER_DESTINATION")
+
+    return {
+      "required_context_packs":sorted(packs),
+      "obligations":obligations,
+      "evidence":evidence,
+    }
+
+
 def _assess_request(repo,request):
     repo=Path(repo).resolve(); profile=_load_json(repo/".sef/project-profile.json",scan(repo)); change=_request_change(profile,request)
     td,root=_runtime_root()
@@ -1143,6 +1228,10 @@ def _assess_request(repo,request):
         if RISK_ORDER.get(floor,0)>RISK_ORDER.get(str(result.get("risk") or "R0"),0): result["risk"]=floor
         result["request_human_decisions"]=sorted(set(change.get("b1_human_decisions",[])))
         result["b1_semantic_materiality"]=change.get("b1_semantic_materiality",{})
+        b2=_b2_request_composition(request,change,result)
+        result["required_context_packs"]=b2.get("required_context_packs",result.get("required_context_packs",[]))
+        result["b2_obligations"]=b2.get("obligations",[])
+        result["b2_composition_evidence"]=b2.get("evidence",[])
         result["request_detection"]=change["request_detection"]
         result["request_execution_contexts"]=change.get("execution_contexts",[])
         return result
@@ -1173,6 +1262,15 @@ def _implicit_requirements(request,assessment,baseline):
       "REGULATED_DOMAIN":["Identify applicable jurisdiction/domain overlay and qualified authority before compliance/safety claims."],
     }
     for p in sorted(packs): req += by.get(p,[])
+    b2_obligations=set(assessment.get("b2_obligations",[]))
+    if "EXTERNAL_AUTH_CALLBACK_INTEGRITY" in b2_obligations:
+        req += ["For an external authorization-code/OIDC callback, bind and verify state/CSRF protection, validate the exact redirect/callback target and code exchange before session establishment, and verify provider-specific behavior against current authoritative provider documentation."]
+    if "BOUNDED_ONLINE_DATA_TRANSFORMATION" in b2_obligations:
+        req += ["Execute the online data transformation/backfill in bounded batches or chunks with explicit pause/resume and reconciliation semantics; measure lock duration, database load and capacity impact before increasing rollout scope."]
+    if "MUTABLE_PRODUCTION_BUILD_INPUT" in b2_obligations:
+        req += ["A floating/latest tag or mutable branch cannot establish reproducible artifact identity by itself; pin an immutable digest/revision and preserve build provenance before release claims."]
+    if "CALLER_CONTROLLED_SERVER_DESTINATION" in b2_obligations:
+        req += ["Treat caller-controlled server destinations as untrusted external input: prevent SSRF to internal/private network and cloud metadata targets, and define explicit allowlist/deny plus destination validation before the server performs the request."]
     exec_ctx=set(assessment.get("request_execution_contexts",[]))
     if "SEO_WEB_DISCOVERABILITY" in exec_ctx:
         req += ["Define intentional crawl/indexation/canonical/sitemap behavior for public routes; technical readiness must not be represented as guaranteed ranking or traffic.","Use external search data for demand/performance claims; do not fabricate keyword volume, rankings or indexation evidence."]
