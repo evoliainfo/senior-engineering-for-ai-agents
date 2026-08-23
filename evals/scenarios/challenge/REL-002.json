@@ -17,7 +17,7 @@
   "expect": {
     "risk": {"minimum": "R2"},
     "required_packs": ["CONTAINER_ENGINEERING", "CI_SUPPLY_CHAIN", "RELEASE_ENGINEERING"],
-    "required_procedures": ["docker-containers", "ci-software-supply-chain", "release-progressive-delivery"]
+    "required_procedures": ["container-docker-engineering", "ci-software-supply-chain", "release-progressive-delivery"]
   },
   "challenge_expect": {
     "required_dod_term_groups": [
