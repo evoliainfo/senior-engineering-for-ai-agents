@@ -11,9 +11,10 @@ import json, re, sys
 # tenant/organization boundary. Broad project nouns alone are intentionally not
 # enough.
 MATERIAL_PATTERNS = [
-    ("separate_tenant_data", re.compile(r"\b(?:separate|isolat(?:e|ed|ion)|partition(?:ed|ing)?)\b.{0,55}\b(?:customer|tenant|organization|organisation|workspace|company)\b.{0,35}\b(?:data|records?|storage|files?|keys?|queries?)\b", re.I)),
+    ("separate_tenant_data", re.compile(r"\b(?:separate|separately|isolat(?:e|ed|ion)|partition(?:ed|ing)?)\b.{0,70}\b(?:customer|tenant|organization|organisation|workspace|company)\b", re.I)),
     ("tenant_scoped", re.compile(r"\b(?:tenant|organization|organisation|workspace|customer|company)[- ](?:scoped|aware|specific|isolated|partitioned)\b", re.I)),
     ("per_tenant", re.compile(r"\bper[- ](?:tenant|organization|organisation|workspace|customer|company)\b", re.I)),
+    ("each_tenant", re.compile(r"\b(?:for\s+)?each\s+(?:tenant|organization|organisation|workspace|customer|company)\b", re.I)),
     ("switch_tenant", re.compile(r"\bswitch\b.{0,35}\b(?:between|across)\b.{0,35}\b(?:companies|organizations|organisations|workspaces|tenants)\b", re.I)),
     ("selected_tenant", re.compile(r"\b(?:selected|target)\s+(?:tenant|organization|organisation|workspace|company)\b", re.I)),
     ("cross_tenant", re.compile(r"\bcross[- ](?:tenant|organization|organisation|workspace|company)\b", re.I)),
@@ -51,8 +52,6 @@ def classify(request: str, project_brief: str = ""):
         label="UNCERTAIN"
         signals=ambiguous
     else:
-        # No task-local tenant signal: the project candidate remains visible but
-        # there is no evidence that the current task materially depends on it.
         label="PROJECT_ONLY"
         signals=["no_task_local_tenant_boundary_signal"]
     return {
