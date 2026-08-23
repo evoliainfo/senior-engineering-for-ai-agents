@@ -16,9 +16,9 @@
   },
   "expect": {},
   "dev_closure_expect": {
-    "block_or_dod_term_groups": [
+    "block_or_obligation_term_groups": [
       ["latency", "throughput", "performance", "response time"],
-      ["benchmark", "load test", "measure", "target", "evidence"]
+      ["benchmark", "load test", "measure", "target", "evidence", "budget"]
     ]
   }
 }
