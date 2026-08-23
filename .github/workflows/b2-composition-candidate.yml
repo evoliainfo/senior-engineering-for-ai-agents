@@ -1,0 +1,67 @@
+name: B2 composition canonical gate
+on:
+  pull_request:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  b2-canonical:
+    if: github.event.pull_request.head.ref == 'integration/b2-composition-closure'
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Verify canonical B2 identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          sha256sum -c SHA256SUMS
+          test "$(sha256sum sef.py | awk '{print $1}')" = "bfeda790cd70c78ceb9fae862441df35c9bfe819001c0d429c09c0dde2a0c2bd"
+          python3 -m py_compile sef.py evals/run_b2_acceptance.py evals/run_rc8_controls_round2_candidate.py evals/run_consumed_challenge_regression.py
+      - name: Preserve deterministic DEV 38 of 38
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 evals/run_dev_closure_all.py --sef sef.py --output b2-canonical-dev.json
+      - name: Preserve B1 acceptance 10 of 10
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 evals/run_b1_acceptance.py --sef sef.py --output b2-canonical-b1.json
+      - name: Pass B2 generalization controls 10 of 10
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 evals/run_b2_acceptance.py --sef sef.py --output b2-canonical-b2.json
+      - name: Close calibrated RC-8 controls 14 of 14
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 evals/run_rc8_controls_round2_candidate.py --sef sef.py --output b2-canonical-rc8.json
+          python3 - <<'PY'
+          import json
+          p=json.load(open('b2-canonical-rc8.json',encoding='utf-8'))
+          summary=p.get('raw_summary') or {}
+          if p.get('harness_errors') or summary.get('counts') != {'PASS':14} or summary.get('status')!='PASS':
+              raise SystemExit(f'RC-8 canonical gate failed: {p}')
+          PY
+      - name: Close consumed first challenge as regression 10 of 10
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 evals/run_consumed_challenge_regression.py --sef sef.py --output b2-canonical-consumed.json
+      - name: Publish canonical B2 evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: b2-canonical-${{ github.run_id }}
+          path: |
+            b2-canonical-dev.json
+            b2-canonical-b1.json
+            b2-canonical-b2.json
+            b2-canonical-rc8.json
+            b2-canonical-consumed.json
+          if-no-files-found: warn
+          retention-days: 90
