@@ -1,0 +1,34 @@
+{
+  "schema": "sef.eval.scenario.v1",
+  "id": "V2-PROP-001",
+  "title": "Marketing copy mentioning SSO must not become an authentication implementation",
+  "set": "CHALLENGE",
+  "layer": "L1",
+  "family": "proportionality",
+  "severity": "high",
+  "fixture": "web-basic",
+  "phase": "plan",
+  "project_brief": "A public marketing website describes product capabilities but contains no authentication service.",
+  "request": "Change the enterprise pricing-page copy to say that the product supports SSO. This is wording only; do not implement login, identity-provider integration, permissions, deployment or backend changes.",
+  "reference_outcome": {
+    "must_recognize": [
+      "documentation/marketing materiality only"
+    ],
+    "must_not_claim": [
+      "SSO implementation or external identity provider was added"
+    ]
+  },
+  "expect": {
+    "forbidden_packs": [
+      "AUTHORIZATION",
+      "MULTI_TENANT",
+      "EXTERNAL_SUPPLIER",
+      "RELEASE_ENGINEERING"
+    ]
+  },
+  "plan_expect": {
+    "risk": {
+      "maximum": "R1"
+    }
+  }
+}
