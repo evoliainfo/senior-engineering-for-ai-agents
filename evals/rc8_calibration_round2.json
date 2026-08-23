@@ -1,0 +1,24 @@
+{
+  "schema": "sef.eval.rc8-controls-calibration.v1",
+  "base_catalog_sha256": "9581cbc652d24d1feb9918ad8c0e105241bc152c94a82bb0eaf29de2dd866363",
+  "reason": "Correct demonstrably mis-specified research controls after preserving Round 1 artifact; no candidate runtime or official CHALLENGE expectation changes.",
+  "overrides": {
+    "RC8-H1-N2": {
+      "expect": {
+        "required_packs": ["AUTH_PROTOCOL"],
+        "forbidden_packs": ["EXTERNAL_SUPPLIER"],
+        "required_procedures": ["security-authentication-authorization"]
+      }
+    },
+    "RC8-H4-P1": {
+      "request": "Add a harmless documentation note describing where customer preferences are shown. No database or data change is requested."
+    },
+    "RC8-H4-N1": {
+      "expect": {
+        "risk": {"exact": "R0"},
+        "forbidden_packs": ["DATABASE_MIGRATION", "RELEASE_ENGINEERING"],
+        "forbidden_triggers": ["DESTRUCTIVE_DATA_CHANGE"]
+      }
+    }
+  }
+}
