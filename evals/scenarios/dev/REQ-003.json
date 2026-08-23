@@ -14,7 +14,11 @@
     "must_recognize": ["performance target is not measurable as stated"],
     "must_not_claim": ["performance success without a measurable target or evidence"]
   },
-  "expect": {
-    "implementation_allowed": false
+  "expect": {},
+  "dev_closure_expect": {
+    "block_or_dod_term_groups": [
+      ["latency", "throughput", "performance", "response time"],
+      ["benchmark", "load test", "measure", "target", "evidence"]
+    ]
   }
 }
