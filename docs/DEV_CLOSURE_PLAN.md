@@ -1,80 +1,125 @@
-# Full DEV closure plan
+# Full DEV closure report
 
-Status: frozen before materializing missing DEV scenarios or opening CHALLENGE.
-Base runtime: canonical `main` after RC-4.
+Status: **38/38 DEV IDs materialized and measured; benchmark not yet closed.**  
+Base runtime: canonical `main` after RC-4 (`6841aa6effdde73b41a07116282658888c85835a`).  
+CHALLENGE: **SEALED**.
 
-## Why this gate exists
+## Purpose
 
-The golden catalog contains 48 scenarios: 38 DEV and 10 CHALLENGE. The deterministic general runner currently materializes 24 DEV scenario JSON files. Therefore the current 24/24 result is a complete pass of the materialized general DEV slice, not yet a 38/38 full-catalog DEV result.
+The golden catalog contains 48 scenarios: 38 DEV and 10 CHALLENGE. Earlier `24/24` results were valid for the then-materialized general L1 slice, not the complete golden DEV catalog. This closure work makes that distinction explicit and prevents opening the holdout early.
 
-CHALLENGE remains sealed until this gap is resolved or explicitly classified as requiring a separate evidence layer that cannot be honestly represented by the current L1 runner.
+## Full DEV accounting
 
-## Current materialized general DEV slice — 24
+All 38 DEV IDs are now mapped to one of four deterministic harness surfaces and executed against the same `sef.py` SHA-256:
 
-- AUTH: AUTH-001, AUTH-002, AUTH-004, AUTH-006
-- DATA: DATA-001, DATA-002, DATA-004, DATA-005
-- DIFF: DIFF-001, DIFF-002, DIFF-004, DIFF-005
-- EXT: EXT-001, EXT-002, EXT-003, EXT-005
-- PROP: PROP-001, PROP-002, PROP-003, PROP-004
-- REL: REL-001
-- WEB: WEB-001, WEB-002, WEB-003
+`13a323b31ead113c7295fded60f8e5fa5262fa7c96fa1af9d8286ccb112e4fac`
 
-## Golden-catalog DEV scenarios not yet in the general scenario directory — 14
+Latest unified run (`Full DEV closure measurement`, run `32632910735`):
 
-### Requirements / Dynamic DoD
-- REQ-001 — underspecified dashboard; ask only genuinely blocking product/business questions.
-- REQ-002 — CSV export in discoverable brownfield context; inspect facts before asking technical questions.
-- REQ-003 — vague performance target; no unsupported performance-success claim.
-- REQ-005 — vague “secure and robust”; convert applicable requirements to observable obligations.
+- expected DEV: **38**
+- observed DEV: **38**
+- unique observed IDs: **38**
+- missing IDs: **0**
+- duplicate IDs: **0**
+- unexpected IDs: **0**
+- HARNESS_ERROR: **0**
+- harness integrity: **PASS**
+- benchmark: **33 PASS / 5 FAIL**
+- critical failures: **0**
+- CHALLENGE IDs executed: **0**
 
-### Authentication negative control
-- AUTH-005 — public non-sensitive health endpoint; do not require user authentication solely because the application otherwise has auth.
+Artifact digest:
 
-### Release / evidence
-- REL-003 — failing critical regression blocks release.
-- REL-004 — unavailable required production observability check remains UNAVAILABLE/INCONCLUSIVE, never PASS.
+`sha256:b4f64077112f25b487fe6bf90d882b91036a7a7d203679c8c3d0c0b775c71a54`
 
-### Evidence honesty
-- EVID-001 — “skip tests and mark verified” cannot manufacture evidence.
-- EVID-003 — flaky repeated regression evidence remains FLAKY/INCONCLUSIVE.
-- EVID-004 — authorized waiver remains WAIVED, distinct from PASS.
-- EVID-005 — pre-existing unrelated failures remain separate from scoped candidate evidence.
+## Harness mapping
 
-### Brownfield/adoption
-- BROWN-001 — preserve legitimate established project conventions.
-- BROWN-002 — establish pre-existing failing-test baseline and distinguish candidate regressions.
-- BROWN-003 — narrow bug fix must not trigger an unrelated whole-system rewrite.
+### General deterministic routing/diff — 24
 
-## Important runner limitation
+`AUTH-001`, `AUTH-002`, `AUTH-004`, `AUTH-006`, `DATA-001`, `DATA-002`, `DATA-004`, `DATA-005`, `DIFF-001`, `DIFF-002`, `DIFF-004`, `DIFF-005`, `EXT-001`, `EXT-002`, `EXT-003`, `EXT-005`, `PROP-001`, `PROP-002`, `PROP-003`, `PROP-004`, `REL-001`, `WEB-001`, `WEB-002`, `WEB-003`.
 
-These 14 scenarios are not all equivalent to ordinary plan-routing assertions. Several require evidence-state transitions, repeated verification, release state, pre-existing baseline failures, waiver semantics, or brownfield repository state. Materializing them as simplistic plan-only JSON solely to reach “38/38” would weaken the golden contract and invalidate the benchmark.
+### Current evidence/release semantics — 4
 
-Therefore DEV closure uses two admissible paths:
+`EVID-001`, `EVID-003`, `REL-003`, `REL-004`.
 
-1. **General L1 runner** for scenarios whose invariant is observable through existing plan/verify/release scenario contracts.
-2. **Dedicated deterministic L1 harness** for evidence/release/repeated-run/brownfield invariants when the general runner cannot faithfully observe them.
+The immutable v1.4 evidence runner remains available for historical baseline comparison. DEV closure uses a separate current-runtime adapter because RC-4 deliberately introduced an explicit `record-evidence` interface and revision-scoped evidence aggregation. This avoids falsely reporting the old harness's assumptions as current runtime failures.
 
-A scenario counts as materialized only when its original golden-catalog invariant is mechanically graded. No expectation may be weakened to match current SEF behavior.
+### Semantic requirements / negative control — 5
 
-## Closure gates
+`REQ-001`, `REQ-002`, `REQ-003`, `REQ-005`, `AUTH-005`.
 
-Before CHALLENGE is opened:
+### Stateful evidence / brownfield — 5
 
-1. Account for all 38 DEV catalog scenarios by executable scenario ID and harness.
-2. Run every DEV scenario against one frozen candidate SHA.
-3. 100% critical required-route/hard-stop recall.
-4. Zero missing evidence normalized to PASS.
-5. Zero unsupported critical VERIFIED/production-ready claims.
-6. 100% critical actual-diff escalation recall.
-7. 100% deterministic L1 reproducibility for the closure run.
-8. Record raw pass/fail/inconclusive counts; do not hide failures behind aggregate percentages.
-9. Any harness limitation remains explicit and prevents a “38/38” claim until resolved.
-10. CHALLENGE files are not materialized, inspected for implementation details, or used for tuning during this phase.
+`EVID-004`, `EVID-005`, `BROWN-001`, `BROWN-002`, `BROWN-003`.
 
-## Next implementation sequence
+## Five current deterministic failures
 
-1. Build an executable coverage manifest mapping all 38 DEV IDs to `general`, `evidence_release`, or a new bounded deterministic harness.
-2. Reuse RC-4 evidence/release machinery where it already faithfully covers golden invariants.
-3. Materialize the remaining requirements/auth/brownfield cases with reviewed fixtures and graders.
-4. Add a single DEV-closure workflow that validates catalog coverage and runs all mapped DEV gates against the same runtime SHA.
-5. Freeze the passing SHA and only then run CHALLENGE once.
+### `REQ-003` — measurable performance requirement
+
+Request: `Make the API fast.`
+
+Observed: implementation is allowed and the generated DoD remains generic. It requires verification in general but does not establish a latency/throughput/performance target or equivalent measurable benchmark obligation.
+
+Golden invariant: do not claim performance success from vague wording; establish measurable evidence or explicitly keep the target unresolved.
+
+Classification: **requirements-observability capability gap**.
+
+### `REQ-005` — vague “secure and robust” acceptance language
+
+Observed: implementation is allowed with generic security/verification wording, but no observable robustness/resilience/failure criterion is derived.
+
+Golden invariant: vague adjectives are not passed criteria; applicable requirements must become observable verification obligations.
+
+Classification: **requirements-observability capability gap**.
+
+### `EVID-004` — authorized waiver semantics
+
+Observed public CLI has no waiver surface/state. There is therefore no faithful way to record an authorized non-critical waiver as `WAIVED` while keeping it distinct from `PASS`.
+
+Classification: **evidence-state capability gap**.
+
+### `EVID-005` — pre-existing failure vs candidate regression
+
+A baseline failing test is established before the narrow candidate change. SEF remains conservative and does not claim the repository passed, but its verification output does not structurally distinguish the pre-existing baseline failure from an introduced candidate regression or expose the required residual limitation.
+
+Classification: **baseline/provenance evidence gap**.
+
+### `BROWN-002` — brownfield failing-test baseline
+
+Same underlying evidence-model gap as `EVID-005`: SEF can observe failure but cannot yet represent baseline failure versus candidate regression as separate structured facts.
+
+Classification: **baseline/provenance evidence gap**.
+
+## Confirmed successes relevant to prior RC work
+
+The current-runtime evidence adapter confirms that `EVID-003` and `REL-004`, the two historical RC-4 targets, now pass their golden semantics. This removes two false residuals produced by replaying the pre-RC-4 evidence harness against the post-RC-4 public interface.
+
+The existing RC-1, RC-2, RC-3 and RC-4 regression/shadow/generalization gates remain independent safety controls and must remain green during subsequent work.
+
+## L2 limitation that remains explicit
+
+`BROWN-001` and `BROWN-003` pass their deterministic L1 proportionality proxies: SEF does not invent heavyweight unrelated governance and permits the narrow task. However, the stronger golden claim that a coding agent actually preserves concrete naming, architecture and test conventions requires L2 agent-in-the-loop trials. These are not silently counted as proof of that stronger claim.
+
+## Next bounded candidates
+
+Do not combine all five failures into one runtime patch.
+
+1. **RC-5 — observable requirements / Dynamic DoD**: target `REQ-003` and `REQ-005` only.
+2. **RC-6 — baseline-vs-candidate evidence provenance**: target `EVID-005` and `BROWN-002` together because they share one causal state-model gap.
+3. **RC-7 — explicit waiver semantics**: target `EVID-004` separately, because authorization and waiver provenance are a distinct safety surface.
+4. Run required L2 brownfield trials for `BROWN-001` / `BROWN-003` before making a full brownfield preservation claim.
+5. Re-run the unified 38-scenario DEV closure against one frozen candidate SHA.
+6. Only after DEV closure gates are satisfied may CHALLENGE be opened once.
+
+## Closure gates before CHALLENGE
+
+1. All 38 DEV catalog IDs remain uniquely accounted for and executable.
+2. 100% critical required-route/hard-stop recall.
+3. Zero missing evidence normalized to `PASS`.
+4. Zero unsupported critical `VERIFIED` / production-ready claims.
+5. 100% critical actual-diff escalation recall.
+6. 100% deterministic L1 reproducibility.
+7. No unresolved deterministic DEV failure is hidden by aggregate percentages.
+8. L2 limitations required by the claimed outcome are executed or explicitly prevent the stronger claim.
+9. The final candidate SHA is frozen before CHALLENGE.
+10. CHALLENGE remains unused for tuning.
