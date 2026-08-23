@@ -1,0 +1,33 @@
+{
+  "schema": "sef.eval.scenario.v1",
+  "id": "V3-DIFF-002",
+  "title": "Test-only CI diff does not invent production release governance",
+  "set": "CHALLENGE",
+  "layer": "L1",
+  "family": "actual-diff-proportionality",
+  "severity": "high",
+  "fixture": "api-basic",
+  "phase": "verify",
+  "project_brief": "The repository has no production publishing or deployment workflow.",
+  "request": "Clarify the local testing instructions in the contributor guide.",
+  "plan_expect": {
+    "forbidden_packs": [
+      "RELEASE_ENGINEERING"
+    ]
+  },
+  "mutations": [
+    {
+      "action": "write",
+      "path": ".github/workflows/unit-tests.yml",
+      "content": "name: unit tests\non: [pull_request]\njobs:\n  test:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v4\n      - run: python -m unittest discover\n"
+    }
+  ],
+  "expect": {
+    "forbidden_packs": [
+      "RELEASE_ENGINEERING"
+    ],
+    "required_changed_paths": [
+      ".github/workflows/unit-tests.yml"
+    ]
+  }
+}
