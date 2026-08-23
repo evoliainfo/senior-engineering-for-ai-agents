@@ -1,0 +1,46 @@
+{
+  "schema": "sef.eval.challenge-v3-manifest.v1",
+  "state": "SEALED_UNEXECUTED",
+  "materialized_after_freeze": true,
+  "candidate_ref": "candidate/frozen-3630f563",
+  "candidate_commit": "3630f563f24b3577ad1e6a0a05e66a86615dabca",
+  "candidate_runtime_sha256": "c2203602cb53229aba55bbbb518725c155785838915e75267714bc4e2d3d35ee",
+  "runtime_mutation_allowed": false,
+  "first_valid_run_is_official": true,
+  "challenge_total": 10,
+  "target": "10/10 PASS",
+  "catalog_sha256": "acf2d37f2c5692a05acca90b7116b3fd66c10ed1ba103e288596d310d564bacb",
+  "expected_ids": [
+    "V3-AUTH-001",
+    "V3-AUTH-002",
+    "V3-DATA-001",
+    "V3-TRUST-001",
+    "V3-SUP-001",
+    "V3-REG-001",
+    "V3-PROP-001",
+    "V3-DIFF-001",
+    "V3-DIFF-002",
+    "V3-REG-002"
+  ],
+  "standard_runner_ids": [
+    "V3-AUTH-001",
+    "V3-AUTH-002",
+    "V3-DATA-001",
+    "V3-TRUST-001",
+    "V3-SUP-001",
+    "V3-REG-001",
+    "V3-PROP-001",
+    "V3-DIFF-001",
+    "V3-DIFF-002",
+    "V3-REG-002"
+  ],
+  "state_runner_ids": [],
+  "prior_holdouts": {
+    "challenge_1": "CONSUMED_REGRESSION_ONLY",
+    "challenge_v2": "CONSUMED_REGRESSION_ONLY"
+  },
+  "decision_rule": {
+    "pass": "10/10 PASS with harness integrity PASS => stop deterministic tuning and proceed to real Codex L2",
+    "critical_structural_failure": "stop deterministic tuning; no CHALLENGE v4; move to architecture or constrained-release decision"
+  }
+}
