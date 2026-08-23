@@ -1,0 +1,86 @@
+name: RC-7 explicit waiver semantics gate
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  rc7:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate EVID-004 and waiver safety controls
+        shell: bash
+        run: |
+          set -euo pipefail
+          sha256sum -c SHA256SUMS
+          python3 -m py_compile sef.py evals/run.py evals/run_dev_closure_state.py evals/run_dev_closure_all.py
+          python3 sef.py self-test
+          python3 evals/run_dev_closure_state.py --ids EVID-004 --output rc7-target.json
+          python3 - <<'PY'
+          import json
+          r=json.load(open('rc7-target.json'))
+          assert r['results'][0]['scenario_id']=='EVID-004'
+          assert r['results'][0]['status']=='PASS', r
+          PY
+          python3 - <<'PY'
+          import json,shutil,subprocess,sys,tempfile
+          from pathlib import Path
+          sys.path.insert(0,'evals')
+          import run as core
+          source=Path('sef.py').resolve()
+          fixture=Path('evals/evidence_release/fixtures/command-suite').resolve()
+          with tempfile.TemporaryDirectory(prefix='sef-rc7-controls-') as tmp:
+              repo=Path(tmp)/'repo'; shutil.copytree(fixture,repo)
+              init=core.run_json([sys.executable,str(source),'init',str(repo),'--brief','RC-7 waiver control fixture.'])
+              assert init['status']=='PASS',init
+              core.git_checkpoint(repo,'eval: rc7 initialized')
+              sef=repo/'.sef/sef.py'
+              required=core.run_json([sys.executable,str(sef),'record-evidence',str(repo),'required-check','FAIL','--detail','required failure'])
+              assert required['status']=='PASS',required
+              denied=core.run_json([sys.executable,str(sef),'waive-evidence',str(repo),'required-check','--reason','should not work','--authorized-by','human:evaluator'])
+              assert denied.get('status')=='BLOCKED' and denied.get('reason')=='REQUIRED_CHECK_CANNOT_BE_WAIVED',denied
+              unknown=core.run_json([sys.executable,str(sef),'waive-evidence',str(repo),'unknown-check','--reason','unknown','--authorized-by','human:evaluator'])
+              assert unknown.get('status')=='BLOCKED' and unknown.get('reason')=='UNKNOWN_CHECK',unknown
+              optional=core.run_json([sys.executable,str(sef),'record-evidence',str(repo),'optional-check','FAIL','--optional'])
+              assert optional['status']=='PASS',optional
+              no_reason=core.run_json([sys.executable,str(sef),'waive-evidence',str(repo),'optional-check','--authorized-by','human:evaluator'])
+              assert no_reason.get('status')=='BLOCKED' and no_reason.get('reason')=='WAIVER_REASON_REQUIRED',no_reason
+              no_auth=core.run_json([sys.executable,str(sef),'waive-evidence',str(repo),'optional-check','--reason','accepted'])
+              assert no_auth.get('status')=='BLOCKED' and no_auth.get('reason')=='WAIVER_AUTHORIZATION_REQUIRED',no_auth
+              ok=core.run_json([sys.executable,str(sef),'waive-evidence',str(repo),'optional-check','--reason','accepted residual risk','--authorized-by','human:evaluator'])
+              assert ok.get('status')=='PASS' and ok.get('waiver',{}).get('state')=='WAIVED',ok
+              assert ok['waiver']['authorization_provenance']=='operator_asserted',ok
+              # Exact-revision scope: a new commit cannot inherit the old waiver as active evidence.
+              (repo/'README.md').write_text((repo/'README.md').read_text()+'\nnew revision\n')
+              core.git_checkpoint(repo,'eval: new revision after waiver')
+              rel=core.run_json([sys.executable,str(sef),'release',str(repo)])
+              active=[c for c in rel.get('evidence',{}).get('checks',[]) if c.get('state')=='WAIVED']
+              assert not active,(rel,active)
+          PY
+      - name: Require deterministic full DEV closure
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 evals/run_dev_closure_all.py --output rc7-full-dev.json
+          python3 - <<'PY'
+          import json
+          r=json.load(open('rc7-full-dev.json'))
+          assert r['harness_integrity']=='PASS',r['harness_errors']
+          assert r['accounting']=={'expected_dev':38,'observed_dev':38,'unique_observed':38,'missing':[],'unexpected':[],'duplicates':[]},r['accounting']
+          assert r['challenge_status']=='SEALED' and not r['challenge_ids_executed'],r
+          b=r['benchmark']
+          assert b['status']=='PASS' and b['counts'].get('PASS')==38 and not b['failures'] and not b['critical_failures'],b
+          PY
+      - name: Publish RC-7 closure evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rc7-dev-closure-${{ github.run_id }}
+          path: |
+            rc7-target.json
+            rc7-full-dev.json
+          if-no-files-found: error
+          retention-days: 90
