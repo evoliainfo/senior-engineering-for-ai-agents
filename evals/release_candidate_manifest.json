@@ -1,9 +1,9 @@
 {
   "schema": "sef.eval.release-candidate.v1",
-  "stage": "PRE_FREEZE_B3",
-  "source_main_commit": "95e1be4d3eaa1b4e9c3f852e9772a3d817ced601",
-  "freeze_commit": null,
-  "candidate_ref": "integration/final-generalization-remediation",
+  "stage": "FROZEN",
+  "source_main_commit": "3630f563f24b3577ad1e6a0a05e66a86615dabca",
+  "freeze_commit": "3630f563f24b3577ad1e6a0a05e66a86615dabca",
+  "candidate_ref": "candidate/frozen-3630f563",
   "candidate_runtime_sha256": "c2203602cb53229aba55bbbb518725c155785838915e75267714bc4e2d3d35ee",
   "runtime_mutation_allowed_in_b3": false,
   "runtime_mutation_allowed_after_freeze": false,
@@ -44,5 +44,5 @@
     "codex": "NOT_RUN",
     "claude": "NOT_RUN"
   },
-  "next_transition": "Merge the exact canonical runtime without further mutation, bind the resulting main commit as the new freeze identity, then materialize one fresh CHALLENGE v3. If v3 has structural critical failures, stop deterministic tuning; if it passes 10/10, proceed to the real Codex L2 trial."
+  "next_transition": "Materialize exactly one fresh CHALLENGE v3 against frozen commit 3630f563f24b3577ad1e6a0a05e66a86615dabca and runtime c2203602cb53229aba55bbbb518725c155785838915e75267714bc4e2d3d35ee. The first valid run is the official independent verdict. Do not mutate the candidate. If v3 passes 10/10, proceed to real Codex L2; if it has structural critical failures, stop deterministic tuning and make an architecture/release-scope decision."
 }
