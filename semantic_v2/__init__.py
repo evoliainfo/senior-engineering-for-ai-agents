@@ -1,7 +1,7 @@
 """Semantic Routing v2 architecture.
 
 This package remains separate from the frozen root-level ``sef.py`` runtime.
-S0-S2 code must not alter canonical v1.5 routing.
+S0-S3 code must not alter canonical v1.5 routing.
 """
 
 from .contracts import (
@@ -14,6 +14,7 @@ from .contracts import (
 )
 from .bridge_v15 import bridge_legacy_assessment, shadow_bridge
 from .model_extractor import ModelAssistedExtractor, SemanticProvider
+from .policy_composer import DeterministicPolicyComposer, composer_rule_coverage
 
 __all__ = [
     "SEMANTIC_IR_SCHEMA",
@@ -21,7 +22,9 @@ __all__ = [
     "ModelAssistedExtractor",
     "PolicyComposer",
     "SemanticProvider",
+    "DeterministicPolicyComposer",
     "bridge_legacy_assessment",
+    "composer_rule_coverage",
     "semantic_ir_digest",
     "semantic_review_required",
     "shadow_bridge",
