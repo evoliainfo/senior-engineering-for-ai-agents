@@ -1,0 +1,23 @@
+name: RC-4 shadow evidence release gate
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  evidence-release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Evaluate frozen RC-4 treatments and controls
+        run: python3 evals/diagnostic/rc4_evidence_release/run_cases.py
+      - name: Publish RC-4 observations
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rc4-shadow-evidence-release-${{ github.run_id }}
+          path: artifacts/rc4-evidence-release/
+          if-no-files-found: error
+          retention-days: 90
