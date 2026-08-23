@@ -1,0 +1,42 @@
+name: B1 semantic-materiality canonical gate
+on:
+  pull_request:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  b1-canonical:
+    if: github.event.pull_request.head.ref == 'integration/b1-semantic-materiality'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Verify promoted canonical identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          sha256sum -c SHA256SUMS
+          test "$(sha256sum sef.py | awk '{print $1}')" = "a32437274e4617da28626c027f4162328d2ea0ded831366db1677bd815360cc3"
+          python3 -m py_compile sef.py evals/run_b1_acceptance.py
+      - name: Preserve deterministic DEV 38 of 38
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 evals/run_dev_closure_all.py --sef sef.py --output b1-canonical-dev-closure.json
+      - name: Pass B1 semantic-materiality controls
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 evals/run_b1_acceptance.py --sef sef.py --output b1-canonical-acceptance.json
+      - name: Publish canonical B1 evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: b1-canonical-${{ github.run_id }}
+          path: |
+            b1-canonical-dev-closure.json
+            b1-canonical-acceptance.json
+          if-no-files-found: warn
+          retention-days: 90

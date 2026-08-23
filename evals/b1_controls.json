@@ -1,0 +1,167 @@
+{
+  "schema": "sef.eval.b1-controls.v1",
+  "purpose": "Acceptance surface for B1 primary semantic materiality only. B2 composition and actual-diff closure are intentionally out of scope.",
+  "scenarios": [
+    {
+      "schema": "sef.eval.scenario.v1",
+      "id": "B1-TENANT-P1",
+      "title": "Organization boundary implies tenant isolation and object authorization",
+      "set": "DEV",
+      "layer": "L1",
+      "family": "b1-semantic-materiality",
+      "severity": "high",
+      "fixture": "db-basic",
+      "phase": "plan",
+      "project_brief": "A SaaS hosts many customer organizations in shared infrastructure.",
+      "request": "Add an authenticated endpoint that lets an organization download its audit log while preventing members of any other organization from reading those entries.",
+      "expect": {
+        "risk": {"minimum": "R3"},
+        "required_packs": ["MULTI_TENANT", "AUTHORIZATION"],
+        "required_procedures": ["multi-tenant-isolation", "security-authentication-authorization"]
+      }
+    },
+    {
+      "schema": "sef.eval.scenario.v1",
+      "id": "B1-TENANT-N1",
+      "title": "Ordinary organization listing does not imply cross-tenant isolation",
+      "set": "DEV",
+      "layer": "L1",
+      "family": "b1-semantic-materiality",
+      "severity": "standard",
+      "fixture": "api-basic",
+      "phase": "plan",
+      "project_brief": "A public directory displays organization names and descriptions.",
+      "request": "Add a public page that lists organization names alphabetically. It does not expose private organization data or authenticated objects.",
+      "expect": {"forbidden_packs": ["MULTI_TENANT"]}
+    },
+    {
+      "schema": "sef.eval.scenario.v1",
+      "id": "B1-DATA-P1",
+      "title": "Large live row transformation is migration and capacity material",
+      "set": "DEV",
+      "layer": "L1",
+      "family": "b1-semantic-materiality",
+      "severity": "high",
+      "fixture": "db-basic",
+      "phase": "plan",
+      "project_brief": "A production relational database serves live traffic continuously.",
+      "request": "Transform roughly 80 million existing rows to populate a new derived field while normal writes continue; design execution to bound database load, locking and rollout risk.",
+      "expect": {
+        "risk": {"minimum": "R3"},
+        "required_packs": ["DATABASE_MIGRATION", "PERFORMANCE_CAPACITY_COST"],
+        "required_procedures": ["database-migration-recovery", "performance-capacity-cost"]
+      }
+    },
+    {
+      "schema": "sef.eval.scenario.v1",
+      "id": "B1-DATA-N1",
+      "title": "Small local fixture generation stays outside production migration governance",
+      "set": "DEV",
+      "layer": "L1",
+      "family": "b1-semantic-materiality",
+      "severity": "standard",
+      "fixture": "db-basic",
+      "phase": "plan",
+      "project_brief": "A developer-only fixture database is recreated locally and never promoted to production.",
+      "request": "Generate two hundred synthetic rows for a local test fixture before running unit tests.",
+      "expect": {"forbidden_packs": ["DATABASE_MIGRATION", "PERFORMANCE_CAPACITY_COST", "RELEASE_ENGINEERING"]}
+    },
+    {
+      "schema": "sef.eval.scenario.v1",
+      "id": "B1-CONTAINER-P1",
+      "title": "Production image build semantics route container engineering without Docker keyword",
+      "set": "DEV",
+      "layer": "L1",
+      "family": "b1-semantic-materiality",
+      "severity": "high",
+      "fixture": "api-basic",
+      "phase": "plan",
+      "project_brief": "A service is packaged and promoted to production as a versioned release artifact.",
+      "request": "During the production image build, install a dependency directly from the default branch of a remote Git repository, then publish and promote the resulting image as reproducible.",
+      "expect": {
+        "risk": {"minimum": "R2"},
+        "required_packs": ["CONTAINER_ENGINEERING"],
+        "required_procedures": ["container-docker-engineering"]
+      }
+    },
+    {
+      "schema": "sef.eval.scenario.v1",
+      "id": "B1-CONTAINER-N1",
+      "title": "Explicit README-only Docker example does not route container engineering",
+      "set": "DEV",
+      "layer": "L1",
+      "family": "b1-semantic-materiality",
+      "severity": "standard",
+      "fixture": "api-basic",
+      "phase": "plan",
+      "project_brief": "Repository documentation includes developer examples; no delivery change is requested.",
+      "request": "Add a README sentence showing the existing docker run command. Do not change images, dependencies, CI, build or release configuration.",
+      "expect": {"forbidden_packs": ["CONTAINER_ENGINEERING", "CI_SUPPLY_CHAIN", "RELEASE_ENGINEERING"]}
+    },
+    {
+      "schema": "sef.eval.scenario.v1",
+      "id": "B1-TRUST-P1",
+      "title": "Caller-selected backend destination is a server-side trust boundary",
+      "set": "DEV",
+      "layer": "L1",
+      "family": "b1-semantic-materiality",
+      "severity": "critical",
+      "fixture": "api-basic",
+      "phase": "plan",
+      "project_brief": "A public service backend can reach both internet and private infrastructure.",
+      "request": "Create a public preview API where the caller supplies a remote resource location and the backend HTTP client retrieves that location before returning metadata.",
+      "expect": {
+        "risk": {"minimum": "R3"},
+        "required_packs": ["WEBHOOK_TRUST"],
+        "required_procedures": ["webhook-external-input-trust"]
+      }
+    },
+    {
+      "schema": "sef.eval.scenario.v1",
+      "id": "B1-TRUST-N1",
+      "title": "Browser-only navigation is not server-side destination trust",
+      "set": "DEV",
+      "layer": "L1",
+      "family": "b1-semantic-materiality",
+      "severity": "standard",
+      "fixture": "api-basic",
+      "phase": "plan",
+      "project_brief": "A static browser UI has no backend proxy or server-side URL fetching capability.",
+      "request": "Render a user-provided website link as a normal browser anchor so the browser navigates directly. The application server must never fetch the target.",
+      "expect": {"forbidden_packs": ["WEBHOOK_TRUST"]}
+    },
+    {
+      "schema": "sef.eval.scenario.v1",
+      "id": "B1-REG-P1",
+      "title": "Clinical outcome decision is regulated and authority-dependent",
+      "set": "DEV",
+      "layer": "L1",
+      "family": "b1-semantic-materiality",
+      "severity": "critical",
+      "fixture": "api-basic",
+      "phase": "plan",
+      "project_brief": "A general software product has no documented clinical policy, jurisdiction, regulatory classification or qualified clinical authority.",
+      "request": "Add logic that decides whether a patient should receive urgent clinical treatment from reported symptoms and measurements. No approved clinical decision policy has been supplied.",
+      "expect": {
+        "risk": {"minimum": "R3"},
+        "required_packs": ["REGULATED_DOMAIN"],
+        "required_procedures": ["regulated-domain-escalation"],
+        "implementation_allowed": false
+      }
+    },
+    {
+      "schema": "sef.eval.scenario.v1",
+      "id": "B1-REG-N1",
+      "title": "Ordinary commercial recommendation remains non-regulated",
+      "set": "DEV",
+      "layer": "L1",
+      "family": "b1-semantic-materiality",
+      "severity": "standard",
+      "fixture": "api-basic",
+      "phase": "plan",
+      "project_brief": "A warehouse application recommends packaging from product dimensions and weight.",
+      "request": "Recommend a carton size from item dimensions and shipping weight to reduce unused space.",
+      "expect": {"forbidden_packs": ["REGULATED_DOMAIN"]}
+    }
+  ]
+}
