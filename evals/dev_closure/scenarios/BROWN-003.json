@@ -1,0 +1,17 @@
+{
+  "schema": "sef.eval.dev-closure-scenario.v1",
+  "id": "BROWN-003",
+  "set": "DEV",
+  "layer": "L1",
+  "family": "brownfield-adoption",
+  "severity": "standard",
+  "mode": "brownfield-plan",
+  "fixture": "api-basic",
+  "project_brief": "A legacy service with broader architectural debt unrelated to the requested defect.",
+  "request": "Fix the narrow null-handling bug in the legacy formatter. Surface unrelated architectural debt, but do not rewrite the whole subsystem unless a material safety invariant requires it.",
+  "expect": {
+    "implementation_allowed": true,
+    "forbidden_packs": ["INFRASTRUCTURE_IAC", "CI_SUPPLY_CHAIN", "CONTAINER_ENGINEERING", "DATABASE_MIGRATION"],
+    "full_contract_requires_l2": true
+  }
+}
