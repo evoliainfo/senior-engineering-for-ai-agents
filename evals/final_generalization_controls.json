@@ -12,7 +12,7 @@
       "schema":"sef.eval.scenario.v1","id":"FGR-AUTH-N1","title":"Public partner-group copy does not invent data isolation","set":"DEV","layer":"L1","family":"final-boundary","severity":"standard","fixture":"web-basic","phase":"plan",
       "project_brief":"A public website describes partner programs.",
       "request":"Change the public page heading from Partner Network to Partner Groups. This is marketing copy only.",
-      "expect":{"forbidden_packs":["MULTI_TENANT","AUTHORIZATION"]},"plan_expect":{"risk":{"maximum":"R1"}}
+      "expect":{"risk":{"exact":"R1"},"forbidden_packs":["MULTI_TENANT","AUTHORIZATION","UI_ACCESSIBILITY_COMPAT"]}
     },
     {
       "schema":"sef.eval.scenario.v1","id":"FGR-TRUST-P1","title":"Partner-controlled asset endpoint routes server destination trust","set":"DEV","layer":"L1","family":"final-trust","severity":"critical","fixture":"api-basic","phase":"plan",
@@ -37,7 +37,7 @@
       "schema":"sef.eval.scenario.v1","id":"FGR-REG-N1","title":"Mortgage repayment arithmetic does not become approval governance","set":"DEV","layer":"L1","family":"final-regulated","severity":"standard","fixture":"api-basic","phase":"plan",
       "project_brief":"A public financial education calculator performs deterministic arithmetic only.",
       "request":"Calculate the monthly repayment from principal, interest rate and term. Do not determine eligibility, approve, decline or recommend a mortgage application.",
-      "expect":{"forbidden_packs":["REGULATED_DOMAIN"]}
+      "expect":{"risk":{"exact":"R1"},"forbidden_packs":["REGULATED_DOMAIN"]}
     },
     {
       "schema":"sef.eval.scenario.v1","id":"FGR-SUP-P1","title":"Hosted support API with quota and vendor outages routes supplier governance","set":"DEV","layer":"L1","family":"final-supplier","severity":"high","fixture":"api-basic","phase":"plan",
@@ -55,7 +55,7 @@
       "schema":"sef.eval.scenario.v1","id":"FGR-POL-P1","title":"Security-feature marketing copy respects explicit implementation non-goals","set":"DEV","layer":"L1","family":"final-polarity","severity":"high","fixture":"web-basic","phase":"plan",
       "project_brief":"A public product page describes enterprise features but contains no identity service.",
       "request":"Change the pricing-page sentence to say that enterprise plans support RBAC. This is wording only; do not implement permissions, login, deployment or backend changes.",
-      "expect":{"forbidden_packs":["AUTHORIZATION","AUTH_PROTOCOL","RELEASE_ENGINEERING","MULTI_TENANT"]},"plan_expect":{"risk":{"maximum":"R1"}}
+      "expect":{"risk":{"exact":"R1"},"forbidden_packs":["AUTHORIZATION","AUTH_PROTOCOL","RELEASE_ENGINEERING","MULTI_TENANT","UI_ACCESSIBILITY_COMPAT"]}
     },
     {
       "schema":"sef.eval.scenario.v1","id":"FGR-POL-P2","title":"Prohibitive authorization requirement is not suppressed as a non-goal","set":"DEV","layer":"L1","family":"final-polarity","severity":"critical","fixture":"api-basic","phase":"plan",
