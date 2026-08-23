@@ -26,7 +26,7 @@ jobs:
           assert r['results'][0]['status']=='PASS', r
           PY
           python3 - <<'PY'
-          import json,shutil,subprocess,sys,tempfile
+          import shutil,sys,tempfile
           from pathlib import Path
           sys.path.insert(0,'evals')
           import run as core
@@ -53,8 +53,8 @@ jobs:
               ok=core.run_json([sys.executable,str(sef),'waive-evidence',str(repo),'optional-check','--reason','accepted residual risk','--authorized-by','human:evaluator'])
               assert ok.get('status')=='PASS' and ok.get('waiver',{}).get('state')=='WAIVED',ok
               assert ok['waiver']['authorization_provenance']=='operator_asserted',ok
-              # Exact-revision scope: a new commit cannot inherit the old waiver as active evidence.
-              (repo/'README.md').write_text((repo/'README.md').read_text()+'\nnew revision\n')
+              # Exact-revision scope: a new committed file cannot inherit the old waiver.
+              marker=repo/'rc7-revision-marker.txt'; marker.write_text('new revision\n',encoding='utf-8')
               core.git_checkpoint(repo,'eval: new revision after waiver')
               rel=core.run_json([sys.executable,str(sef),'release',str(repo)])
               active=[c for c in rel.get('evidence',{}).get('checks',[]) if c.get('state')=='WAIVED']
