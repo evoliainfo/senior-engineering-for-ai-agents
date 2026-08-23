@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """Aggregate deterministic release-candidate evidence without opening a fresh holdout.
 
-B3 is a closeout/freeze-readiness phase. This runner deliberately executes only
-DEV/regression surfaces that are already available for tuning. It never discovers
-or executes CHALLENGE v2 content.
+The runner is valid both immediately before freeze and after a candidate has been
+frozen. It executes only DEV/regression surfaces already available for tuning and
+never discovers or executes CHALLENGE v2 content.
 """
 from __future__ import annotations
 
@@ -68,14 +68,23 @@ def main() -> int:
 
     if manifest.get("schema") != "sef.eval.release-candidate.v1":
         blockers.append("unexpected release candidate manifest schema")
-    if manifest.get("stage") != "PRE_FREEZE_B3":
-        blockers.append(f"unexpected B3 stage: {manifest.get('stage')}")
+
+    stage = manifest.get("stage")
+    if stage not in {"PRE_FREEZE_B3", "FROZEN"}:
+        blockers.append(f"unexpected release-candidate stage: {stage}")
+
     if actual_sha != expected_sha:
         blockers.append(f"runtime hash mismatch: expected {expected_sha}, observed {actual_sha}")
 
     checksum = (ROOT / "SHA256SUMS").read_text(encoding="utf-8").strip()
     if checksum != f"{expected_sha}  sef.py":
-        blockers.append("SHA256SUMS does not exactly identify the B3 candidate runtime")
+        blockers.append("SHA256SUMS does not exactly identify the candidate runtime")
+
+    if stage == "FROZEN":
+        if manifest.get("freeze_commit") != manifest.get("source_main_commit"):
+            blockers.append("frozen manifest does not bind freeze_commit to source_main_commit")
+        if manifest.get("runtime_mutation_allowed_after_freeze") is not False:
+            blockers.append("frozen manifest does not forbid runtime mutation after freeze")
 
     if dev_manifest.get("dev_total") != 38 or dev_manifest.get("challenge_total") != 10:
         blockers.append("DEV/CHALLENGE accounting is not 38+10")
@@ -92,8 +101,12 @@ def main() -> int:
         blockers.append("first challenge manifest no longer forbids candidate runtime mutation")
 
     future = manifest.get("future_holdout", {})
-    if future.get("materialized") is not False or future.get("creation_allowed_in_b3") is not False:
-        blockers.append("release candidate manifest does not keep CHALLENGE v2 unmaterialized during B3")
+    if future.get("materialized") is not False:
+        blockers.append("release candidate manifest does not keep CHALLENGE v2 unmaterialized")
+    if stage == "PRE_FREEZE_B3" and future.get("creation_allowed_in_b3") is not False:
+        blockers.append("PRE_FREEZE_B3 manifest does not forbid CHALLENGE v2 creation during B3")
+    if stage == "FROZEN" and future.get("creation_allowed_after_freeze") is not True:
+        blockers.append("FROZEN manifest does not explicitly permit fresh holdout creation after freeze")
 
     forbidden_future_paths: list[str] = []
     for path in EVALS.rglob("*"):
@@ -103,7 +116,7 @@ def main() -> int:
     if forbidden_future_paths:
         blockers.append("CHALLENGE v2 content is already materialized under evals: " + ", ".join(sorted(forbidden_future_paths)))
 
-    with tempfile.TemporaryDirectory(prefix="sef-b3-closeout-") as tmp:
+    with tempfile.TemporaryDirectory(prefix="sef-release-candidate-") as tmp:
         t = Path(tmp)
         suites: dict[str, tuple[int, dict[str, Any], str]] = {}
         commands = {
@@ -123,7 +136,7 @@ def main() -> int:
         for name, command in commands.items():
             try:
                 suites[name] = run_report(command, output_paths[name])
-            except Exception as exc:  # harness defect, not benchmark failure
+            except Exception as exc:
                 blockers.append(f"{name}: HARNESS_ERROR: {exc}")
 
     normalized: dict[str, Any] = {}
@@ -187,10 +200,12 @@ def main() -> int:
     output = {
         "schema": "sef.eval.release-candidate-gate.v1",
         "status": "PASS" if not blockers else "FAIL",
-        "stage": manifest.get("stage"),
+        "stage": stage,
         "candidate_runtime_sha256": actual_sha,
         "source_main_commit": manifest.get("source_main_commit"),
+        "freeze_commit": manifest.get("freeze_commit"),
         "runtime_mutation_allowed_in_b3": manifest.get("runtime_mutation_allowed_in_b3"),
+        "runtime_mutation_allowed_after_freeze": manifest.get("runtime_mutation_allowed_after_freeze"),
         "future_holdout_materialized": bool(forbidden_future_paths),
         "first_challenge_evidence_class": "CONSUMED_REGRESSION_ONLY",
         "independent_holdout_claim": False,

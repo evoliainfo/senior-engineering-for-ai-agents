@@ -1,0 +1,72 @@
+name: Validate frozen candidate 4132711f
+on:
+  pull_request:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  freeze-candidate:
+    if: github.event.pull_request.head.ref == 'release/freeze-4132711f'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Verify freeze manifests
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json
+          fm=json.load(open('evals/freeze_manifest.json',encoding='utf-8'))
+          rc=json.load(open('evals/release_candidate_manifest.json',encoding='utf-8'))
+          expected_commit='4132711f9d0ad74ff41b26deff7b9966d6e54e94'
+          expected_hash='bfeda790cd70c78ceb9fae862441df35c9bfe819001c0d429c09c0dde2a0c2bd'
+          assert fm['state']=='FROZEN'
+          assert fm['candidate_commit']==expected_commit
+          assert fm['candidate_runtime_sha256']==expected_hash
+          assert fm['runtime_mutation_allowed_after_freeze'] is False
+          assert fm['fresh_holdout']['materialized_at_freeze'] is False
+          assert rc['stage']=='FROZEN'
+          assert rc['freeze_commit']==expected_commit
+          assert rc['candidate_runtime_sha256']==expected_hash
+          assert rc['runtime_mutation_allowed_after_freeze'] is False
+          assert rc['future_holdout']['materialized'] is False
+          PY
+      - name: Verify exact frozen Git ref and runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          expected_commit='4132711f9d0ad74ff41b26deff7b9966d6e54e94'
+          expected_hash='bfeda790cd70c78ceb9fae862441df35c9bfe819001c0d429c09c0dde2a0c2bd'
+          git fetch origin refs/heads/candidate/frozen-4132711f:refs/remotes/origin/candidate/frozen-4132711f
+          test "$(git rev-parse refs/remotes/origin/candidate/frozen-4132711f)" = "$expected_commit"
+          test "$(git show "$expected_commit:sef.py" | sha256sum | awk '{print $1}')" = "$expected_hash"
+          test "$(git show "$expected_commit:SHA256SUMS" | awk '{print $1}')" = "$expected_hash"
+          git diff --exit-code "$expected_commit" -- sef.py SHA256SUMS
+      - name: Re-run deterministic readiness on unchanged runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          sha256sum -c SHA256SUMS
+          python3 -m py_compile sef.py evals/run_release_candidate_gate.py
+          python3 evals/run_release_candidate_gate.py --sef sef.py --output freeze-release-candidate-gate.json
+          python3 - <<'PY'
+          import json
+          p=json.load(open('freeze-release-candidate-gate.json',encoding='utf-8'))
+          assert p['status']=='PASS'
+          assert p['freeze_ready'] is True
+          assert p['candidate_runtime_sha256']=='bfeda790cd70c78ceb9fae862441df35c9bfe819001c0d429c09c0dde2a0c2bd'
+          assert p['blockers']==[]
+          PY
+      - name: Publish freeze evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: freeze-4132711f-${{ github.run_id }}
+          path: |
+            evals/freeze_manifest.json
+            evals/release_candidate_manifest.json
+            freeze-release-candidate-gate.json
+          if-no-files-found: error
+          retention-days: 90
