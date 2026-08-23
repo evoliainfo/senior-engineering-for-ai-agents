@@ -19,12 +19,12 @@ jobs:
           set -euo pipefail
           git diff --exit-code "${{ github.event.pull_request.base.sha }}" -- sef.py SHA256SUMS
           sha256sum -c SHA256SUMS
-          python3 -m py_compile sef.py evals/apply_b1_semantic_materiality.py evals/apply_b1_semantic_materiality_v2.py evals/run_b1_acceptance.py
+          python3 -m py_compile sef.py evals/apply_b1_semantic_materiality.py evals/apply_b1_semantic_materiality_v2.py evals/apply_b1_semantic_materiality_v3.py evals/run_b1_acceptance.py
       - name: Build isolated B1 candidate
         shell: bash
         run: |
           set -euo pipefail
-          python3 evals/apply_b1_semantic_materiality_v2.py --input sef.py --output /tmp/b1-sef.py | tee b1-candidate-build.txt
+          python3 evals/apply_b1_semantic_materiality_v3.py --input sef.py --output /tmp/b1-sef.py | tee b1-candidate-build.txt
           python3 -m py_compile /tmp/b1-sef.py
       - name: Preserve deterministic DEV 38 of 38
         shell: bash
