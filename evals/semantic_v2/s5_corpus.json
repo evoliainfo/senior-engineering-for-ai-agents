@@ -1,0 +1,355 @@
+{
+  "schema": "sef.eval.semantic-v2-s5-corpus.v1",
+  "phase": "S5",
+  "development_only": true,
+  "independent_holdout": false,
+  "purpose": "Relation-focused semantic DEV qualification with positive, negative, metamorphic and ambiguity controls. Consumed holdouts may appear only as regression probes.",
+  "consumed_regressions": ["V3-AUTH-002"],
+  "cases": [
+    {
+      "id": "S5-AUTH-DEPARTMENT-CONSUMED",
+      "family": "authorization-partition",
+      "severity": "critical",
+      "metamorphic_group": "AUTH-PARTITION",
+      "consumed_regression": "V3-AUTH-002",
+      "source_digest": "f47cf769e78c97e9898a4a4a38cc726d435374069903ae74ce36936490e62743",
+      "project_brief": "One operations application is shared by multiple internal departments with separate work queues.",
+      "request": "An operator is assigned to one department and may edit work items only for that department. Passing another department's identifier must never expose or modify the other department's work items.",
+      "replay_fact_kinds": ["ACCESS_CONTROL_BOUNDARY", "PARTITION_ISOLATION"],
+      "expect": {"review_state": "RESOLVED", "required_fact_kinds": ["ACCESS_CONTROL_BOUNDARY", "PARTITION_ISOLATION"], "forbidden_fact_kinds": [], "risk": "R3", "required_packs": ["AUTHORIZATION", "MULTI_TENANT"], "implementation_allowed": false}
+    },
+    {
+      "id": "S5-AUTH-BRANCH",
+      "family": "authorization-partition",
+      "severity": "critical",
+      "metamorphic_group": "AUTH-PARTITION",
+      "project_brief": "A shared service is used by independent retail branches.",
+      "request": "A clerk assigned to one branch may update orders only for that branch, and supplying a different branch identifier must never reveal or change another branch's orders.",
+      "replay_fact_kinds": ["ACCESS_CONTROL_BOUNDARY", "PARTITION_ISOLATION"],
+      "expect": {"review_state": "RESOLVED", "required_fact_kinds": ["ACCESS_CONTROL_BOUNDARY", "PARTITION_ISOLATION"], "forbidden_fact_kinds": [], "risk": "R3", "required_packs": ["AUTHORIZATION", "MULTI_TENANT"], "implementation_allowed": false}
+    },
+    {
+      "id": "S5-AUTH-REGION",
+      "family": "authorization-partition",
+      "severity": "critical",
+      "metamorphic_group": "AUTH-PARTITION",
+      "project_brief": "A sales platform contains records for multiple operating regions.",
+      "request": "A coordinator belongs to one region and may edit leads only inside that region; changing the region id in the request must not expose or modify leads from another region.",
+      "replay_fact_kinds": ["ACCESS_CONTROL_BOUNDARY", "PARTITION_ISOLATION"],
+      "expect": {"review_state": "RESOLVED", "required_fact_kinds": ["ACCESS_CONTROL_BOUNDARY", "PARTITION_ISOLATION"], "forbidden_fact_kinds": [], "risk": "R3", "required_packs": ["AUTHORIZATION", "MULTI_TENANT"], "implementation_allowed": false}
+    },
+    {
+      "id": "S5-AUTH-DIVISION",
+      "family": "authorization-partition",
+      "severity": "critical",
+      "metamorphic_group": "AUTH-PARTITION",
+      "project_brief": "A corporate workflow tool is shared by several divisions.",
+      "request": "An analyst assigned to a division may change cases only for that division. A caller-provided division identifier must never grant access to another division's cases.",
+      "replay_fact_kinds": ["ACCESS_CONTROL_BOUNDARY", "PARTITION_ISOLATION"],
+      "expect": {"review_state": "RESOLVED", "required_fact_kinds": ["ACCESS_CONTROL_BOUNDARY", "PARTITION_ISOLATION"], "forbidden_fact_kinds": [], "risk": "R3", "required_packs": ["AUTHORIZATION", "MULTI_TENANT"], "implementation_allowed": false}
+    },
+    {
+      "id": "S5-AUTH-PORTFOLIO",
+      "family": "authorization-partition",
+      "severity": "critical",
+      "metamorphic_group": "AUTH-PARTITION",
+      "project_brief": "An investment operations app separates work by internal portfolios.",
+      "request": "A reviewer assigned to one portfolio may edit reconciliation items only for that portfolio, and a forged portfolio id must not expose or modify items from a different portfolio.",
+      "replay_fact_kinds": ["ACCESS_CONTROL_BOUNDARY", "PARTITION_ISOLATION"],
+      "expect": {"review_state": "RESOLVED", "required_fact_kinds": ["ACCESS_CONTROL_BOUNDARY", "PARTITION_ISOLATION"], "forbidden_fact_kinds": [], "risk": "R3", "required_packs": ["AUTHORIZATION", "MULTI_TENANT"], "implementation_allowed": false}
+    },
+    {
+      "id": "S5-AUTH-POD",
+      "family": "authorization-partition",
+      "severity": "critical",
+      "metamorphic_group": "AUTH-PARTITION",
+      "project_brief": "A support application is partitioned into autonomous service pods.",
+      "request": "An agent assigned to a pod may update tickets only for that pod; substituting another pod id in the API call must never reveal or mutate that pod's tickets.",
+      "replay_fact_kinds": ["ACCESS_CONTROL_BOUNDARY", "PARTITION_ISOLATION"],
+      "expect": {"review_state": "RESOLVED", "required_fact_kinds": ["ACCESS_CONTROL_BOUNDARY", "PARTITION_ISOLATION"], "forbidden_fact_kinds": [], "risk": "R3", "required_packs": ["AUTHORIZATION", "MULTI_TENANT"], "implementation_allowed": false}
+    },
+    {
+      "id": "S5-AUTH-DESK",
+      "family": "authorization-partition",
+      "severity": "critical",
+      "metamorphic_group": "AUTH-PARTITION",
+      "project_brief": "A trading operations tool separates work by internal desks.",
+      "request": "An operator belongs to one desk and may modify exceptions only for that desk. Supplying another desk identifier must not reveal or alter the other desk's exceptions.",
+      "replay_fact_kinds": ["ACCESS_CONTROL_BOUNDARY", "PARTITION_ISOLATION"],
+      "expect": {"review_state": "RESOLVED", "required_fact_kinds": ["ACCESS_CONTROL_BOUNDARY", "PARTITION_ISOLATION"], "forbidden_fact_kinds": [], "risk": "R3", "required_packs": ["AUTHORIZATION", "MULTI_TENANT"], "implementation_allowed": false}
+    },
+    {
+      "id": "S5-AUTH-FRANCHISE",
+      "family": "authorization-partition",
+      "severity": "critical",
+      "metamorphic_group": "AUTH-PARTITION",
+      "project_brief": "A shared ordering platform serves independently operated franchise locations.",
+      "request": "A franchise employee may edit orders only for the employee's assigned franchise, and changing the franchise id must never reveal or modify another franchise's orders.",
+      "replay_fact_kinds": ["ACCESS_CONTROL_BOUNDARY", "PARTITION_ISOLATION"],
+      "expect": {"review_state": "RESOLVED", "required_fact_kinds": ["ACCESS_CONTROL_BOUNDARY", "PARTITION_ISOLATION"], "forbidden_fact_kinds": [], "risk": "R3", "required_packs": ["AUTHORIZATION", "MULTI_TENANT"], "implementation_allowed": false}
+    },
+    {
+      "id": "S5-AUTH-OBJECT",
+      "family": "authorization-object",
+      "severity": "critical",
+      "project_brief": "Users own private attachments inside a shared workspace.",
+      "request": "A user may download or replace an attachment only when that attachment belongs to the user. Supplying another attachment id must never allow reading or replacing somebody else's file.",
+      "replay_fact_kinds": ["ACCESS_CONTROL_BOUNDARY"],
+      "expect": {"review_state": "RESOLVED", "required_fact_kinds": ["ACCESS_CONTROL_BOUNDARY"], "forbidden_fact_kinds": [], "risk": "R3", "required_packs": ["AUTHORIZATION"], "implementation_allowed": false}
+    },
+    {
+      "id": "S5-AUTH-NEG-LABEL",
+      "family": "authorization-negative",
+      "severity": "medium",
+      "metamorphic_group": "AUTH-NEGATIVE",
+      "project_brief": "Public documentation site.",
+      "request": "Change the heading 'Department overview' to 'Team overview' on the public documentation page. No permissions or data access behavior changes.",
+      "replay_fact_kinds": [],
+      "expect": {"review_state": "RESOLVED", "required_fact_kinds": [], "forbidden_fact_kinds": ["ACCESS_CONTROL_BOUNDARY", "PARTITION_ISOLATION"], "max_material_facts": 0, "risk": "R1", "required_packs": [], "implementation_allowed": true}
+    },
+    {
+      "id": "S5-AUTH-NEG-ANALYTICS",
+      "family": "authorization-negative",
+      "severity": "medium",
+      "metamorphic_group": "AUTH-NEGATIVE",
+      "project_brief": "Internal analytics dashboard visible to all staff.",
+      "request": "Group the chart by department and add a department filter. Every authenticated employee may continue to view all departments; this is presentation only.",
+      "replay_fact_kinds": [],
+      "expect": {"review_state": "RESOLVED", "required_fact_kinds": [], "forbidden_fact_kinds": ["ACCESS_CONTROL_BOUNDARY", "PARTITION_ISOLATION"], "max_material_facts": 0, "risk": "R1", "required_packs": [], "implementation_allowed": true}
+    },
+    {
+      "id": "S5-AUTH-NEG-COPY",
+      "family": "authorization-negative",
+      "severity": "medium",
+      "metamorphic_group": "AUTH-NEGATIVE",
+      "project_brief": "Marketing site with no authenticated area.",
+      "request": "Update the sentence 'Each branch has its own service page' to 'Each location has its own service page'. Do not change application behavior.",
+      "replay_fact_kinds": [],
+      "expect": {"review_state": "RESOLVED", "required_fact_kinds": [], "forbidden_fact_kinds": ["ACCESS_CONTROL_BOUNDARY", "PARTITION_ISOLATION"], "max_material_facts": 0, "risk": "R1", "required_packs": [], "implementation_allowed": true}
+    },
+    {
+      "id": "S5-TRUST-MERCHANT-URI",
+      "family": "server-destination-trust",
+      "severity": "critical",
+      "metamorphic_group": "TRUST-DESTINATION",
+      "project_brief": "Backend imports remote merchant archives.",
+      "request": "The API receives a merchant-controlled source_uri and the backend downloads that URI before processing the archive.",
+      "replay_fact_kinds": ["SERVER_DESTINATION_TRUST"],
+      "expect": {"review_state": "RESOLVED", "required_fact_kinds": ["SERVER_DESTINATION_TRUST"], "forbidden_fact_kinds": [], "risk": "R3", "required_packs": ["WEBHOOK_TRUST"], "implementation_allowed": true}
+    },
+    {
+      "id": "S5-TRUST-PARTNER-CALLBACK",
+      "family": "server-destination-trust",
+      "severity": "critical",
+      "metamorphic_group": "TRUST-DESTINATION",
+      "project_brief": "Backend sends event notifications to partner destinations.",
+      "request": "A partner supplies callback_url when creating an integration, and our server later POSTs event payloads to that partner-controlled destination.",
+      "replay_fact_kinds": ["SERVER_DESTINATION_TRUST"],
+      "expect": {"review_state": "RESOLVED", "required_fact_kinds": ["SERVER_DESTINATION_TRUST"], "forbidden_fact_kinds": [], "risk": "R3", "required_packs": ["WEBHOOK_TRUST"], "implementation_allowed": true}
+    },
+    {
+      "id": "S5-TRUST-TENANT-PROXY",
+      "family": "server-destination-trust",
+      "severity": "critical",
+      "metamorphic_group": "TRUST-DESTINATION",
+      "project_brief": "Image proxy fetches remote tenant assets.",
+      "request": "A tenant submits image_url and the backend proxy fetches that tenant-controlled URL to resize the image.",
+      "replay_fact_kinds": ["SERVER_DESTINATION_TRUST"],
+      "expect": {"review_state": "RESOLVED", "required_fact_kinds": ["SERVER_DESTINATION_TRUST"], "forbidden_fact_kinds": [], "risk": "R3", "required_packs": ["WEBHOOK_TRUST"], "implementation_allowed": true}
+    },
+    {
+      "id": "S5-TRUST-CUSTOMER-ENDPOINT",
+      "family": "server-destination-trust",
+      "severity": "critical",
+      "metamorphic_group": "TRUST-DESTINATION",
+      "project_brief": "Customers configure outbound delivery endpoints.",
+      "request": "A customer enters delivery_endpoint and the service sends server-side delivery receipts to that customer-controlled endpoint.",
+      "replay_fact_kinds": ["SERVER_DESTINATION_TRUST"],
+      "expect": {"review_state": "RESOLVED", "required_fact_kinds": ["SERVER_DESTINATION_TRUST"], "forbidden_fact_kinds": [], "risk": "R3", "required_packs": ["WEBHOOK_TRUST"], "implementation_allowed": true}
+    },
+    {
+      "id": "S5-TRUST-NEG-BROWSER-LINK",
+      "family": "server-destination-negative",
+      "severity": "medium",
+      "metamorphic_group": "TRUST-NEGATIVE",
+      "project_brief": "Frontend renders customer links.",
+      "request": "Render the customer-provided website URL as a normal anchor in the browser. The backend must not fetch, proxy, validate by network call, or connect to that URL.",
+      "replay_fact_kinds": [],
+      "expect": {"review_state": "RESOLVED", "required_fact_kinds": [], "forbidden_fact_kinds": ["SERVER_DESTINATION_TRUST"], "max_material_facts": 0, "risk": "R1", "required_packs": [], "implementation_allowed": true}
+    },
+    {
+      "id": "S5-TRUST-NEG-FIXED-INTERNAL",
+      "family": "server-destination-negative",
+      "severity": "medium",
+      "metamorphic_group": "TRUST-NEGATIVE",
+      "project_brief": "Backend calls a fixed company-owned internal endpoint.",
+      "request": "Send health data to the fixed internal URL configured by the platform operator. End users and external partners cannot supply or change the destination.",
+      "replay_fact_kinds": [],
+      "expect": {"review_state": "RESOLVED", "required_fact_kinds": [], "forbidden_fact_kinds": ["SERVER_DESTINATION_TRUST"], "max_material_facts": 0, "risk": "R1", "required_packs": [], "implementation_allowed": true}
+    },
+    {
+      "id": "S5-SUP-CARRIER",
+      "family": "external-supplier",
+      "severity": "high",
+      "project_brief": "Order fulfillment depends on an external carrier API.",
+      "request": "Integrate the independently operated carrier API for shipping labels. Carrier outages, quota limits and API version changes can block fulfillment.",
+      "replay_fact_kinds": ["EXTERNAL_OPERATIONAL_DEPENDENCY"],
+      "expect": {"review_state": "RESOLVED", "required_fact_kinds": ["EXTERNAL_OPERATIONAL_DEPENDENCY"], "forbidden_fact_kinds": [], "risk": "R3", "required_packs": ["EXTERNAL_SUPPLIER"], "implementation_allowed": true}
+    },
+    {
+      "id": "S5-SUP-CRM",
+      "family": "external-supplier",
+      "severity": "high",
+      "project_brief": "Sales synchronization depends on an external CRM SaaS.",
+      "request": "Synchronize deals through the CRM provider's API. Its rate limits, outages and deprecations directly affect the synchronization job.",
+      "replay_fact_kinds": ["EXTERNAL_OPERATIONAL_DEPENDENCY"],
+      "expect": {"review_state": "RESOLVED", "required_fact_kinds": ["EXTERNAL_OPERATIONAL_DEPENDENCY"], "forbidden_fact_kinds": [], "risk": "R3", "required_packs": ["EXTERNAL_SUPPLIER"], "implementation_allowed": true}
+    },
+    {
+      "id": "S5-SUP-PAYMENT",
+      "family": "external-supplier",
+      "severity": "high",
+      "project_brief": "Checkout depends on a third-party payment gateway.",
+      "request": "Charge customers through an independently operated payment API; provider downtime, quotas or API changes can prevent checkout completion.",
+      "replay_fact_kinds": ["EXTERNAL_OPERATIONAL_DEPENDENCY"],
+      "expect": {"review_state": "RESOLVED", "required_fact_kinds": ["EXTERNAL_OPERATIONAL_DEPENDENCY"], "forbidden_fact_kinds": [], "risk": "R3", "required_packs": ["EXTERNAL_SUPPLIER"], "implementation_allowed": true}
+    },
+    {
+      "id": "S5-SUP-NEG-INTERNAL-NAME",
+      "family": "external-supplier-negative",
+      "severity": "medium",
+      "project_brief": "Monorepo contains an internal module named VendorAdapter.",
+      "request": "Refactor the local VendorAdapter class used entirely inside this repository. It makes no network calls and depends on no independently operated service.",
+      "replay_fact_kinds": [],
+      "expect": {"review_state": "RESOLVED", "required_fact_kinds": [], "forbidden_fact_kinds": ["EXTERNAL_OPERATIONAL_DEPENDENCY"], "max_material_facts": 0, "risk": "R1", "required_packs": [], "implementation_allowed": true}
+    },
+    {
+      "id": "S5-REG-HIRING",
+      "family": "consequential-decision",
+      "severity": "critical",
+      "metamorphic_group": "REG-DECISION",
+      "project_brief": "Recruiting workflow uses an automated recommendation.",
+      "request": "Generate a recommendation to accept or reject each job applicant, and use that recommendation as input to the hiring decision.",
+      "replay_fact_kinds": ["CONSEQUENTIAL_DECISION"],
+      "expect": {"review_state": "RESOLVED", "required_fact_kinds": ["CONSEQUENTIAL_DECISION"], "forbidden_fact_kinds": [], "risk": "R4", "required_packs": ["REGULATED_DOMAIN"], "implementation_allowed": false}
+    },
+    {
+      "id": "S5-REG-MORTGAGE",
+      "family": "consequential-decision",
+      "severity": "critical",
+      "metamorphic_group": "REG-DECISION",
+      "project_brief": "Lending workflow evaluates applicants.",
+      "request": "Recommend approve or decline for a mortgage applicant, with the recommendation used by staff when deciding whether the applicant receives the loan.",
+      "replay_fact_kinds": ["CONSEQUENTIAL_DECISION"],
+      "expect": {"review_state": "RESOLVED", "required_fact_kinds": ["CONSEQUENTIAL_DECISION"], "forbidden_fact_kinds": [], "risk": "R4", "required_packs": ["REGULATED_DOMAIN"], "implementation_allowed": false}
+    },
+    {
+      "id": "S5-REG-CLAIM",
+      "family": "consequential-decision",
+      "severity": "critical",
+      "metamorphic_group": "REG-DECISION",
+      "project_brief": "Insurance workflow reviews claims.",
+      "request": "Recommend whether a claimant is eligible for claim payment, and present that recommendation to the adjuster making the coverage decision.",
+      "replay_fact_kinds": ["CONSEQUENTIAL_DECISION"],
+      "expect": {"review_state": "RESOLVED", "required_fact_kinds": ["CONSEQUENTIAL_DECISION"], "forbidden_fact_kinds": [], "risk": "R4", "required_packs": ["REGULATED_DOMAIN"], "implementation_allowed": false}
+    },
+    {
+      "id": "S5-REG-NEG-SALARY",
+      "family": "consequential-negative",
+      "severity": "high",
+      "metamorphic_group": "REG-ARITHMETIC-NEGATIVE",
+      "project_brief": "Employee self-service calculator.",
+      "request": "Calculate estimated monthly take-home pay from a salary entered by the user. Do not rank, approve, reject or recommend any employment decision.",
+      "replay_fact_kinds": [],
+      "expect": {"review_state": "RESOLVED", "required_fact_kinds": [], "forbidden_fact_kinds": ["CONSEQUENTIAL_DECISION"], "max_material_facts": 0, "risk": "R1", "required_packs": [], "implementation_allowed": true}
+    },
+    {
+      "id": "S5-REG-NEG-MORTGAGE-CALC",
+      "family": "consequential-negative",
+      "severity": "high",
+      "metamorphic_group": "REG-ARITHMETIC-NEGATIVE",
+      "project_brief": "Public financial calculator.",
+      "request": "Compute monthly mortgage payments from principal, interest rate and term. The calculator does not assess eligibility, approve applications or make lending recommendations.",
+      "replay_fact_kinds": [],
+      "expect": {"review_state": "RESOLVED", "required_fact_kinds": [], "forbidden_fact_kinds": ["CONSEQUENTIAL_DECISION"], "max_material_facts": 0, "risk": "R1", "required_packs": [], "implementation_allowed": true}
+    },
+    {
+      "id": "S5-REG-NEG-PREMIUM",
+      "family": "consequential-negative",
+      "severity": "high",
+      "metamorphic_group": "REG-ARITHMETIC-NEGATIVE",
+      "project_brief": "Insurance quote calculator.",
+      "request": "Calculate an illustrative premium from a fixed published formula. Do not decide coverage eligibility, approve claims or recommend acceptance or rejection.",
+      "replay_fact_kinds": [],
+      "expect": {"review_state": "RESOLVED", "required_fact_kinds": [], "forbidden_fact_kinds": ["CONSEQUENTIAL_DECISION"], "max_material_facts": 0, "risk": "R1", "required_packs": [], "implementation_allowed": true}
+    },
+    {
+      "id": "S5-DATA-ORDERS",
+      "family": "live-data-transformation",
+      "severity": "critical",
+      "metamorphic_group": "DATA-LIVE",
+      "project_brief": "Production order database contains tens of millions of rows.",
+      "request": "Normalize 45 million live order rows in place, backfill the new representation and keep the service available while the transformation runs.",
+      "replay_fact_kinds": ["LIVE_DATA_TRANSFORMATION", "CAPACITY_MATERIALITY"],
+      "expect": {"review_state": "RESOLVED", "required_fact_kinds": ["LIVE_DATA_TRANSFORMATION", "CAPACITY_MATERIALITY"], "forbidden_fact_kinds": [], "risk": "R3", "required_packs": ["DATABASE_MIGRATION", "PERFORMANCE_CAPACITY_COST", "RELEASE_ENGINEERING"], "implementation_allowed": false}
+    },
+    {
+      "id": "S5-DATA-CUSTOMERS",
+      "family": "live-data-transformation",
+      "severity": "critical",
+      "metamorphic_group": "DATA-LIVE",
+      "project_brief": "Production customer table contains twelve million active records.",
+      "request": "Rewrite and backfill 12 million live customer records to a new normalized shape without taking the production service offline.",
+      "replay_fact_kinds": ["LIVE_DATA_TRANSFORMATION", "CAPACITY_MATERIALITY"],
+      "expect": {"review_state": "RESOLVED", "required_fact_kinds": ["LIVE_DATA_TRANSFORMATION", "CAPACITY_MATERIALITY"], "forbidden_fact_kinds": [], "risk": "R3", "required_packs": ["DATABASE_MIGRATION", "PERFORMANCE_CAPACITY_COST", "RELEASE_ENGINEERING"], "implementation_allowed": false}
+    },
+    {
+      "id": "S5-DATA-NEG-FIXTURE",
+      "family": "live-data-negative",
+      "severity": "medium",
+      "project_brief": "Local developer fixture contains 500 synthetic rows.",
+      "request": "Normalize the 500-row synthetic CSV fixture used only by local tests. It is not production data and no live service reads it.",
+      "replay_fact_kinds": [],
+      "expect": {"review_state": "RESOLVED", "required_fact_kinds": [], "forbidden_fact_kinds": ["LIVE_DATA_TRANSFORMATION", "CAPACITY_MATERIALITY"], "max_material_facts": 0, "risk": "R1", "required_packs": [], "implementation_allowed": true}
+    },
+    {
+      "id": "S5-EXT-AUTH",
+      "family": "external-authentication",
+      "severity": "critical",
+      "project_brief": "Application delegates sign-in to an independently operated identity provider.",
+      "request": "Implement federated login with an external identity provider. The external authentication response creates the local user session, and provider outage or protocol changes can prevent sign-in.",
+      "replay_fact_kinds": ["AUTHENTICATION_PROTOCOL", "EXTERNAL_OPERATIONAL_DEPENDENCY"],
+      "expect": {"review_state": "RESOLVED", "required_fact_kinds": ["AUTHENTICATION_PROTOCOL", "EXTERNAL_OPERATIONAL_DEPENDENCY"], "forbidden_fact_kinds": [], "risk": "R3", "required_packs": ["AUTH_PROTOCOL", "EXTERNAL_SUPPLIER", "AUTHORIZATION", "PRIVACY", "WEBHOOK_TRUST"], "implementation_allowed": false}
+    },
+    {
+      "id": "S5-UNCERTAIN-AUTH",
+      "family": "semantic-ambiguity",
+      "severity": "critical",
+      "project_brief": "Product requirements are incomplete.",
+      "request": "Users should see only the appropriate group records, but the ownership and cross-group access rules are still being decided and are not specified yet.",
+      "replay_fact_kinds": [],
+      "replay_uncertainty": {"relation_hint": "access_control_boundary", "state": "AMBIGUOUS", "reason": "material access relationship is unresolved"},
+      "expect": {"review_state": "SEMANTIC_REVIEW_REQUIRED", "required_fact_kinds": [], "forbidden_fact_kinds": [], "risk": null, "required_packs": [], "implementation_allowed": false}
+    },
+    {
+      "id": "S5-UNCERTAIN-TRUST",
+      "family": "semantic-ambiguity",
+      "severity": "critical",
+      "project_brief": "Integration ownership is not yet defined.",
+      "request": "The backend may fetch a URL from the integration payload, but the specification does not say whether the destination is partner-controlled or a fixed operator configuration.",
+      "replay_fact_kinds": [],
+      "replay_uncertainty": {"relation_hint": "server_destination_trust", "state": "AMBIGUOUS", "reason": "destination control is unresolved"},
+      "expect": {"review_state": "SEMANTIC_REVIEW_REQUIRED", "required_fact_kinds": [], "forbidden_fact_kinds": [], "risk": null, "required_packs": [], "implementation_allowed": false}
+    },
+    {
+      "id": "S5-UNCERTAIN-REG",
+      "family": "semantic-ambiguity",
+      "severity": "critical",
+      "project_brief": "Future use of a scoring model has not been approved.",
+      "request": "Generate a score for insurance records. The product team has not decided whether that score will be informational only or later used to determine coverage eligibility.",
+      "replay_fact_kinds": [],
+      "replay_uncertainty": {"relation_hint": "consequential_decision", "state": "AMBIGUOUS", "reason": "material downstream decision use is unresolved"},
+      "expect": {"review_state": "SEMANTIC_REVIEW_REQUIRED", "required_fact_kinds": [], "forbidden_fact_kinds": [], "risk": null, "required_packs": [], "implementation_allowed": false}
+    }
+  ]
+}
