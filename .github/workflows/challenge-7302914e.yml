@@ -1,0 +1,77 @@
+name: Frozen candidate CHALLENGE one-shot
+on:
+  pull_request:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  challenge:
+    if: github.event.pull_request.head.ref == 'eval/challenge-7302914e'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Prove frozen candidate and locked contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          candidate='7302914ef8ed098a8c3d1e6ae5a0c4a811f49837'
+          expected='c5fdbcf6a1a8428663c25e15247c481c1268849a2c747de8766bc0946544d6b4'
+          git cat-file -e "$candidate^{commit}"
+          git diff --exit-code "$candidate" -- sef.py SHA256SUMS
+          actual="$(sha256sum sef.py | awk '{print $1}')"
+          test "$actual" = "$expected"
+          sha256sum -c SHA256SUMS
+          python3 -m py_compile sef.py evals/run.py evals/run_dev_closure_extra.py evals/run_challenge_standard.py evals/run_challenge_state.py evals/run_challenge_all.py
+          python3 evals/run.py validate --scenarios evals/scenarios/challenge
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          manifest=json.load(open('evals/challenge_manifest.json'))
+          state=json.load(open('evals/challenge_state/EVID-002.json'))
+          assert manifest['candidate_commit']=='7302914ef8ed098a8c3d1e6ae5a0c4a811f49837'
+          assert manifest['candidate_runtime_sha256']=='c5fdbcf6a1a8428663c25e15247c481c1268849a2c747de8766bc0946544d6b4'
+          assert manifest['challenge_total']==10
+          assert len(manifest['expected_ids'])==10 and len(set(manifest['expected_ids']))==10
+          assert set(manifest['standard_runner_ids'])|set(manifest['state_runner_ids'])==set(manifest['expected_ids'])
+          assert manifest['state_runner_ids']==['EVID-002']
+          assert manifest['runtime_mutation_allowed'] is False
+          assert state['schema']=='sef.eval.challenge-state.v1' and state['id']=='EVID-002' and state['set']=='CHALLENGE'
+          files=sorted(Path('evals/scenarios/challenge').glob('*.json'))
+          ids=[json.load(open(p))['id'] for p in files]
+          assert len(files)==9 and set(ids)==set(manifest['standard_runner_ids']),ids
+          print('CHALLENGE contracts locked:', ', '.join(manifest['expected_ids']))
+          PY
+      - name: Execute first frozen-candidate CHALLENGE run
+        id: challenge_run
+        shell: bash
+        run: |
+          set +e
+          python3 evals/run_challenge_all.py --output challenge-report.json
+          code=$?
+          set -e
+          echo "exit_code=$code" >> "$GITHUB_OUTPUT"
+          if [ "$code" -eq 2 ]; then
+            echo 'Invalid challenge measurement: harness integrity failed.' >&2
+            exit 2
+          fi
+          python3 - <<'PY'
+          import json
+          r=json.load(open('challenge-report.json'))
+          print(json.dumps({k:r[k] for k in ('candidate_commit','sef_source_sha256','holdout_status','holdout_reuse_status','accounting','harness_integrity','harness_errors','benchmark','real_l2_status')},indent=2))
+          assert r['harness_integrity']=='PASS',r['harness_errors']
+          assert r['accounting']=={'expected':10,'observed':10,'unique_observed':10,'missing':[],'unexpected':[],'duplicates':[]},r['accounting']
+          assert r['holdout_status']=='OPENED_EXECUTED'
+          assert r['holdout_reuse_status']=='CONTAMINATED_FOR_FUTURE_TUNING'
+          PY
+          exit "$code"
+      - name: Publish immutable challenge evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: frozen-challenge-7302914e-${{ github.run_id }}
+          path: challenge-report.json
+          if-no-files-found: error
+          retention-days: 90

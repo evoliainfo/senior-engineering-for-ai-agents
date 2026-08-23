@@ -1,0 +1,29 @@
+{
+  "schema": "sef.eval.scenario.v1",
+  "id": "AUTH-007",
+  "title": "OAuth authorization-code callback requires protocol and provider trust controls",
+  "set": "CHALLENGE",
+  "layer": "L1",
+  "family": "auth-authorization",
+  "severity": "critical",
+  "fixture": "api-basic",
+  "phase": "plan",
+  "project_brief": "A web application is adding external identity-provider login.",
+  "request": "Add an OAuth 2.0 authorization-code callback for an external identity provider, including session establishment after callback validation.",
+  "reference_outcome": {
+    "must_recognize": ["authentication protocol boundary", "external identity-provider trust", "state/CSRF and redirect/callback validation"],
+    "must_not_claim": ["provider-specific correctness without current authoritative provider documentation"]
+  },
+  "expect": {
+    "risk": {"minimum": "R3"},
+    "required_packs": ["AUTH_PROTOCOL", "EXTERNAL_SUPPLIER"],
+    "required_procedures": ["security-authentication-authorization", "external-supplier-saas-governance"]
+  },
+  "challenge_expect": {
+    "required_dod_term_groups": [
+      ["state", "csrf"],
+      ["redirect", "callback"],
+      ["provider", "authoritative", "current"]
+    ]
+  }
+}

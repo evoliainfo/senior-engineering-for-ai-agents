@@ -1,0 +1,33 @@
+{
+  "schema": "sef.eval.scenario.v1",
+  "id": "PROP-005",
+  "title": "Spacing-only change on instrumented lead-generation page stays proportional",
+  "set": "CHALLENGE",
+  "layer": "L1",
+  "family": "proportionality",
+  "severity": "standard",
+  "fixture": "web-basic",
+  "phase": "verify",
+  "project_brief": "A public lead-generation website with existing SEO and analytics instrumentation already in production.",
+  "request": "Change only the visual spacing around the existing lead form. Do not change SEO metadata, analytics instrumentation, conversion semantics, or application behavior.",
+  "reference_outcome": {
+    "must_recognize": ["visual-only localized diff", "existing SEO/analytics may be inspected but need not be reimplemented"],
+    "must_not_activate": ["new analytics implementation from spacing alone", "unrelated heavyweight governance"]
+  },
+  "plan_expect": {
+    "risk": {"exact": "R0"},
+    "forbidden_packs": ["AUTH_PROTOCOL", "AUTHORIZATION", "DATABASE_MIGRATION", "CI_SUPPLY_CHAIN", "INFRASTRUCTURE_IAC"],
+    "implementation_allowed": true
+  },
+  "expect": {
+    "risk": {"exact": "R0"},
+    "forbidden_packs": ["AUTH_PROTOCOL", "AUTHORIZATION", "DATABASE_MIGRATION", "CI_SUPPLY_CHAIN", "INFRASTRUCTURE_IAC"],
+    "required_changed_paths": ["styles.css"]
+  },
+  "challenge_expect": {
+    "forbidden_new_procedures": ["analytics-conversion-instrumentation", "seo-web-discoverability-engineering", "geo-ai-discoverability-engineering"]
+  },
+  "mutations": [
+    {"action": "append", "path": "styles.css", "content": "\n.lead-form { margin-block: 1.5rem; }\n"}
+  ]
+}

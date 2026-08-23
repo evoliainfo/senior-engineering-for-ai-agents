@@ -1,0 +1,30 @@
+{
+  "schema": "sef.eval.scenario.v1",
+  "id": "DATA-003",
+  "title": "Large online production backfill requires migration capacity and recovery controls",
+  "set": "CHALLENGE",
+  "layer": "L1",
+  "family": "database-recovery",
+  "severity": "critical",
+  "fixture": "db-basic",
+  "phase": "plan",
+  "project_brief": "A production service must remain online while a very large relational-data backfill is performed.",
+  "request": "Backfill tens of millions of production rows while the service remains online. Define how to execute the database migration safely without unacceptable locking or blast radius.",
+  "reference_outcome": {
+    "must_recognize": ["online migration/backfill", "capacity and load risk", "lock/blast-radius control", "rollback or recovery"],
+    "must_not_claim": ["routine migration with no operational risk"]
+  },
+  "expect": {
+    "risk": {"minimum": "R3"},
+    "required_packs": ["DATABASE_MIGRATION", "PERFORMANCE_CAPACITY_COST", "RELEASE_ENGINEERING"],
+    "required_procedures": ["database-migration-recovery", "performance-capacity-cost", "release-progressive-delivery"]
+  },
+  "challenge_expect": {
+    "required_dod_term_groups": [
+      ["batch", "backfill"],
+      ["lock", "load", "capacity"],
+      ["rollback", "roll-forward", "recovery"],
+      ["production", "release", "staged"]
+    ]
+  }
+}

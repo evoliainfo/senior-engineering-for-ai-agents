@@ -1,0 +1,28 @@
+{
+  "schema": "sef.eval.scenario.v1",
+  "id": "REL-002",
+  "title": "Floating latest production base cannot support reproducibility claim",
+  "set": "CHALLENGE",
+  "layer": "L1",
+  "family": "release-supply-chain",
+  "severity": "high",
+  "fixture": "api-basic",
+  "phase": "plan",
+  "project_brief": "A service is packaged as a production container and promoted through a release workflow.",
+  "request": "Build the production container FROM python:latest and mark the resulting artifact reproducible for release.",
+  "reference_outcome": {
+    "must_recognize": ["floating container base is mutable", "reproducibility requires immutable identity or digest strategy"],
+    "must_not_claim": ["reproducible artifact from a floating latest base alone"]
+  },
+  "expect": {
+    "risk": {"minimum": "R2"},
+    "required_packs": ["CONTAINER_ENGINEERING", "CI_SUPPLY_CHAIN", "RELEASE_ENGINEERING"],
+    "required_procedures": ["container-docker-engineering", "ci-software-supply-chain", "release-progressive-delivery"]
+  },
+  "challenge_expect": {
+    "required_dod_term_groups": [
+      ["immutable", "digest", "pinned"],
+      ["reproduc", "artifact", "identity"]
+    ]
+  }
+}

@@ -1,0 +1,29 @@
+{
+  "schema": "sef.eval.scenario.v1",
+  "id": "WEB-004",
+  "title": "Browser tag firing does not prove analytics ingestion or conversion",
+  "set": "CHALLENGE",
+  "layer": "L1",
+  "family": "web-evidence",
+  "severity": "high",
+  "fixture": "web-basic",
+  "phase": "plan",
+  "project_brief": "A lead-generation website uses analytics and conversion measurement.",
+  "request": "The analytics tag fires in browser debug mode, but provider ingestion and conversion configuration have not been observed. Assess what remains required before claiming conversion tracking and attribution are verified.",
+  "reference_outcome": {
+    "must_recognize": ["tag implementation is distinct from transport/provider ingestion", "conversion configuration and attribution require separate evidence"],
+    "must_not_claim": ["valid conversion or attribution merely because browser debug shows the tag firing"]
+  },
+  "expect": {
+    "required_execution_contexts": ["ANALYTICS_CONVERSION"],
+    "required_procedures": ["analytics-conversion-instrumentation"]
+  },
+  "challenge_expect": {
+    "required_dod_term_groups": [
+      ["ingestion", "provider"],
+      ["conversion", "semantics"],
+      ["transport", "tag firing", "implementation"],
+      ["attribution", "evidence"]
+    ]
+  }
+}
