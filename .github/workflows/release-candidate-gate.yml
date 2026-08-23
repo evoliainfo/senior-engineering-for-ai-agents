@@ -1,0 +1,69 @@
+name: Release candidate aggregate gate
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'sef.py'
+      - 'SHA256SUMS'
+      - 'evals/**'
+      - 'docs/B3_REGRESSION_CLOSEOUT.md'
+      - '.github/workflows/release-candidate-gate.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  release-candidate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Enforce B3 runtime immutability
+        if: github.event_name == 'pull_request'
+        shell: bash
+        run: |
+          set -euo pipefail
+          stage="$(python3 - <<'PY'
+          import json
+          print(json.load(open('evals/release_candidate_manifest.json', encoding='utf-8')).get('stage',''))
+          PY
+          )"
+          if [ "$stage" = "PRE_FREEZE_B3" ]; then
+            git diff --exit-code "${{ github.event.pull_request.base.sha }}" -- sef.py SHA256SUMS
+          fi
+
+      - name: Compile release-candidate harness
+        shell: bash
+        run: |
+          set -euo pipefail
+          sha256sum -c SHA256SUMS
+          python3 -m py_compile \
+            sef.py \
+            evals/run_release_candidate_gate.py \
+            evals/run_dev_closure_all.py \
+            evals/run_b1_acceptance.py \
+            evals/run_b2_acceptance.py \
+            evals/run_rc8_controls_round2_candidate.py \
+            evals/run_consumed_challenge_regression.py
+
+      - name: Run aggregate deterministic closeout
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 evals/run_release_candidate_gate.py \
+            --sef sef.py \
+            --output release-candidate-gate.json
+
+      - name: Publish release-candidate evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-candidate-gate-${{ github.run_id }}
+          path: release-candidate-gate.json
+          if-no-files-found: error
+          retention-days: 90
