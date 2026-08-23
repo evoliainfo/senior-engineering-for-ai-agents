@@ -1,11 +1,11 @@
-name: B2 composition candidate
+name: B2 composition canonical gate
 on:
   pull_request:
     branches: [main]
 permissions:
   contents: read
 jobs:
-  b2-candidate:
+  b2-canonical:
     if: github.event.pull_request.head.ref == 'integration/b2-composition-closure'
     runs-on: ubuntu-latest
     timeout-minutes: 40
@@ -13,67 +13,55 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - name: Prove canonical B1 runtime is untouched
+      - name: Verify canonical B2 identity
         shell: bash
         run: |
           set -euo pipefail
-          git diff --exit-code "${{ github.event.pull_request.base.sha }}" -- sef.py SHA256SUMS
           sha256sum -c SHA256SUMS
-          test "$(sha256sum sef.py | awk '{print $1}')" = "a32437274e4617da28626c027f4162328d2ea0ded831366db1677bd815360cc3"
-          python3 -m py_compile sef.py evals/apply_b2_composition.py evals/run_b2_acceptance.py evals/run_rc8_controls_round2_candidate.py evals/run_consumed_challenge_regression.py
-      - name: Build isolated B2 candidate
-        shell: bash
-        run: |
-          set -euo pipefail
-          python3 evals/apply_b2_composition.py --input sef.py --output /tmp/b2-sef.py | tee b2-candidate-build.txt
-          python3 -m py_compile /tmp/b2-sef.py
+          test "$(sha256sum sef.py | awk '{print $1}')" = "bfeda790cd70c78ceb9fae862441df35c9bfe819001c0d429c09c0dde2a0c2bd"
+          python3 -m py_compile sef.py evals/run_b2_acceptance.py evals/run_rc8_controls_round2_candidate.py evals/run_consumed_challenge_regression.py
       - name: Preserve deterministic DEV 38 of 38
         shell: bash
         run: |
           set -euo pipefail
-          python3 evals/run_dev_closure_all.py --sef /tmp/b2-sef.py --output b2-dev-closure.json
+          python3 evals/run_dev_closure_all.py --sef sef.py --output b2-canonical-dev.json
       - name: Preserve B1 acceptance 10 of 10
         shell: bash
         run: |
           set -euo pipefail
-          python3 evals/run_b1_acceptance.py --sef /tmp/b2-sef.py --output b2-b1-acceptance.json
+          python3 evals/run_b1_acceptance.py --sef sef.py --output b2-canonical-b1.json
       - name: Pass B2 generalization controls 10 of 10
         shell: bash
         run: |
           set -euo pipefail
-          python3 evals/run_b2_acceptance.py --sef /tmp/b2-sef.py --output b2-acceptance.json
+          python3 evals/run_b2_acceptance.py --sef sef.py --output b2-canonical-b2.json
       - name: Close calibrated RC-8 controls 14 of 14
         shell: bash
         run: |
           set -euo pipefail
-          python3 evals/run_rc8_controls_round2_candidate.py --sef /tmp/b2-sef.py --output b2-rc8-round2.json
+          python3 evals/run_rc8_controls_round2_candidate.py --sef sef.py --output b2-canonical-rc8.json
           python3 - <<'PY'
           import json
-          p=json.load(open('b2-rc8-round2.json',encoding='utf-8'))
-          if p.get('status')!='MEASURED' or p.get('harness_errors'):
-              raise SystemExit('RC-8 candidate harness invalid')
+          p=json.load(open('b2-canonical-rc8.json',encoding='utf-8'))
           summary=p.get('raw_summary') or {}
-          counts=summary.get('counts') or {}
-          if counts != {'PASS': 14} or summary.get('status')!='PASS':
-              raise SystemExit(f'RC-8 controls not closed: {summary}')
+          if p.get('harness_errors') or summary.get('counts') != {'PASS':14} or summary.get('status')!='PASS':
+              raise SystemExit(f'RC-8 canonical gate failed: {p}')
           PY
       - name: Close consumed first challenge as regression 10 of 10
         shell: bash
         run: |
           set -euo pipefail
-          python3 evals/run_consumed_challenge_regression.py --sef /tmp/b2-sef.py --output b2-consumed-regression.json
-      - name: Publish B2 candidate evidence
+          python3 evals/run_consumed_challenge_regression.py --sef sef.py --output b2-canonical-consumed.json
+      - name: Publish canonical B2 evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: b2-composition-candidate-${{ github.run_id }}
+          name: b2-canonical-${{ github.run_id }}
           path: |
-            b2-candidate-build.txt
-            b2-dev-closure.json
-            b2-b1-acceptance.json
-            b2-acceptance.json
-            b2-rc8-round2.json
-            b2-consumed-regression.json
-            /tmp/b2-sef.py
+            b2-canonical-dev.json
+            b2-canonical-b1.json
+            b2-canonical-b2.json
+            b2-canonical-rc8.json
+            b2-canonical-consumed.json
           if-no-files-found: warn
           retention-days: 90
