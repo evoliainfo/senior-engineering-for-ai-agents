@@ -1,4 +1,4 @@
-name: Full DEV closure measurement
+name: Full DEV regression gate
 on:
   pull_request:
     branches: [main]
@@ -7,12 +7,11 @@ permissions:
   contents: read
 jobs:
   full-dev-closure:
-    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.head.ref == 'eval/dev-closure-full-catalog'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
-      - name: Validate harness and execute all 38 DEV contracts
+      - name: Validate harness and require all 38 DEV contracts
         shell: bash
         run: |
           set -euo pipefail
@@ -20,21 +19,21 @@ jobs:
           python3 -m py_compile sef.py evals/run.py evals/run_evidence_release.py evals/run_dev_closure_evidence.py evals/run_dev_closure_extra.py evals/run_dev_closure_state.py evals/run_dev_closure_all.py
           python3 evals/run.py validate --scenarios evals/scenarios/dev
           python3 evals/run_evidence_release.py validate
-          set +e
           python3 evals/run_dev_closure_all.py --output dev-closure-all.json
-          benchmark_exit=$?
-          set -e
-          python3 - "$benchmark_exit" <<'PY'
-          import json,sys
+          python3 - <<'PY'
+          import json
           r=json.load(open('dev-closure-all.json'))
           print(json.dumps({k:r[k] for k in ('accounting','harness_integrity','harness_errors','benchmark','known_l2_followups')},indent=2))
           if r.get('challenge_status')!='SEALED' or r.get('challenge_ids_executed'):
               raise SystemExit('CHALLENGE process boundary violated')
           if r.get('harness_integrity')!='PASS':
               raise SystemExit('Invalid DEV closure measurement: '+str(r.get('harness_errors')))
-          if int(sys.argv[1]) not in (0,1):
-              raise SystemExit(f'Unexpected orchestrator exit code {sys.argv[1]}')
-          print('Benchmark FAIL remains visible as measurement data and does not invalidate this harness-only PR.')
+          a=r.get('accounting',{})
+          if not (a.get('expected_dev')==38 and a.get('observed_dev')==38 and a.get('unique_observed')==38 and not a.get('missing') and not a.get('unexpected') and not a.get('duplicates')):
+              raise SystemExit('DEV accounting is not exact: '+str(a))
+          b=r.get('benchmark',{})
+          if b.get('status')!='PASS' or b.get('counts',{}).get('PASS')!=38 or b.get('failures') or b.get('critical_failures'):
+              raise SystemExit('Full deterministic DEV regression gate failed: '+str(b))
           PY
       - name: Publish full DEV closure evidence
         if: always()

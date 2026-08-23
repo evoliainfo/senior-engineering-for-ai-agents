@@ -74,14 +74,23 @@ def evaluate(sef:Path,path:Path,fixtures:Path,evidence_fixtures:Path)->dict[str,
                 return result(s,assertions,observed,sef,limitations)
 
             if mode=='authorized-waiver':
-                help_cp=core.run_process([sys.executable,str(installed),'--help'],cwd=repo)
-                help_text=(help_cp.stdout+'\n'+help_cp.stderr).lower()
-                waiver_surface=any(token in help_text for token in ('waive','waiver','waived'))
-                assertions.append(core.assertion('public-waiver-interface',waiver_surface,True,waiver_surface,critical))
-                # Presence alone is insufficient to claim the semantic contract.
-                if waiver_surface:
-                    assertions.append(core.assertion('waiver-distinct-from-pass',None,'WAIVED state exercised','interface discovered but not yet exercised',critical))
-                observed={'cli_returncode':help_cp.returncode,'waiver_surface_detected':waiver_surface,'help_excerpt':help_text[-2000:]}
+                check_id='optional-noncritical-eval-check'
+                recorded=core.run_json([sys.executable,str(installed),'record-evidence',str(repo),check_id,'FAIL','--optional','--detail','Non-critical deterministic benchmark check.','--source','dev-closure'])
+                assertions.append(core.assertion('optional-evidence-recorded',recorded.get('status')=='PASS','PASS',recorded.get('status'),critical))
+                waiver=core.run_json([sys.executable,str(installed),'waive-evidence',str(repo),check_id,'--reason','Authorized evaluator accepts this non-critical residual risk for the scenario.','--authorized-by','human:evaluator'])
+                w=waiver.get('waiver') if isinstance(waiver.get('waiver'),dict) else {}
+                agg=waiver.get('aggregate') if isinstance(waiver.get('aggregate'),dict) else {}
+                checks={str(c.get('check_id')):c for c in agg.get('checks',[]) if isinstance(c,dict)}
+                c=checks.get(check_id,{})
+                assertions.append(core.assertion('waiver-command-status',waiver.get('status')=='PASS','PASS',waiver.get('status'),critical))
+                assertions.append(core.assertion('waiver-state-distinct',w.get('state')=='WAIVED','WAIVED',w.get('state'),critical))
+                assertions.append(core.assertion('waiver-not-pass',w.get('state')!='PASS','not PASS',w.get('state'),critical))
+                assertions.append(core.assertion('waiver-reason-visible',bool(w.get('reason')) and 'residual risk' in str(w.get('reason')).lower(),True,w.get('reason'),critical))
+                assertions.append(core.assertion('waiver-authorization-visible',w.get('authorized_by')=='human:evaluator','human:evaluator',w.get('authorized_by'),critical))
+                assertions.append(core.assertion('aggregate-check-waived',c.get('state')=='WAIVED','WAIVED',c.get('state'),critical))
+                assertions.append(core.assertion('waived-check-remains-optional',c.get('required') is False,False,c.get('required'),critical))
+                assertions.append(core.assertion('raw-observation-preserved',c.get('observed_state')=='FAIL','FAIL',c.get('observed_state'),critical))
+                observed={'recorded_optional_evidence':recorded,'waiver':waiver,'active_check':c}
                 return result(s,assertions,observed,sef)
 
             # preexisting-failure

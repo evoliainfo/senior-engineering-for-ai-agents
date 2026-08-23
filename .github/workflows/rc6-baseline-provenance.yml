@@ -30,7 +30,7 @@ jobs:
               assert c.get('preexisting_failures'), (x['scenario_id'],c)
               assert 'candidate_regressions' in c and 'baseline_comparison' in c and 'residual_limitations' in c
           PY
-      - name: Verify full DEV delta is bounded
+      - name: Verify full DEV has no regression beyond the RC-6 residual set
         shell: bash
         run: |
           set -euo pipefail
@@ -38,7 +38,7 @@ jobs:
           python3 evals/run_dev_closure_all.py --output rc6-full-dev.json
           code=$?
           set -e
-          test "$code" -eq 1
+          test "$code" -eq 0 -o "$code" -eq 1
           python3 - <<'PY'
           import json
           r=json.load(open('rc6-full-dev.json'))
@@ -46,8 +46,9 @@ jobs:
           assert r['accounting']['expected_dev']==38 and r['accounting']['observed_dev']==38
           assert r['challenge_status']=='SEALED' and not r['challenge_ids_executed']
           b=r['benchmark']
-          assert b['counts'].get('PASS')==37, b
-          assert set(b['failures'])=={'EVID-004'}, b
+          failures=set(b['failures'])
+          assert failures <= {'EVID-004'}, b
+          assert b['counts'].get('PASS',0) >= 37, b
           assert not b['critical_failures'], b
           PY
       - name: Publish RC-6 evidence

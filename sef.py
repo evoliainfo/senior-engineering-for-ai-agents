@@ -1088,26 +1088,6 @@ def _rc5_observable_requirement_dod(request):
         out.append("Robustness/resilience acceptance criteria must define observable failure, fault and error behavior and be verified with applicable tests/evidence; 'robust' is not itself a passed criterion.")
     return out
 
-def _rc5_observable_requirement_dod(request):
-    """Translate vague quality language into observable DoD without inventing targets."""
-    text=str(request or '')
-    low=text.lower()
-    out=[]
-
-    perf_signal=re.search(r"\b(fast|faster|performant|performance|responsive|low[- ]latency|latency|throughput|optimi[sz](?:e|ation|ing)?)\b",low,re.I)
-    measurable_perf=re.search(r"(?:\b(?:p50|p90|p95|p99|rps|qps|tps)\b|\b\d+(?:\.\d+)?\s*(?:ms|milliseconds?|s|seconds?|rps|qps|tps|req(?:uests?)?/s)\b|\b(?:latency|response time|throughput)\s*(?:target|budget|slo)\b)",low,re.I)
-    if perf_signal and not measurable_perf:
-        out.append("Performance success requires an explicit measurable target (for example applicable latency, response-time, throughput or capacity criteria) rather than the adjective alone; do not invent the target.")
-        out.append("Benchmark, load-test or equivalent measurement evidence must demonstrate the agreed performance target before claiming the API is fast or performance-successful.")
-
-    vague_secure=bool(re.search(r"\bsecure\b",low,re.I))
-    vague_robust=bool(re.search(r"\b(?:robust|resilien(?:t|ce)|reliable)\b",low,re.I))
-    if vague_secure:
-        out.append("Security acceptance criteria must be observable for the affected trust/access boundaries, with applicable negative or abuse-path tests and verification evidence; 'secure' is not itself a passed criterion.")
-    if vague_robust:
-        out.append("Robustness/resilience acceptance criteria must define observable failure, fault and error behavior and be verified with applicable tests/evidence; 'robust' is not itself a passed criterion.")
-    return out
-
 def task_plan(repo,request,save=False):
     repo=Path(repo).resolve(); baseline=_load_json(repo/".sef/project-baseline.json",{}); assessment=_assess_request(repo,request)
     risk=assessment.get("risk","R1"); packs=assessment.get("required_context_packs",[])
@@ -1120,7 +1100,6 @@ def task_plan(repo,request,save=False):
       "Actual diff is re-assessed and does not reveal unhandled higher risk.",
       "Known residual risk and follow-up debt are explicit rather than hidden."
     ]
-    dod += _rc5_observable_requirement_dod(request)
     dod += _rc5_observable_requirement_dod(request)
     if RISK_ORDER.get(risk,1)>=3: dod += ["Independent/machine evidence is present for hard specialist gates; agent observation alone is insufficient."]
     if "RELEASE_ENGINEERING" in packs or "PRODUCTION" in assessment.get("contexts",[]): dod += ["Exact release revision/artifact and rollback/roll-forward strategy are identified before production eligibility."]
@@ -1310,49 +1289,53 @@ def _rc4_aggregate_index(index,revision):
     return {"revision":revision,"state":overall,"checks":checks}
 
 
-def _rc6_nearest_ancestor_evidence(repo,index,base_ref,current_revision):
-    """Return nearest revision-bound evidence on base_ref or its Git ancestors."""
-    if not isinstance(index,dict) or not index:
-        return None,None
-    try:
-        cp=_run(["git","rev-parse",str(base_ref)],repo,timeout=30)
-        if cp.returncode!=0 or not cp.stdout.strip(): return None,None
-        base_revision=cp.stdout.strip().splitlines()[0]
-        cp=_run(["git","rev-list",base_revision],repo,timeout=30)
-        if cp.returncode!=0: return base_revision,None
-        for rev in [x.strip() for x in cp.stdout.splitlines() if x.strip()]:
-            if rev==current_revision: continue
-            bucket=index.get(rev)
-            if isinstance(bucket,dict) and bucket:
-                return base_revision,rev
-        return base_revision,None
-    except Exception:
-        return None,None
+def _rc7_active_waiver(waivers,revision,check_id):
+    if not isinstance(waivers,dict) or not revision: return None
+    bucket=waivers.get(revision)
+    if not isinstance(bucket,dict): return None
+    item=bucket.get(check_id)
+    if not isinstance(item,dict) or item.get("state")!="WAIVED": return None
+    return item
 
-def _rc6_baseline_comparison(repo,index,base_ref,current_revision,current_aggregate):
-    base_revision,baseline_revision=_rc6_nearest_ancestor_evidence(repo,index,base_ref,current_revision)
-    current={str(c.get("check_id")):str(c.get("state") or "NOT_RUN") for c in current_aggregate.get("checks",[]) if c.get("check_id")}
-    bad={"FAIL","FLAKY","UNAVAILABLE","INCONCLUSIVE"}
-    if not baseline_revision:
-        limitation="No comparable revision-bound verification evidence exists on the requested base revision or its retained ancestors; candidate-vs-baseline classification is unavailable."
-        return {
-          "comparison_base_revision":base_revision,"baseline_revision":None,
-          "preexisting_failures":[],"candidate_regressions":sorted(k for k,v in current.items() if v in bad),
-          "resolved_baseline_failures":[],"residual_limitations":[limitation],
-        }
-    baseline=_rc4_aggregate_index(index,baseline_revision)
-    prior={str(c.get("check_id")):str(c.get("state") or "NOT_RUN") for c in baseline.get("checks",[]) if c.get("check_id")}
-    preexisting=sorted(k for k,v in current.items() if v in bad and prior.get(k) in bad)
-    introduced=sorted(k for k,v in current.items() if v in bad and prior.get(k) not in bad)
-    resolved=sorted(k for k,v in prior.items() if v in bad and current.get(k) not in bad)
-    limitations=[]
-    if preexisting:
-        limitations.append("A matching required check was already non-passing on ancestor baseline evidence; matching check identity establishes pre-existing failure evidence but does not prove the failure cause is identical or that the candidate did not worsen it.")
-    return {
-      "comparison_base_revision":base_revision,"baseline_revision":baseline_revision,
-      "preexisting_failures":preexisting,"candidate_regressions":introduced,
-      "resolved_baseline_failures":resolved,"residual_limitations":limitations,
-    }
+def _rc7_overlay_waivers(aggregate,waivers):
+    revision=aggregate.get("revision")
+    checks=[]
+    for check in aggregate.get("checks",[]):
+        c=dict(check)
+        waiver=_rc7_active_waiver(waivers,revision,str(c.get("check_id") or ""))
+        if waiver and not bool(c.get("required",True)):
+            c["observed_state"]=c.get("state")
+            c["state"]="WAIVED"
+            c["waiver"]={k:waiver.get(k) for k in ("state","revision","check_id","reason","authorized_by","recorded_at","authorization_provenance")}
+        checks.append(c)
+    out=dict(aggregate); out["checks"]=checks
+    # Overall remains based only on required raw evidence, exactly as RC-4.
+    out["waivers"]=[c["waiver"] for c in checks if c.get("state")=="WAIVED" and isinstance(c.get("waiver"),dict)]
+    return out
+
+def waive_verification_evidence(repo,check_id,reason="",authorized_by=""):
+    repo=Path(repo).resolve(); revision=_git_head(repo)
+    if revision is None: return {"status":"BLOCKED","reason":"NO_GIT_REVISION"}
+    check_id=str(check_id or '').strip(); reason=str(reason or '').strip(); authorized_by=str(authorized_by or '').strip()
+    if not check_id: return {"status":"BLOCKED","reason":"CHECK_ID_REQUIRED"}
+    if not reason: return {"status":"BLOCKED","reason":"WAIVER_REASON_REQUIRED"}
+    if not authorized_by: return {"status":"BLOCKED","reason":"WAIVER_AUTHORIZATION_REQUIRED"}
+    sp=_state_path(repo); statefile=_load_json(sp,{})
+    index=statefile.get("verification_evidence_index")
+    bucket=index.get(revision) if isinstance(index,dict) else None
+    summary=bucket.get(check_id) if isinstance(bucket,dict) else None
+    if not isinstance(summary,dict): return {"status":"BLOCKED","reason":"UNKNOWN_CHECK","revision":revision,"check_id":check_id}
+    if bool(summary.get("required",True)):
+        return {"status":"BLOCKED","reason":"REQUIRED_CHECK_CANNOT_BE_WAIVED","revision":revision,"check_id":check_id}
+    now=_now()
+    waiver={"state":"WAIVED","revision":revision,"check_id":check_id,"reason":reason,"authorized_by":authorized_by,"recorded_at":now,"authorization_provenance":"operator_asserted"}
+    waivers=statefile.setdefault("verification_waivers",{})
+    if not isinstance(waivers,dict): waivers={}; statefile["verification_waivers"]=waivers
+    waivers.setdefault(revision,{})[check_id]=waiver
+    raw=_rc4_aggregate_index(index,revision)
+    aggregate=_rc7_overlay_waivers(raw,waivers)
+    statefile["verification_evidence_state"]={"at":now,**aggregate}; statefile["updated_at"]=now; _write_json(sp,statefile)
+    return {"status":"PASS","waiver":waiver,"aggregate":aggregate,"note":"WAIVED is explicit residual-risk authorization and is never normalized to PASS."}
 
 def _rc6_nearest_ancestor_evidence(repo,index,base_ref,current_revision):
     """Return nearest revision-bound evidence on base_ref or its Git ancestors."""
@@ -1409,7 +1392,8 @@ def record_verification_evidence(repo,check_id,state,required=True,detail="",sou
     sp=_state_path(repo); statefile=_load_json(sp,{})
     obs={"revision":revision,"attempt_id":attempt,"recorded_at":now,"check_id":check_id,"required":bool(required),"state":raw_state,"source":str(source or 'adapter'),"detail":detail}
     _rc4_append_evidence(statefile,[obs],revision)
-    aggregate=_rc4_aggregate_index(statefile.get("verification_evidence_index",{}),revision)
+    raw_aggregate=_rc4_aggregate_index(statefile.get("verification_evidence_index",{}),revision)
+    aggregate=_rc7_overlay_waivers(raw_aggregate,statefile.get("verification_waivers",{}))
     statefile["verification_evidence_state"]={"at":now,**aggregate}; statefile["updated_at"]=now; _write_json(sp,statefile)
     return {"status":"PASS","recorded":obs,"aggregate":aggregate}
 
@@ -1458,15 +1442,10 @@ def verify(repo,base="HEAD",run_commands=False,allow_risky_exec=False):
     sp=_state_path(repo); statefile=_load_json(sp,{})
     if observations and revision:
         _rc4_append_evidence(statefile,observations,revision)
-    aggregate=_rc4_aggregate_index(statefile.get("verification_evidence_index",{}),revision)
-    result["evidence_state"]=aggregate["state"]; result["evidence_revision"]=revision
-    comparison=_rc6_baseline_comparison(repo,statefile.get("verification_evidence_index",{}),base,revision,aggregate)
-    result["baseline_comparison"]={"comparison_base_revision":comparison.get("comparison_base_revision"),"baseline_revision":comparison.get("baseline_revision")}
-    result["preexisting_failures"]=comparison.get("preexisting_failures",[])
-    result["candidate_regressions"]=comparison.get("candidate_regressions",[])
-    result["resolved_baseline_failures"]=comparison.get("resolved_baseline_failures",[])
-    result["residual_limitations"]=comparison.get("residual_limitations",[])
-    comparison=_rc6_baseline_comparison(repo,statefile.get("verification_evidence_index",{}),base,revision,aggregate)
+    raw_aggregate=_rc4_aggregate_index(statefile.get("verification_evidence_index",{}),revision)
+    aggregate=_rc7_overlay_waivers(raw_aggregate,statefile.get("verification_waivers",{}))
+    result["evidence_state"]=aggregate["state"]; result["evidence_revision"]=revision; result["evidence_checks"]=aggregate.get("checks",[]); result["waivers"]=aggregate.get("waivers",[])
+    comparison=_rc6_baseline_comparison(repo,statefile.get("verification_evidence_index",{}),base,revision,raw_aggregate)
     result["baseline_comparison"]={"comparison_base_revision":comparison.get("comparison_base_revision"),"baseline_revision":comparison.get("baseline_revision")}
     result["preexisting_failures"]=comparison.get("preexisting_failures",[])
     result["candidate_regressions"]=comparison.get("candidate_regressions",[])
@@ -1500,8 +1479,9 @@ def release(repo):
         blockers.append("No revision-bound verification evidence index exists; run fresh verification on the current revision.")
         evidence={"revision":head,"state":"NOT_RUN","checks":[]}
     else:
-        evidence=_rc4_aggregate_index(index,head)
-        if evidence.get("state")!="PASS": blockers.append("Current revision required evidence is not passing: "+str(evidence.get("state")))
+        raw_evidence=_rc4_aggregate_index(index,head)
+        evidence=_rc7_overlay_waivers(raw_evidence,state.get("verification_waivers",{}))
+        if raw_evidence.get("state")!="PASS": blockers.append("Current revision required evidence is not passing: "+str(raw_evidence.get("state")))
     readiness="BLOCKED" if blockers else "READY_FOR_RELEASE_REVIEW"
     result={"status":"PASS" if not blockers else "BLOCKED","release_readiness":readiness,"revision":head,"evidence":evidence,"blockers":blockers,"warnings":warnings,"note":"READY_FOR_RELEASE_REVIEW is not an automatic deployment. R3/R4/human gates remain policy-controlled."}
     state["last_release_check"]={"at":_now(),**result}; state["updated_at"]=_now(); _write_json(_state_path(repo),state)
@@ -1573,6 +1553,7 @@ def main():
     x=sub.add_parser("task-guidance"); x.add_argument("repo",nargs="?",default=".")
     x=sub.add_parser("verify"); x.add_argument("repo",nargs="?",default="."); x.add_argument("--base",default="HEAD"); x.add_argument("--run",action="store_true"); x.add_argument("--allow-risky-exec",action="store_true")
     x=sub.add_parser("record-evidence"); x.add_argument("repo",nargs="?",default="."); x.add_argument("check_id"); x.add_argument("state",choices=["PASS","FAIL","UNAVAILABLE","INCONCLUSIVE"]); x.add_argument("--optional",action="store_true"); x.add_argument("--detail",default=""); x.add_argument("--source",default="adapter")
+    x=sub.add_parser("waive-evidence"); x.add_argument("repo",nargs="?",default="."); x.add_argument("check_id"); x.add_argument("--reason",default=""); x.add_argument("--authorized-by",default="")
     x=sub.add_parser("release"); x.add_argument("repo",nargs="?",default=".")
     sub.add_parser("runtime-info")
     sub.add_parser("self-test")
@@ -1611,6 +1592,7 @@ def main():
     elif args.cmd=="task-guidance": r=task_guidance(args.repo)
     elif args.cmd=="verify": r=verify(args.repo,args.base,args.run,args.allow_risky_exec)
     elif args.cmd=="record-evidence": r=record_verification_evidence(args.repo,args.check_id,args.state,not args.optional,args.detail,args.source)
+    elif args.cmd=="waive-evidence": r=waive_verification_evidence(args.repo,args.check_id,args.reason,args.authorized_by)
     elif args.cmd=="release": r=release(args.repo)
     elif args.cmd=="runtime-info": r=python_runtime_info()
     elif args.cmd=="self-test": r=self_test()
