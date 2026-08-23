@@ -5,7 +5,7 @@
   "challenge_total": 10,
   "challenge_status": "SEALED",
   "harnesses": {
-    "general": {
+    "general_core": {
       "runner": "evals/run.py",
       "scenario_root": "evals/scenarios/dev",
       "ids": [
@@ -22,17 +22,27 @@
       "runner": "evals/run_evidence_release.py",
       "scenario_root": "evals/evidence_release/scenarios/dev",
       "ids": ["EVID-001","EVID-003","REL-003","REL-004"]
+    },
+    "semantic_requirements": {
+      "runner": "evals/run_dev_closure_extra.py",
+      "scenario_root": "evals/scenarios/dev",
+      "ids": ["REQ-001","REQ-002","REQ-003","REQ-005","AUTH-005"]
+    },
+    "stateful_brownfield": {
+      "runner": "evals/run_dev_closure_state.py",
+      "scenario_root": "evals/dev_closure/scenarios",
+      "ids": ["EVID-004","EVID-005","BROWN-001","BROWN-002","BROWN-003"]
     }
   },
-  "pending_materialization": {
-    "requirements_dynamic_dod": ["REQ-001","REQ-002","REQ-003","REQ-005"],
-    "auth_negative_control": ["AUTH-005"],
-    "evidence_honesty": ["EVID-004","EVID-005"],
-    "brownfield_adoption": ["BROWN-001","BROWN-002","BROWN-003"]
-  },
+  "known_l2_followups": [
+    {
+      "ids": ["BROWN-001","BROWN-003"],
+      "reason": "L1 can grade planning proportionality, but preserving concrete naming/architecture/test conventions requires an agent-in-the-loop L2 execution trial before a full brownfield claim."
+    }
+  ],
   "accounting": {
-    "executable_now": 28,
-    "pending": 10,
+    "materialized": 38,
+    "pending_materialization": 0,
     "expected_dev_total": 38
   },
   "challenge_ids_sealed": [
