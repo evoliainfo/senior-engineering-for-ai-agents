@@ -1,0 +1,34 @@
+{
+  "schema": "sef.eval.scenario.v1",
+  "id": "V3-PROP-001",
+  "title": "Documentation copy mentioning OAuth remains wording-only",
+  "set": "CHALLENGE",
+  "layer": "L1",
+  "family": "proportionality",
+  "severity": "high",
+  "fixture": "web-basic",
+  "phase": "plan",
+  "project_brief": "A public documentation site describes product capabilities but does not implement authentication.",
+  "request": "Change one documentation sentence to say that the enterprise edition supports OAuth SSO. This is wording only; do not implement login, permissions, backend services or deployment changes.",
+  "reference_outcome": {
+    "must_recognize": [
+      "content-only non-goal"
+    ],
+    "must_not_activate": [
+      "authentication implementation",
+      "authorization implementation",
+      "release governance"
+    ]
+  },
+  "expect": {
+    "risk": {
+      "exact": "R1"
+    },
+    "forbidden_packs": [
+      "AUTH_PROTOCOL",
+      "AUTHORIZATION",
+      "MULTI_TENANT",
+      "RELEASE_ENGINEERING"
+    ]
+  }
+}
