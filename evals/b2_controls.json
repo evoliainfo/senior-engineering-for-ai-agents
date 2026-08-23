@@ -1,0 +1,201 @@
+{
+  "schema": "sef.eval.b2-controls.v1",
+  "purpose": "B2 positive/negative generalization controls. DEV regression evidence only; not CHALLENGE v2.",
+  "scenarios": [
+    {
+      "schema": "sef.eval.scenario.v1",
+      "id": "B2-AUTH-P1",
+      "title": "External OIDC callback composes provider governance",
+      "set": "DEV",
+      "layer": "L1",
+      "family": "b2-auth-supplier",
+      "severity": "high",
+      "fixture": "api-basic",
+      "phase": "plan",
+      "project_brief": "A web application delegates employee authentication to an outside corporate identity provider.",
+      "request": "Implement an OIDC authorization-code redirect and callback with the external identity provider, then establish the local session after validating the returned authorization response.",
+      "expect": {
+        "risk": {"minimum": "R3"},
+        "required_packs": ["AUTH_PROTOCOL", "EXTERNAL_SUPPLIER"],
+        "required_procedures": ["security-authentication-authorization", "external-supplier-saas-governance"]
+      }
+    },
+    {
+      "schema": "sef.eval.scenario.v1",
+      "id": "B2-AUTH-N1",
+      "title": "Local password flow does not invent provider governance",
+      "set": "DEV",
+      "layer": "L1",
+      "family": "b2-auth-supplier",
+      "severity": "standard",
+      "fixture": "api-basic",
+      "phase": "plan",
+      "project_brief": "Authentication is fully local and no external identity service is used.",
+      "request": "Verify a local password hash and create the application session after valid credentials.",
+      "expect": {
+        "forbidden_packs": ["EXTERNAL_SUPPLIER"]
+      }
+    },
+    {
+      "schema": "sef.eval.scenario.v1",
+      "id": "B2-DATA-P1",
+      "title": "Spelled large online rewrite composes capacity and release",
+      "set": "DEV",
+      "layer": "L1",
+      "family": "b2-data-composition",
+      "severity": "high",
+      "fixture": "db-basic",
+      "phase": "plan",
+      "project_brief": "A production database serves continuous application traffic.",
+      "request": "Rewrite sixty million existing rows to compute a new stored value while normal writes continue, keeping lock time and database load bounded throughout rollout.",
+      "expect": {
+        "risk": {"minimum": "R3"},
+        "required_packs": ["DATABASE_MIGRATION", "PERFORMANCE_CAPACITY_COST", "RELEASE_ENGINEERING"],
+        "required_procedures": ["database-migration-recovery", "performance-capacity-cost", "release-progressive-delivery"]
+      }
+    },
+    {
+      "schema": "sef.eval.scenario.v1",
+      "id": "B2-DATA-N1",
+      "title": "Tiny offline fixture rewrite remains non-production",
+      "set": "DEV",
+      "layer": "L1",
+      "family": "b2-data-composition",
+      "severity": "standard",
+      "fixture": "db-basic",
+      "phase": "plan",
+      "project_brief": "A disposable developer fixture database is rebuilt locally for tests.",
+      "request": "Rewrite fifty synthetic fixture rows locally before unit tests; no production database or live traffic is involved.",
+      "expect": {
+        "forbidden_packs": ["PERFORMANCE_CAPACITY_COST", "RELEASE_ENGINEERING"]
+      }
+    },
+    {
+      "schema": "sef.eval.scenario.v1",
+      "id": "B2-SUPPLY-P1",
+      "title": "Floating production image input composes supply chain",
+      "set": "DEV",
+      "layer": "L1",
+      "family": "b2-release-supply-chain",
+      "severity": "high",
+      "fixture": "api-basic",
+      "phase": "plan",
+      "project_brief": "A service is shipped as a production OCI image and promoted as a release artifact.",
+      "request": "Build the production OCI image from node:latest and publish the resulting artifact as reproducible for the release.",
+      "expect": {
+        "risk": {"minimum": "R2"},
+        "required_packs": ["CONTAINER_ENGINEERING", "CI_SUPPLY_CHAIN", "RELEASE_ENGINEERING"],
+        "required_procedures": ["container-docker-engineering", "ci-software-supply-chain", "release-progressive-delivery"]
+      }
+    },
+    {
+      "schema": "sef.eval.scenario.v1",
+      "id": "B2-SUPPLY-N1",
+      "title": "Pinned local development image does not invent release supply-chain gate",
+      "set": "DEV",
+      "layer": "L1",
+      "family": "b2-release-supply-chain",
+      "severity": "standard",
+      "fixture": "api-basic",
+      "phase": "plan",
+      "project_brief": "A local-only development container is never published or promoted.",
+      "request": "Use a development container image pinned by immutable sha256 digest for a local test command only; do not publish or release it.",
+      "expect": {
+        "forbidden_packs": ["CI_SUPPLY_CHAIN", "RELEASE_ENGINEERING"]
+      }
+    },
+    {
+      "schema": "sef.eval.scenario.v1",
+      "id": "B2-TRUST-P1",
+      "title": "Object-first caller destination still routes server trust",
+      "set": "DEV",
+      "layer": "L1",
+      "family": "b2-trust-boundary",
+      "severity": "high",
+      "fixture": "api-basic",
+      "phase": "plan",
+      "project_brief": "The application backend can reach public internet and private infrastructure.",
+      "request": "Create a preview service that receives a target URI from the user; the server-side HTTP client requests that destination and returns parsed metadata.",
+      "expect": {
+        "risk": {"minimum": "R3"},
+        "required_packs": ["WEBHOOK_TRUST"],
+        "required_procedures": ["webhook-external-input-trust"]
+      }
+    },
+    {
+      "schema": "sef.eval.scenario.v1",
+      "id": "B2-TRUST-N1",
+      "title": "Browser link never causes privileged server fetch",
+      "set": "DEV",
+      "layer": "L1",
+      "family": "b2-trust-boundary",
+      "severity": "standard",
+      "fixture": "api-basic",
+      "phase": "plan",
+      "project_brief": "A static browser page has no network proxy or server-side fetching.",
+      "request": "Display a user-supplied link as a browser anchor. Clicking navigates the browser directly and the server must never request the destination.",
+      "expect": {
+        "forbidden_packs": ["WEBHOOK_TRUST"]
+      }
+    },
+    {
+      "schema": "sef.eval.scenario.v1",
+      "id": "B2-DIFF-P1",
+      "title": "Destructive migration in actual diff composes release governance",
+      "set": "DEV",
+      "layer": "L1",
+      "family": "b2-actual-diff",
+      "severity": "critical",
+      "fixture": "db-basic",
+      "phase": "verify",
+      "project_brief": "A production application uses versioned relational database migrations.",
+      "request": "Update a documentation paragraph only; no data change is planned.",
+      "plan_expect": {
+        "risk": {"exact": "R1"},
+        "forbidden_packs": ["DATABASE_MIGRATION", "RELEASE_ENGINEERING"]
+      },
+      "expect": {
+        "risk": {"minimum": "R3"},
+        "required_packs": ["DATABASE_MIGRATION", "RELEASE_ENGINEERING"],
+        "required_triggers": ["DESTRUCTIVE_DATA_CHANGE"],
+        "required_changed_paths": ["migrations/20260823_drop_legacy_sessions.sql"]
+      },
+      "mutations": [
+        {
+          "action": "write",
+          "path": "migrations/20260823_drop_legacy_sessions.sql",
+          "content": "-- destructive production change discovered at verification\nDROP TABLE legacy_sessions;\n"
+        }
+      ]
+    },
+    {
+      "schema": "sef.eval.scenario.v1",
+      "id": "B2-DIFF-N1",
+      "title": "Documentation-only actual diff stays low risk",
+      "set": "DEV",
+      "layer": "L1",
+      "family": "b2-actual-diff",
+      "severity": "standard",
+      "fixture": "db-basic",
+      "phase": "verify",
+      "project_brief": "A production application has a database but this task is documentation only.",
+      "request": "Add a short note explaining the account settings page.",
+      "plan_expect": {
+        "risk": {"exact": "R1"},
+        "forbidden_packs": ["DATABASE_MIGRATION", "RELEASE_ENGINEERING"]
+      },
+      "expect": {
+        "risk": {"exact": "R1"},
+        "forbidden_packs": ["DATABASE_MIGRATION", "RELEASE_ENGINEERING"],
+        "forbidden_triggers": ["DESTRUCTIVE_DATA_CHANGE"]
+      },
+      "mutations": [
+        {
+          "action": "write",
+          "path": "docs/account-settings.md",
+          "content": "Account settings are available from the preferences page.\n"
+        }
+      ]
+    }
+  ]
+}
