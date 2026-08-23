@@ -1,0 +1,145 @@
+[
+  {
+    "id": "T-EVID-003-PASS-FAIL-PASS",
+    "kind": "treatment",
+    "revision": "r1",
+    "required_checks": ["regression"],
+    "observations": [
+      {"check_id":"regression","revision":"r1","attempt":1,"required":true,"returncode":0},
+      {"check_id":"regression","revision":"r1","attempt":2,"required":true,"returncode":1},
+      {"check_id":"regression","revision":"r1","attempt":3,"required":true,"returncode":0}
+    ],
+    "expected_state": "FLAKY",
+    "expected_release": "BLOCKED"
+  },
+  {
+    "id": "T-REL-004-EXPLICIT-UNAVAILABLE",
+    "kind": "treatment",
+    "revision": "r1",
+    "required_checks": ["observability-provider"],
+    "observations": [
+      {"check_id":"observability-provider","revision":"r1","attempt":1,"required":true,"returncode":2,"adapter_state":"UNAVAILABLE","stderr":"provider unavailable"}
+    ],
+    "expected_state": "UNAVAILABLE",
+    "expected_release": "BLOCKED"
+  },
+  {
+    "id": "T-REL-003-GENUINE-REGRESSION",
+    "kind": "treatment",
+    "revision": "r1",
+    "required_checks": ["critical-regression"],
+    "observations": [
+      {"check_id":"critical-regression","revision":"r1","attempt":1,"required":true,"returncode":1,"stderr":"assertion failed"}
+    ],
+    "expected_state": "FAIL",
+    "expected_release": "BLOCKED"
+  },
+  {
+    "id": "T-REVISION-RESOLUTION-BOUNDARY",
+    "kind": "treatment",
+    "revision": "r2",
+    "required_checks": ["regression"],
+    "observations": [
+      {"check_id":"regression","revision":"r1","attempt":1,"required":true,"returncode":0},
+      {"check_id":"regression","revision":"r1","attempt":2,"required":true,"returncode":1},
+      {"check_id":"regression","revision":"r1","attempt":3,"required":true,"returncode":0},
+      {"check_id":"regression","revision":"r2","attempt":1,"required":true,"returncode":0}
+    ],
+    "expected_state": "PASS",
+    "expected_release": "READY_FOR_RELEASE_REVIEW"
+  },
+  {
+    "id": "C-SIMPLE-PASS",
+    "kind": "control",
+    "revision": "r1",
+    "required_checks": ["unit"],
+    "observations": [
+      {"check_id":"unit","revision":"r1","attempt":1,"required":true,"returncode":0},
+      {"check_id":"unit","revision":"r1","attempt":2,"required":true,"returncode":0}
+    ],
+    "expected_state": "PASS",
+    "expected_release": "READY_FOR_RELEASE_REVIEW"
+  },
+  {
+    "id": "C-STDERR-CANNOT-DECLARE-UNAVAILABLE",
+    "kind": "control",
+    "revision": "r1",
+    "required_checks": ["provider"],
+    "observations": [
+      {"check_id":"provider","revision":"r1","attempt":1,"required":true,"returncode":2,"stderr":"provider unavailable: timeout"}
+    ],
+    "expected_state": "FAIL",
+    "expected_release": "BLOCKED"
+  },
+  {
+    "id": "C-NOT-RUN",
+    "kind": "control",
+    "revision": "r1",
+    "required_checks": ["unit"],
+    "observations": [],
+    "expected_state": "NOT_RUN",
+    "expected_release": "BLOCKED"
+  },
+  {
+    "id": "C-STALE-EVIDENCE",
+    "kind": "control",
+    "revision": "r1",
+    "release_revision": "r2",
+    "required_checks": ["unit"],
+    "observations": [
+      {"check_id":"unit","revision":"r1","attempt":1,"required":true,"returncode":0}
+    ],
+    "expected_state": "PASS",
+    "expected_release": "BLOCKED",
+    "expected_blocker": "STALE_EVIDENCE_REVISION"
+  },
+  {
+    "id": "C-MATERIAL-CONFIRMATION-STILL-BLOCKS",
+    "kind": "control",
+    "revision": "r1",
+    "required_checks": ["unit"],
+    "unresolved_material_confirmations": ["MULTI_TENANT"],
+    "observations": [
+      {"check_id":"unit","revision":"r1","attempt":1,"required":true,"returncode":0}
+    ],
+    "expected_state": "PASS",
+    "expected_release": "BLOCKED",
+    "expected_blocker_prefix": "UNRESOLVED_MATERIAL_CONFIRMATIONS:"
+  },
+  {
+    "id": "C-INCONCLUSIVE-EXPLICIT",
+    "kind": "control",
+    "revision": "r1",
+    "required_checks": ["security-evidence"],
+    "observations": [
+      {"check_id":"security-evidence","revision":"r1","attempt":1,"required":true,"returncode":2,"adapter_state":"INCONCLUSIVE"}
+    ],
+    "expected_state": "INCONCLUSIVE",
+    "expected_release": "BLOCKED"
+  },
+  {
+    "id": "C-DIRTY-WORKTREE-BLOCKS",
+    "kind": "control",
+    "revision": "r1",
+    "dirty": true,
+    "required_checks": ["unit"],
+    "observations": [
+      {"check_id":"unit","revision":"r1","attempt":1,"required":true,"returncode":0}
+    ],
+    "expected_state": "PASS",
+    "expected_release": "BLOCKED",
+    "expected_blocker": "DIRTY_WORKTREE"
+  },
+  {
+    "id": "C-MULTIPLE-REQUIRED-ONE-FAILS",
+    "kind": "control",
+    "revision": "r1",
+    "required_checks": ["unit","integration"],
+    "observations": [
+      {"check_id":"unit","revision":"r1","attempt":1,"required":true,"returncode":0},
+      {"check_id":"integration","revision":"r1","attempt":1,"required":true,"returncode":1}
+    ],
+    "expected_state": "FAIL",
+    "expected_release": "BLOCKED"
+  }
+]
