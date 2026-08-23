@@ -1,0 +1,113 @@
+name: Semantic Routing v2 S5 qualification
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "semantic_v2/**"
+      - "evals/semantic_v2/**"
+      - "evals/run_semantic_v2_s0_s1.py"
+      - "evals/run_semantic_v2_s2.py"
+      - "evals/run_semantic_v2_s3.py"
+      - "evals/run_semantic_v2_s4.py"
+      - "evals/run_semantic_v2_s5.py"
+      - ".github/workflows/semantic-v2-s5.yml"
+      - "docs/SEMANTIC_ROUTING_V2_S5.md"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  semantic-v2-s5-replay:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Prove frozen v1.5 runtime is untouched
+        shell: bash
+        run: |
+          set -euo pipefail
+          sha256sum -c SHA256SUMS
+          test "$(sha256sum sef.py | awk '{print $1}')" = "c2203602cb53229aba55bbbb518725c155785838915e75267714bc4e2d3d35ee"
+          git fetch origin main
+          git diff --exit-code origin/main...HEAD -- sef.py SHA256SUMS
+
+      - name: Compile S0-S5 implementation
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m py_compile \
+            semantic_v2/__init__.py \
+            semantic_v2/contracts.py \
+            semantic_v2/bridge_v15.py \
+            semantic_v2/model_extractor.py \
+            semantic_v2/openai_responses_provider.py \
+            semantic_v2/policy_composer.py \
+            semantic_v2/shadow_integration.py \
+            evals/run_semantic_v2_s0_s1.py \
+            evals/run_semantic_v2_s2.py \
+            evals/run_semantic_v2_s3.py \
+            evals/run_semantic_v2_s4.py \
+            evals/run_semantic_v2_s5.py
+          python3 -m json.tool evals/semantic_v2/s5_corpus.json >/dev/null
+
+      - name: Re-run S0-S1 contracts
+        run: PYTHONPATH=. python3 evals/run_semantic_v2_s0_s1.py --output semantic-v2-s0-s1.json
+
+      - name: Re-run S2 provider boundary
+        run: PYTHONPATH=. python3 evals/run_semantic_v2_s2.py --output semantic-v2-s2.json
+
+      - name: Re-run S3 deterministic composer
+        run: PYTHONPATH=. python3 evals/run_semantic_v2_s3.py --output semantic-v2-s3.json
+
+      - name: Re-run S4 shadow integration
+        run: PYTHONPATH=. python3 evals/run_semantic_v2_s4.py --output semantic-v2-s4.json
+
+      - name: Run S5 replay DEV qualification
+        run: PYTHONPATH=. python3 evals/run_semantic_v2_s5.py --provider replay --output semantic-v2-s5-replay.json
+
+      - name: Publish S5 replay evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: semantic-v2-s5-replay-${{ github.run_id }}
+          path: |
+            semantic-v2-s0-s1.json
+            semantic-v2-s2.json
+            semantic-v2-s3.json
+            semantic-v2-s4.json
+            semantic-v2-s5-replay.json
+          retention-days: 90
+
+  semantic-v2-s5-openai:
+    runs-on: ubuntu-24.04
+    needs: semantic-v2-s5-replay
+    env:
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      OPENAI_MODEL: gpt-5.6-sol
+      OPENAI_REASONING_EFFORT: medium
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run live OpenAI Semantic DEV qualification when credential exists
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -z "${OPENAI_API_KEY:-}" ]; then
+            PYTHONPATH=. python3 evals/run_semantic_v2_s5.py --provider not-run --output semantic-v2-s5-openai.json
+          else
+            PYTHONPATH=. python3 evals/run_semantic_v2_s5.py \
+              --provider openai \
+              --model "${OPENAI_MODEL}" \
+              --reasoning-effort "${OPENAI_REASONING_EFFORT}" \
+              --output semantic-v2-s5-openai.json
+          fi
+
+      - name: Publish live-provider evidence or explicit NOT_RUN record
+        uses: actions/upload-artifact@v4
+        with:
+          name: semantic-v2-s5-openai-${{ github.run_id }}
+          path: semantic-v2-s5-openai.json
+          retention-days: 90
