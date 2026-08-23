@@ -15,7 +15,9 @@
     "must_not_activate": ["user authentication solely because the rest of the application has auth"]
   },
   "expect": {
-    "implementation_allowed": true,
     "forbidden_packs": ["AUTH_PROTOCOL", "AUTHORIZATION"]
+  },
+  "dev_closure_expect": {
+    "forbidden_human_decision_terms": ["authentication", "authorization", "session", "token", "login"]
   }
 }
