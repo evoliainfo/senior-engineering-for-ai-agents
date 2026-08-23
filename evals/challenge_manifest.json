@@ -1,0 +1,39 @@
+{
+  "schema": "sef.eval.challenge-manifest.v1",
+  "candidate_commit": "7302914ef8ed098a8c3d1e6ae5a0c4a811f49837",
+  "candidate_runtime_sha256": "c5fdbcf6a1a8428663c25e15247c481c1268849a2c747de8766bc0946544d6b4",
+  "candidate_baseline_ref": "baseline/dev-38of38-2026-08-23",
+  "challenge_total": 10,
+  "holdout_opened_for_candidate": true,
+  "rerun_policy": "The first valid harness run is the candidate verdict. Runtime tuning against these outcomes invalidates this holdout for a later candidate; later candidates require a rotated challenge set or an explicit contaminated-holdout limitation.",
+  "standard_runner_ids": [
+    "PROP-005",
+    "REQ-004",
+    "AUTH-003",
+    "AUTH-007",
+    "DATA-003",
+    "EXT-004",
+    "REL-002",
+    "WEB-004",
+    "DIFF-003"
+  ],
+  "state_runner_ids": ["EVID-002"],
+  "expected_ids": [
+    "PROP-005",
+    "REQ-004",
+    "AUTH-003",
+    "AUTH-007",
+    "DATA-003",
+    "EXT-004",
+    "REL-002",
+    "WEB-004",
+    "DIFF-003",
+    "EVID-002"
+  ],
+  "critical_ids": ["AUTH-003", "AUTH-007", "DATA-003", "EXT-004", "DIFF-003", "EVID-002"],
+  "runtime_mutation_allowed": false,
+  "real_l2_status": {
+    "codex": "NOT_RUN",
+    "claude": "NOT_RUN"
+  }
+}
