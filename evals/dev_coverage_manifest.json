@@ -19,9 +19,10 @@
       ]
     },
     "evidence_release": {
-      "runner": "evals/run_evidence_release.py",
+      "runner": "evals/run_dev_closure_evidence.py",
       "scenario_root": "evals/evidence_release/scenarios/dev",
-      "ids": ["EVID-001","EVID-003","REL-003","REL-004"]
+      "ids": ["EVID-001","EVID-003","REL-003","REL-004"],
+      "note": "Historical run_evidence_release.py remains the immutable v1.4 baseline harness; this closure adapter grades the same golden IDs against the current public RC-4 evidence interface."
     },
     "semantic_requirements": {
       "runner": "evals/run_dev_closure_extra.py",
