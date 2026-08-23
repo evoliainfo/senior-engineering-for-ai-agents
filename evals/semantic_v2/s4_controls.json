@@ -1,0 +1,54 @@
+{
+  "schema": "sef.eval.semantic-v2-s4-controls.v1",
+  "purpose": "S4 shadow integration acceptance. Live v1.5 is canonical; v2 uses scripted semantic facts so provider quality is not claimed.",
+  "parallel_cases": [
+    {
+      "id": "S4-PAR-AUTH",
+      "fixture": "api-basic",
+      "project_brief": "A SaaS hosts many customer organizations in shared infrastructure.",
+      "request": "Add an authenticated endpoint that lets an organization download its audit log while preventing members of any other organization from reading those entries.",
+      "semantic_fact_kinds": ["ACCESS_CONTROL_BOUNDARY", "PARTITION_ISOLATION"],
+      "expect_classification": "AGREEMENT"
+    },
+    {
+      "id": "S4-PAR-TRUST",
+      "fixture": "api-basic",
+      "project_brief": "A public service backend can reach both internet and private infrastructure.",
+      "request": "Create a public preview API where the caller supplies a remote resource location and the backend HTTP client retrieves that location before returning metadata.",
+      "semantic_fact_kinds": ["SERVER_DESTINATION_TRUST"],
+      "expect_classification": "AGREEMENT"
+    },
+    {
+      "id": "S4-PAR-REGULATED",
+      "fixture": "api-basic",
+      "project_brief": "A general software product has no documented clinical policy, jurisdiction, regulatory classification or qualified clinical authority.",
+      "request": "Add logic that decides whether a patient should receive urgent clinical treatment from reported symptoms and measurements. No approved clinical decision policy has been supplied.",
+      "semantic_fact_kinds": ["CONSEQUENTIAL_DECISION"],
+      "expect_classification": "AGREEMENT"
+    },
+    {
+      "id": "S4-PAR-DATA",
+      "fixture": "db-basic",
+      "project_brief": "A production relational database serves live traffic continuously.",
+      "request": "Transform roughly 80 million existing rows to populate a new derived field while normal writes continue; design execution to bound database load, locking and rollout risk.",
+      "semantic_fact_kinds": ["LIVE_DATA_TRANSFORMATION", "CAPACITY_MATERIALITY"],
+      "expect_classification": "AGREEMENT"
+    },
+    {
+      "id": "S4-PAR-OIDC-SUPPLIER",
+      "fixture": "api-basic",
+      "project_brief": "A web application delegates employee authentication to an outside corporate identity provider.",
+      "request": "Implement an OIDC authorization-code redirect and callback with the external identity provider, then establish the local session after validating the returned authorization response.",
+      "semantic_fact_kinds": ["AUTHENTICATION_PROTOCOL", "EXTERNAL_OPERATIONAL_DEPENDENCY"],
+      "expect_classification": "AGREEMENT"
+    },
+    {
+      "id": "S4-PAR-CONTENT-NEGATIVE",
+      "fixture": "api-basic",
+      "project_brief": "Repository documentation includes developer examples; no delivery change is requested.",
+      "request": "Add a README sentence showing the existing docker run command. Do not change images, dependencies, CI, build or release configuration.",
+      "semantic_fact_kinds": [],
+      "expect_classification": "AGREEMENT"
+    }
+  ]
+}

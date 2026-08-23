@@ -1,6 +1,6 @@
 {
   "schema": "sef.eval.semantic-v2-s3-controls.v1",
-  "purpose": "Deterministic policy-composer acceptance. These controls test relation-to-governance mapping, fail-closed review behavior, idempotence and monotonicity without any live semantic provider.",
+  "purpose": "Deterministic policy-composer acceptance. These controls test relation-to-governance mapping, fail-closed review behavior, idempotence, monotonicity, authoritative-context blocking and structural composition without any live semantic provider.",
   "controls": [
     {"id": "S3-AUTH-DEPARTMENT", "kind": "authorization", "scope_label": "department"},
     {"id": "S3-AUTH-BRANCH", "kind": "authorization", "scope_label": "branch"},
@@ -10,6 +10,7 @@
     {"id": "S3-SUPPLIER", "kind": "single_fact", "fact_kind": "EXTERNAL_OPERATIONAL_DEPENDENCY", "risk": "R3", "packs": ["EXTERNAL_SUPPLIER"], "procedures": ["external-supplier-saas-governance"]},
     {"id": "S3-REGULATED", "kind": "regulated"},
     {"id": "S3-DATA-COMPOSITION", "kind": "data_composition"},
+    {"id": "S3-EXTERNAL-AUTH-COMPOSITION", "kind": "external_auth_composition"},
     {"id": "S3-REVIEW-BLOCK", "kind": "review_block"},
     {"id": "S3-INVALID-BLOCK", "kind": "invalid_block"},
     {"id": "S3-NONMATERIAL", "kind": "nonmaterial"},

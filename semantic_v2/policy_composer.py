@@ -14,20 +14,25 @@ from typing import Any, Mapping
 from .contracts import FACT_KINDS, REVIEW_REQUIRED, validate_semantic_ir, semantic_ir_digest
 
 POLICY_SCHEMA = "sef.semantic-policy.v1"
-RISK_ORDER = {"R0": 0, "R1": 1, "R2": 2, "R3": 3}
+RISK_ORDER = {"R0": 0, "R1": 1, "R2": 2, "R3": 3, "R4": 4}
 DEFAULT_RISK = "R1"
 
 # Explicit relation -> governance rules. Literal business nouns never appear here.
+# ``requires_authoritative_context`` is deliberately composer-owned. A semantic
+# provider cannot self-approve the missing project/security authority required to
+# implement a material change safely.
 FACT_POLICY_RULES: dict[str, dict[str, Any]] = {
     "ACCESS_CONTROL_BOUNDARY": {
         "risk": "R3",
         "packs": ["AUTHORIZATION"],
         "procedures": ["security-authentication-authorization"],
+        "requires_authoritative_context": True,
     },
     "PARTITION_ISOLATION": {
         "risk": "R3",
         "packs": ["MULTI_TENANT"],
         "procedures": ["multi-tenant-isolation"],
+        "requires_authoritative_context": True,
     },
     "AUTHENTICATION_PROTOCOL": {
         "risk": "R2",
@@ -45,15 +50,16 @@ FACT_POLICY_RULES: dict[str, dict[str, Any]] = {
         "procedures": ["external-supplier-saas-governance"],
     },
     "CONSEQUENTIAL_DECISION": {
-        "risk": "R3",
+        "risk": "R4",
         "packs": ["REGULATED_DOMAIN"],
         "procedures": ["regulated-domain-escalation"],
-        "implementation_allowed": False,
+        "requires_regulated_authority": True,
     },
     "LIVE_DATA_TRANSFORMATION": {
         "risk": "R3",
         "packs": ["DATABASE_MIGRATION"],
         "procedures": ["database-migration-recovery"],
+        "requires_authoritative_context": True,
     },
     "CAPACITY_MATERIALITY": {
         "risk": "R3",
@@ -83,6 +89,11 @@ FACT_POLICY_RULES: dict[str, dict[str, Any]] = {
 }
 
 # Composition rules operate only on typed fact kinds, never on free-text nouns.
+# The external-auth closure captures the generic security properties of delegating
+# authentication to an independently operated identity service: local session/
+# authorization consequences, personal identity data handling, and trust of the
+# external authentication response/callback. It is protocol-agnostic and contains
+# no OIDC/SAML/vendor keyword matching.
 COMPOSITION_RULES: tuple[dict[str, Any], ...] = (
     {
         "id": "large-live-data-release-closure",
@@ -90,6 +101,18 @@ COMPOSITION_RULES: tuple[dict[str, Any], ...] = (
         "risk": "R3",
         "packs": ["RELEASE_ENGINEERING"],
         "procedures": ["release-progressive-delivery"],
+    },
+    {
+        "id": "external-authentication-governance-closure",
+        "requires": {"AUTHENTICATION_PROTOCOL", "EXTERNAL_OPERATIONAL_DEPENDENCY"},
+        "risk": "R3",
+        "packs": ["AUTHORIZATION", "PRIVACY", "WEBHOOK_TRUST"],
+        "procedures": [
+            "security-authentication-authorization",
+            "privacy-data-protection",
+            "webhook-external-input-trust",
+        ],
+        "requires_authoritative_context": True,
     },
 )
 
@@ -108,13 +131,14 @@ def _canonical_digest(value: Mapping[str, Any]) -> str:
 def _invalid_output(ir: Mapping[str, Any], errors: list[str]) -> dict[str, Any]:
     core = {
         "schema": POLICY_SCHEMA,
-        "composer": {"name": "semantic-v2-deterministic-composer", "version": "1", "mode": "deterministic"},
+        "composer": {"name": "semantic-v2-deterministic-composer", "version": "2", "mode": "deterministic"},
         "status": "INVALID_IR",
         "risk": None,
         "minimum_risk_from_resolved_facts": None,
         "packs": [],
         "procedures": [],
         "implementation_allowed": False,
+        "implementation_gate": "BLOCKED_INVALID_IR",
         "release_decision": "BLOCKED_INVALID_IR",
         "matched_rules": [],
         "semantic_ir_digest": _canonical_digest(dict(ir)),
@@ -129,7 +153,7 @@ class DeterministicPolicyComposer:
     """Map validated Semantic IR relations to governance deterministically."""
 
     name = "semantic-v2-deterministic-composer"
-    version = "1"
+    version = "2"
 
     def compose(self, semantic_ir: Mapping[str, Any]) -> dict[str, Any]:
         if not isinstance(semantic_ir, Mapping):
@@ -144,7 +168,8 @@ class DeterministicPolicyComposer:
         matched_rules: list[str] = []
         material_kinds: set[str] = set()
         risk = DEFAULT_RISK
-        implementation_allowed = True
+        authoritative_context_required = False
+        regulated_authority_required = False
 
         for fact in ir.get("facts", []):
             if fact.get("material") is not True:
@@ -159,8 +184,12 @@ class DeterministicPolicyComposer:
             risk = _max_risk(risk, str(rule["risk"]))
             packs.update(str(value) for value in rule.get("packs", []))
             procedures.update(str(value) for value in rule.get("procedures", []))
-            if rule.get("implementation_allowed") is False:
-                implementation_allowed = False
+            authoritative_context_required = (
+                authoritative_context_required or rule.get("requires_authoritative_context") is True
+            )
+            regulated_authority_required = (
+                regulated_authority_required or rule.get("requires_regulated_authority") is True
+            )
             matched_rules.append(f"fact:{kind}")
 
         for rule in COMPOSITION_RULES:
@@ -169,18 +198,38 @@ class DeterministicPolicyComposer:
                 risk = _max_risk(risk, str(rule["risk"]))
                 packs.update(str(value) for value in rule.get("packs", []))
                 procedures.update(str(value) for value in rule.get("procedures", []))
+                authoritative_context_required = (
+                    authoritative_context_required or rule.get("requires_authoritative_context") is True
+                )
+                regulated_authority_required = (
+                    regulated_authority_required or rule.get("requires_regulated_authority") is True
+                )
                 matched_rules.append(f"composition:{rule['id']}")
 
         review_required = ir.get("review_state") == REVIEW_REQUIRED
         final_risk: str | None = None if review_required else risk
+
+        # Provider output can describe facts, but cannot grant the authoritative
+        # context needed to execute high-impact changes. Until a later deterministic
+        # trusted-context resolver exists, these families remain deny-by-default.
         if review_required:
             implementation_allowed = False
+            implementation_gate = "BLOCKED_SEMANTIC_REVIEW"
             status = REVIEW_REQUIRED
             release_decision = "BLOCKED_SEMANTIC_REVIEW"
-        elif not implementation_allowed:
+        elif regulated_authority_required:
+            implementation_allowed = False
+            implementation_gate = "BLOCKED_PENDING_AUTHORITATIVE_CONTEXT"
             status = "COMPOSED"
             release_decision = "BLOCKED_REGULATED_AUTHORITY"
+        elif authoritative_context_required:
+            implementation_allowed = False
+            implementation_gate = "BLOCKED_PENDING_AUTHORITATIVE_CONTEXT"
+            status = "COMPOSED"
+            release_decision = "BLOCKED_PENDING_AUTHORITATIVE_CONTEXT"
         else:
+            implementation_allowed = True
+            implementation_gate = "READY"
             status = "COMPOSED"
             release_decision = "NOT_EVALUATED"
 
@@ -193,6 +242,7 @@ class DeterministicPolicyComposer:
             "packs": sorted(packs),
             "procedures": sorted(procedures),
             "implementation_allowed": implementation_allowed,
+            "implementation_gate": implementation_gate,
             "release_decision": release_decision,
             "matched_rules": sorted(set(matched_rules)),
             "semantic_ir_digest": semantic_ir_digest(ir),
@@ -202,6 +252,8 @@ class DeterministicPolicyComposer:
                 "deterministic": True,
                 "provider_calls": 0,
                 "material_fact_kinds": sorted(material_kinds),
+                "authoritative_context_required": authoritative_context_required,
+                "regulated_authority_required": regulated_authority_required,
             },
         }
         core["composition_digest"] = _canonical_digest(core)
