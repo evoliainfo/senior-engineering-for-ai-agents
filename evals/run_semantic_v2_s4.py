@@ -296,10 +296,25 @@ def main() -> int:
     clean_summary = summarize_shadow_results(shadow_evidence)
     results.append(result("S4-SUMMARY-CLEAN", clean_summary["promotion_eligible"] is True and clean_summary["promotion_blocked"] is False and not clean_summary["safety_downgrades"] and not clean_summary["semantic_blocks"], clean_summary))
 
-    blocked_evidence = copy.deepcopy(shadow_evidence[:1])
-    blocked_evidence.append({"id": "synthetic-downgrade", "comparison": cmp_pack})
+    # Keep this aggregate fail-closed control independent from ordering or health of
+    # real parallel cases. It proves the summarizer blocks exactly the injected
+    # downgrade even if the real-case corpus is rearranged later.
+    synthetic_agreement = compare_policies(
+        {"risk": "R3", "packs": ["AUTHORIZATION"], "procedures": []},
+        composed_policy(risk="R3", packs=["AUTHORIZATION"]),
+    )
+    blocked_evidence = [
+        {"id": "synthetic-agreement", "comparison": synthetic_agreement},
+        {"id": "synthetic-downgrade", "comparison": cmp_pack},
+    ]
     blocked_summary = summarize_shadow_results(blocked_evidence)
-    results.append(result("S4-SUMMARY-BLOCKS-DOWNGRADE", blocked_summary["promotion_blocked"] is True and blocked_summary["safety_downgrades"] == ["synthetic-downgrade"], blocked_summary))
+    results.append(result(
+        "S4-SUMMARY-BLOCKS-DOWNGRADE",
+        blocked_summary["promotion_blocked"] is True
+        and blocked_summary["safety_downgrades"] == ["synthetic-downgrade"]
+        and blocked_summary["semantic_blocks"] == [],
+        blocked_summary,
+    ))
 
     counts = {
         "PASS": sum(item["status"] == "PASS" for item in results),
