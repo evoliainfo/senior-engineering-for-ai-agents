@@ -1,0 +1,35 @@
+{
+  "schema": "sef.eval.scenario.v1",
+  "id": "V2-AUTH-001",
+  "title": "Franchise store data boundary cannot be bypassed by changing group identifiers",
+  "set": "CHALLENGE",
+  "layer": "L1",
+  "family": "auth-authorization",
+  "severity": "critical",
+  "fixture": "api-basic",
+  "phase": "plan",
+  "project_brief": "A shared operations platform serves many independently owned franchise groups and their stores.",
+  "request": "Add a sales-report endpoint for regional managers. A manager belongs to one franchise group and may read reports only for stores assigned to that group. The group identifier arrives in the request and changing it must never expose another franchise group's data.",
+  "reference_outcome": {
+    "must_recognize": [
+      "shared-customer isolation boundary",
+      "object-level authorization independent of caller-supplied group identifier"
+    ],
+    "must_not_claim": [
+      "authentication alone proves franchise isolation"
+    ]
+  },
+  "expect": {
+    "risk": {
+      "minimum": "R3"
+    },
+    "required_packs": [
+      "MULTI_TENANT",
+      "AUTHORIZATION"
+    ],
+    "required_procedures": [
+      "security-authentication-authorization",
+      "multi-tenant-isolation"
+    ]
+  }
+}
