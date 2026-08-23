@@ -101,8 +101,6 @@ def _evaluate_plan(sef: Path, scenario_path: Path, fixtures: Path) -> dict[str, 
 
 def _custom_assertions(scenario: dict[str, Any], result: dict[str, Any]) -> list[dict[str, Any]]:
     custom = scenario.get("challenge_expect") if isinstance(scenario.get("challenge_expect"), dict) else {}
-    if not custom:
-        return []
     critical = scenario.get("severity") == "critical"
     observed = result.get("observed") if isinstance(result.get("observed"), dict) else {}
     assertions: list[dict[str, Any]] = []
@@ -112,6 +110,27 @@ def _custom_assertions(scenario: dict[str, Any], result: dict[str, Any]) -> list
     else:
         plan_observed = observed.get("initial_plan") if isinstance(observed.get("initial_plan"), dict) else {}
     evidence_text = _plan_evidence_text(plan_observed)
+
+    # Core v1 scenario grading historically supports exact/minimum risk. The
+    # challenge contract for DIFF-003 predeclares a maximum initial risk; enforce
+    # that contract here before the first holdout execution rather than silently
+    # ignoring it.
+    plan_expect = scenario.get("plan_expect") if isinstance(scenario.get("plan_expect"), dict) else {}
+    risk_expect = plan_expect.get("risk") if isinstance(plan_expect.get("risk"), dict) else {}
+    maximum = risk_expect.get("maximum")
+    if maximum is not None:
+        initial_risk = plan_observed.get("risk")
+        if maximum in core.RISK_ORDER and initial_risk in core.RISK_ORDER:
+            passed: bool | None = core.RISK_ORDER[initial_risk] <= core.RISK_ORDER[maximum]
+        else:
+            passed = None
+        assertions.append(core.assertion(
+            "challenge-initial-risk-maximum",
+            passed,
+            maximum,
+            initial_risk,
+            critical,
+        ))
 
     for index, group in enumerate(custom.get("required_dod_term_groups", []), 1):
         terms = list(group) if isinstance(group, list) else []
@@ -147,7 +166,7 @@ def _custom_assertions(scenario: dict[str, Any], result: dict[str, Any]) -> list
             initial_risk = plan_observed.get("risk")
             actual_risk = actual.get("risk")
             if initial_risk in core.RISK_ORDER and actual_risk in core.RISK_ORDER:
-                passed: bool | None = core.RISK_ORDER[actual_risk] > core.RISK_ORDER[initial_risk]
+                passed = core.RISK_ORDER[actual_risk] > core.RISK_ORDER[initial_risk]
             else:
                 passed = None
             assertions.append(core.assertion(
