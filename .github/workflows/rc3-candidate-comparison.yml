@@ -45,12 +45,16 @@ jobs:
           run_suite rc1-probes evals/probes/root_cause/routing
           run_suite rc2-treatment evals/diagnostic/rc2_polarity/treatment
           run_suite rc2-control evals/diagnostic/rc2_polarity/control
+          set +e
+          python3 evals/run_evidence_release.py run --sef sef.py --set DEV > artifacts/rc3-comparison/base/evidence-release.json
+          python3 evals/run_evidence_release.py run --sef artifacts/rc3-candidate/sef_candidate.py --set DEV > artifacts/rc3-comparison/candidate/evidence-release.json
+          set -e
 
           python3 - <<'PY'
           import json
           from pathlib import Path
           root=Path('artifacts/rc3-comparison')
-          suites=['official','rc3-treatment','rc3-control','rc3-ambiguity','rc1-negative','rc1-metamorphic','rc1-probes','rc2-treatment','rc2-control']
+          suites=['official','rc3-treatment','rc3-control','rc3-ambiguity','rc1-negative','rc1-metamorphic','rc1-probes','rc2-treatment','rc2-control','evidence-release']
           failures=[]; lines=['# RC-3 candidate comparison','', '| Suite | Base PASS | Candidate PASS | PASS→FAIL |','| --- | ---: | ---: | ---: |']
           all_base={}; all_cand={}
           for s in suites:
