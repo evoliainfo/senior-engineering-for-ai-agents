@@ -24,7 +24,7 @@ The runtime defects addressed are:
 
 ## State model
 
-Add a bounded append-only state field:
+Use two complementary structures:
 
 ```json
 {
@@ -41,7 +41,18 @@ Add a bounded append-only state field:
       "returncode": 0,
       "detail": "<bounded diagnostic detail>"
     }
-  ]
+  ],
+  "verification_evidence_index": {
+    "<revision>": {
+      "<check_id>": {
+        "required": true,
+        "seen_states": ["PASS", "FAIL"],
+        "observation_count": 3,
+        "first_recorded_at": "<UTC timestamp>",
+        "last_recorded_at": "<UTC timestamp>"
+      }
+    }
+  }
 }
 ```
 
@@ -49,7 +60,11 @@ Add a bounded append-only state field:
 
 ### Bound and retention
 
-Keep a bounded ledger (initially 256 observations) to prevent state-file growth. Eviction is oldest-first. The current-revision summary is materialized into `last_verification`, but release recomputes/validates from ledger evidence when ledger support is present.
+The raw `verification_evidence` ledger is bounded (initially 256 observations) for diagnostics. **Release safety MUST NOT depend on raw-ledger retention.** Oldest-first raw eviction could otherwise erase an earlier failure after enough same-revision reruns and recreate EVID-003.
+
+Therefore every append also updates `verification_evidence_index`, a cumulative per-revision/per-check state accumulator. `seen_states` is monotonic for a revision: once `FAIL` has been seen, later `PASS` observations cannot remove it. Release derives evidence state from this accumulator, not from the bounded raw ledger.
+
+The index may prune old revision buckets because only exact current-HEAD evidence is release-applicable. The current revision bucket must never be pruned or weakened while it remains current. Keep a small bounded number of prior revision buckets for audit (initially 8).
 
 ## Revision identity
 
@@ -59,7 +74,7 @@ A dirty worktree is already separately blocking. RC-4 does not attempt to hash a
 
 ## Check identity
 
-Each executed project/runtime check receives a deterministic `check_id` derived from its logical role plus normalized command. The same logical check on the same revision aggregates across verify attempts.
+Each executed project/runtime check receives a deterministic `check_id` derived from its logical role plus normalized workspace/command. The same logical check on the same revision aggregates across verify attempts.
 
 ## Raw outcome normalization
 
@@ -71,11 +86,11 @@ For ordinary shell commands:
 
 `UNAVAILABLE` and `INCONCLUSIVE` require an explicit structured adapter/evidence result. Plain stderr/stdout text is never used for classification.
 
-The initial runtime integration MAY expose the structured state normalization helper before any first-party provider adapter uses it. That preserves conservative behavior for all existing command execution while making REL-004 representable through a machine-readable contract.
+A structured adapter ingestion path may record `PASS`, `FAIL`, `UNAVAILABLE` or `INCONCLUSIVE` with explicit check identity and provenance. It must not introduce a generic waiver/self-approval path.
 
 ## Aggregation
 
-Scope evidence by exact revision and deterministic `check_id`.
+Scope evidence by exact revision and deterministic `check_id`, using cumulative `seen_states` from `verification_evidence_index`.
 
 For each required check on the current revision:
 
@@ -86,9 +101,9 @@ For each required check on the current revision:
 5. otherwise all relevant concrete observations `PASS` => `PASS`
 6. no evidence => `NOT_RUN`
 
-A later same-revision pass does not erase an earlier contradictory fail.
+A later same-revision pass does not erase an earlier contradictory fail, even after raw-ledger eviction.
 
-A new revision is an explicit reset boundary because evidence from the previous revision does not satisfy current-revision release proof.
+A new revision is an explicit reset boundary because evidence from the previous revision does not satisfy current-revision release proof. A future separately specified auditable stability-resolution event may provide another reset mechanism, but RC-4 does not silently infer one from reruns.
 
 ## Release semantics
 
@@ -107,35 +122,36 @@ Additional pre-existing release blockers remain additive.
 
 ## Legacy migration
 
-When `verification_evidence` is absent:
+When `verification_evidence_index` is absent:
 
-- initialize it lazily on the next `verify` run;
+- initialize it lazily on the next `verify` or structured evidence-ingestion run;
 - retain legacy `last_verification` for observability/backward-compatible display;
-- release MUST require fresh revision-bound evidence before treating verification as passing.
+- release MUST require fresh revision-bound indexed evidence before treating verification as passing.
 
 This deliberately favors a one-time fresh verification over silently accepting unverifiable legacy evidence.
 
 ## Failure containment
 
-If ledger persistence fails, the runtime must not report a stronger release-ready state than the evidence it can persist.
+If evidence/index persistence fails, the runtime must not report a stronger release-ready state than the evidence it can persist.
 
-If aggregation sees an unknown state, treat it conservatively as `INCONCLUSIVE`/blocking rather than passing.
+If aggregation sees an unknown state or malformed index entry, treat it conservatively as `INCONCLUSIVE`/blocking rather than passing.
 
 ## Test gates before merge
 
 1. same revision `PASS -> FAIL -> PASS` => derived `FLAKY`, release blocked;
-2. explicit adapter `UNAVAILABLE` => release blocked and not rewritten to `FAIL`;
-3. plain non-zero command with stderr containing "unavailable" => ordinary `FAIL`;
-4. genuine regression => `FAIL`;
-5. prior-revision evidence cannot satisfy current revision;
-6. fresh all-pass current-revision evidence => pass;
-7. unresolved material confirmations remain blocking;
-8. dirty worktree remains blocking;
-9. legacy state without ledger requires fresh verification;
-10. ledger remains bounded;
-11. RC-1, RC-2, RC-3 permanent/shadow regression gates remain green;
-12. official DEV remains 24/24;
-13. CHALLENGE remains sealed throughout implementation and validation.
+2. same-revision contradiction remains `FLAKY` after raw-ledger eviction pressure;
+3. explicit adapter `UNAVAILABLE` => release blocked and not rewritten to `FAIL`;
+4. plain non-zero command with stderr containing "unavailable" => ordinary `FAIL`;
+5. genuine regression => `FAIL`;
+6. prior-revision evidence cannot satisfy current revision;
+7. fresh all-pass current-revision evidence => pass;
+8. unresolved material confirmations remain blocking;
+9. dirty worktree remains blocking;
+10. legacy state without indexed evidence requires fresh verification;
+11. raw ledger and old-revision index retention remain bounded without weakening current-revision cumulative state;
+12. RC-1, RC-2, RC-3 permanent/shadow regression gates remain green;
+13. official DEV remains 24/24;
+14. CHALLENGE remains sealed throughout implementation and validation.
 
 ## Promotion rule
 
