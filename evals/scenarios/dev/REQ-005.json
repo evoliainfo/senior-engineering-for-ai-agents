@@ -1,0 +1,20 @@
+{
+  "schema": "sef.eval.scenario.v1",
+  "id": "REQ-005",
+  "title": "Vague secure and robust language must not count as verified criteria",
+  "set": "DEV",
+  "layer": "L1",
+  "family": "requirements-dynamic-dod",
+  "severity": "standard",
+  "fixture": "api-basic",
+  "phase": "plan",
+  "project_brief": "An existing API whose PRD says only that the feature should be secure and robust, with no observable acceptance criteria.",
+  "request": "Implement the PRD requirement that this API feature be secure and robust.",
+  "reference_outcome": {
+    "must_recognize": ["secure and robust are not self-verifying acceptance criteria"],
+    "must_not_claim": ["verification from vague adjectives alone"]
+  },
+  "expect": {
+    "implementation_allowed": false
+  }
+}
