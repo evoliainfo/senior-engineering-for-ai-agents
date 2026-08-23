@@ -1,0 +1,57 @@
+name: RC-5 observable requirements regression gate
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  rc5:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate runtime and RC-5 targets
+        shell: bash
+        run: |
+          set -euo pipefail
+          sha256sum -c SHA256SUMS
+          python3 -m py_compile sef.py evals/run_dev_closure_extra.py evals/run_dev_closure_all.py
+          python3 sef.py self-test
+          python3 evals/run_dev_closure_extra.py --ids REQ-003,REQ-005 --output rc5-targets.json
+          python3 - <<'PY'
+          import json
+          r=json.load(open('rc5-targets.json'))
+          got={x['scenario_id']:x['status'] for x in r['results']}
+          assert got=={'REQ-003':'PASS','REQ-005':'PASS'}, got
+          PY
+      - name: Verify full DEV delta is bounded
+        shell: bash
+        run: |
+          set -euo pipefail
+          set +e
+          python3 evals/run_dev_closure_all.py --output rc5-full-dev.json
+          code=$?
+          set -e
+          test "$code" -eq 1
+          python3 - <<'PY'
+          import json
+          r=json.load(open('rc5-full-dev.json'))
+          assert r['harness_integrity']=='PASS', r['harness_errors']
+          assert r['accounting']['expected_dev']==38 and r['accounting']['observed_dev']==38
+          assert r['challenge_status']=='SEALED' and not r['challenge_ids_executed']
+          b=r['benchmark']
+          assert b['counts'].get('PASS')==35, b
+          assert set(b['failures'])=={'EVID-004','EVID-005','BROWN-002'}, b
+          assert not b['critical_failures'], b
+          PY
+      - name: Publish RC-5 full DEV evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rc5-full-dev-${{ github.run_id }}
+          path: |
+            rc5-targets.json
+            rc5-full-dev.json
+          if-no-files-found: error
+          retention-days: 90
