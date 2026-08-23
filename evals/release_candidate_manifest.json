@@ -1,10 +1,12 @@
 {
   "schema": "sef.eval.release-candidate.v1",
-  "stage": "PRE_FREEZE_B3",
-  "source_main_commit": "4ba20e299786eb61b718b855df5d397e48090ac1",
-  "freeze_commit": null,
+  "stage": "FROZEN",
+  "source_main_commit": "4132711f9d0ad74ff41b26deff7b9966d6e54e94",
+  "freeze_commit": "4132711f9d0ad74ff41b26deff7b9966d6e54e94",
+  "candidate_ref": "candidate/frozen-4132711f",
   "candidate_runtime_sha256": "bfeda790cd70c78ceb9fae862441df35c9bfe819001c0d429c09c0dde2a0c2bd",
   "runtime_mutation_allowed_in_b3": false,
+  "runtime_mutation_allowed_after_freeze": false,
   "required_gates": {
     "dev_closure": {"expected_pass": 38},
     "b1_acceptance": {"expected_pass": 10},
@@ -23,13 +25,14 @@
   "future_holdout": {
     "name": "CHALLENGE_V2",
     "materialized": false,
-    "creation_allowed_in_b3": false,
-    "must_remain_unseen_until_after_freeze": true,
-    "rotation_required": true
+    "creation_allowed_after_freeze": true,
+    "must_be_unseen_until_after_freeze": true,
+    "rotation_required": true,
+    "candidate_mutation_after_materialization": false
   },
   "real_l2_status": {
     "codex": "NOT_RUN",
     "claude": "NOT_RUN"
   },
-  "next_transition": "After B3 merge, freeze the exact repository commit and runtime identity without runtime tuning. Only after that freeze may a fresh CHALLENGE v2 be materialized under evaluator separation."
+  "next_transition": "Materialize a fresh CHALLENGE v2 against candidate commit 4132711f9d0ad74ff41b26deff7b9966d6e54e94. The first valid run is the independent verdict. Do not tune or mutate the frozen candidate before or during that run."
 }
