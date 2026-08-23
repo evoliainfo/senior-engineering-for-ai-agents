@@ -35,4 +35,4 @@ The holdout covers:
 - actual-diff infrastructure/network escalation;
 - proportionality for marketing copy that mentions security features.
 
-Catalog SHA-256: `68dd98fd419266c6f2f0de78c766aa43377c101eda7c33698b834facc23ce7ad`
+Catalog SHA-256 (canonical semantic JSON): `9372dec1460c43d96cdca688113fa1a8bf2ca7a74b04008b387d694eb720f041`
