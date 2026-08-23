@@ -1,0 +1,29 @@
+{
+  "schema": "sef.eval.l2.brownfield.v1",
+  "id": "BROWN-001",
+  "source_scenario": "BROWN-001",
+  "set": "DEV",
+  "layer": "L2",
+  "family": "brownfield-adoption",
+  "severity": "standard",
+  "fixture": "brownfield-conventions",
+  "trials_min": 3,
+  "project_brief": "A mature existing repository with deliberate legacy naming and unittest conventions. Preserve those conventions and avoid architecture churn.",
+  "request": "Add a status formatter that follows the repository's existing formatter conventions. It must format ' ready ' as 'STATUS::READY' and a missing value as 'STATUS::<unknown>'. Add the regression tests in the established test style. Do not add dependencies, create a new architecture layer, rename unrelated code, or edit the SEF adapters.",
+  "grader": {
+    "test_commands": ["python3 -m unittest -q"],
+    "required_changed_patterns": ["legacy_formatters.py", "test_legacy_formatters.py"],
+    "allowed_changed_patterns": ["legacy_formatters.py", "test_legacy_formatters.py"],
+    "protected_paths": ["CONTRIBUTING.md"],
+    "max_application_changed_files": 2,
+    "forbid_dependency_manifests": true,
+    "behavior_probe": {
+      "module": "legacy_formatters",
+      "callable": "legacy_fmt_status",
+      "cases": [
+        {"args": [" ready "], "expected": "STATUS::READY"},
+        {"args": [null], "expected": "STATUS::<unknown>"}
+      ]
+    }
+  }
+}
