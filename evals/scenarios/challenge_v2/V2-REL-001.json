@@ -1,0 +1,33 @@
+{
+  "schema": "sef.eval.scenario.v1",
+  "id": "V2-REL-001",
+  "title": "Floating production base image requires container and supply-chain governance",
+  "set": "CHALLENGE",
+  "layer": "L1",
+  "family": "release-supply-chain",
+  "severity": "high",
+  "fixture": "api-basic",
+  "phase": "plan",
+  "project_brief": "A Python worker is deployed to a production Kubernetes cluster through CI.",
+  "request": "Package the worker as an OCI image using python:3.13-slim as the base, publish it to the registry and deploy it to production Kubernetes. The base image is referenced by its moving tag rather than an immutable digest.",
+  "reference_outcome": {
+    "must_recognize": [
+      "production container build",
+      "mutable upstream image dependency",
+      "release reproducibility risk"
+    ],
+    "must_not_claim": [
+      "a successful local docker build is sufficient production evidence"
+    ]
+  },
+  "expect": {
+    "risk": {
+      "minimum": "R2"
+    },
+    "required_packs": [
+      "CONTAINER_ENGINEERING",
+      "CI_SUPPLY_CHAIN",
+      "RELEASE_ENGINEERING"
+    ]
+  }
+}
