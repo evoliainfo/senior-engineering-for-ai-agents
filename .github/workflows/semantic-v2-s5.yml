@@ -86,7 +86,8 @@ jobs:
     needs: semantic-v2-s5-replay
     env:
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-      OPENAI_MODEL: gpt-5.6-sol
+      # OpenAI's current API examples use gpt-5.6 for GPT-5.6 Sol.
+      OPENAI_MODEL: gpt-5.6
       OPENAI_REASONING_EFFORT: medium
     steps:
       - uses: actions/checkout@v4
@@ -106,8 +107,10 @@ jobs:
           fi
 
       - name: Publish live-provider evidence or explicit NOT_RUN record
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: semantic-v2-s5-openai-${{ github.run_id }}
           path: semantic-v2-s5-openai.json
+          if-no-files-found: warn
           retention-days: 90
