@@ -1310,6 +1310,50 @@ def _rc4_aggregate_index(index,revision):
     return {"revision":revision,"state":overall,"checks":checks}
 
 
+def _rc6_nearest_ancestor_evidence(repo,index,base_ref,current_revision):
+    """Return nearest revision-bound evidence on base_ref or its Git ancestors."""
+    if not isinstance(index,dict) or not index:
+        return None,None
+    try:
+        cp=_run(["git","rev-parse",str(base_ref)],repo,timeout=30)
+        if cp.returncode!=0 or not cp.stdout.strip(): return None,None
+        base_revision=cp.stdout.strip().splitlines()[0]
+        cp=_run(["git","rev-list",base_revision],repo,timeout=30)
+        if cp.returncode!=0: return base_revision,None
+        for rev in [x.strip() for x in cp.stdout.splitlines() if x.strip()]:
+            if rev==current_revision: continue
+            bucket=index.get(rev)
+            if isinstance(bucket,dict) and bucket:
+                return base_revision,rev
+        return base_revision,None
+    except Exception:
+        return None,None
+
+def _rc6_baseline_comparison(repo,index,base_ref,current_revision,current_aggregate):
+    base_revision,baseline_revision=_rc6_nearest_ancestor_evidence(repo,index,base_ref,current_revision)
+    current={str(c.get("check_id")):str(c.get("state") or "NOT_RUN") for c in current_aggregate.get("checks",[]) if c.get("check_id")}
+    bad={"FAIL","FLAKY","UNAVAILABLE","INCONCLUSIVE"}
+    if not baseline_revision:
+        limitation="No comparable revision-bound verification evidence exists on the requested base revision or its retained ancestors; candidate-vs-baseline classification is unavailable."
+        return {
+          "comparison_base_revision":base_revision,"baseline_revision":None,
+          "preexisting_failures":[],"candidate_regressions":sorted(k for k,v in current.items() if v in bad),
+          "resolved_baseline_failures":[],"residual_limitations":[limitation],
+        }
+    baseline=_rc4_aggregate_index(index,baseline_revision)
+    prior={str(c.get("check_id")):str(c.get("state") or "NOT_RUN") for c in baseline.get("checks",[]) if c.get("check_id")}
+    preexisting=sorted(k for k,v in current.items() if v in bad and prior.get(k) in bad)
+    introduced=sorted(k for k,v in current.items() if v in bad and prior.get(k) not in bad)
+    resolved=sorted(k for k,v in prior.items() if v in bad and current.get(k) not in bad)
+    limitations=[]
+    if preexisting:
+        limitations.append("A matching required check was already non-passing on ancestor baseline evidence; matching check identity establishes pre-existing failure evidence but does not prove the failure cause is identical or that the candidate did not worsen it.")
+    return {
+      "comparison_base_revision":base_revision,"baseline_revision":baseline_revision,
+      "preexisting_failures":preexisting,"candidate_regressions":introduced,
+      "resolved_baseline_failures":resolved,"residual_limitations":limitations,
+    }
+
 def record_verification_evidence(repo,check_id,state,required=True,detail="",source="adapter"):
     repo=Path(repo).resolve(); revision=_git_head(repo); raw_state=str(state or '').upper().strip()
     if revision is None: return {"status":"BLOCKED","reason":"NO_GIT_REVISION"}
@@ -1372,6 +1416,12 @@ def verify(repo,base="HEAD",run_commands=False,allow_risky_exec=False):
         _rc4_append_evidence(statefile,observations,revision)
     aggregate=_rc4_aggregate_index(statefile.get("verification_evidence_index",{}),revision)
     result["evidence_state"]=aggregate["state"]; result["evidence_revision"]=revision
+    comparison=_rc6_baseline_comparison(repo,statefile.get("verification_evidence_index",{}),base,revision,aggregate)
+    result["baseline_comparison"]={"comparison_base_revision":comparison.get("comparison_base_revision"),"baseline_revision":comparison.get("baseline_revision")}
+    result["preexisting_failures"]=comparison.get("preexisting_failures",[])
+    result["candidate_regressions"]=comparison.get("candidate_regressions",[])
+    result["resolved_baseline_failures"]=comparison.get("resolved_baseline_failures",[])
+    result["residual_limitations"]=comparison.get("residual_limitations",[])
     if run_commands and result.get("status")=="PASS" and aggregate["state"] in {"FLAKY","UNAVAILABLE","INCONCLUSIVE","FAIL"}:
         result["status"]="BLOCKED"; result["reason"]="REVISION_EVIDENCE_NOT_STABLE"
     statefile["last_verification"]={"at":now,"revision":revision,**{k:v for k,v in result.items() if k not in {"assessment","runs"}},"risk":risk,"triggers":sorted(triggers)}
