@@ -15,7 +15,7 @@
     "must_not_claim": ["original documentation plan remains authoritative after destructive migration appears"]
   },
   "plan_expect": {
-    "risk": {"maximum": "R1"},
+    "risk": {"exact": "R1"},
     "forbidden_packs": ["DATABASE_MIGRATION"]
   },
   "expect": {
