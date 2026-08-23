@@ -1,0 +1,61 @@
+name: L2 brownfield harness validation
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'evals/run_l2_brownfield.py'
+      - 'evals/l2/**'
+      - 'docs/L2_BROWNFIELD_PROTOCOL.md'
+      - '.github/workflows/l2-brownfield-harness.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  l2-harness:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate deterministic harness contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          sha256sum -c SHA256SUMS
+          python3 -m py_compile sef.py evals/run_l2_brownfield.py evals/l2/reference_agent.py
+          python3 evals/run_l2_brownfield.py validate
+      - name: Prove fixtures and graders are solvable
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 evals/run_l2_brownfield.py run \
+            --sef sef.py \
+            --sef-revision 7302914ef8ed098a8c3d1e6ae5a0c4a811f49837 \
+            --expected-sef-sha256 c5fdbcf6a1a8428663c25e15247c481c1268849a2c747de8766bc0946544d6b4 \
+            --harness reference \
+            --model reference-deterministic \
+            --agent-version 1 \
+            --agent-command 'python3 {eval_root}/l2/reference_agent.py' \
+            --trials 3 \
+            --output l2-reference-report.json
+          python3 - <<'PY'
+          import json
+          r=json.load(open('l2-reference-report.json'))
+          assert r['status']=='PASS', r
+          assert r['claim_state']=='HARNESS_REFERENCE_ONLY', r
+          assert r['evidence_class']=='HARNESS_REFERENCE_ONLY', r
+          assert r['challenge_status']=='SEALED' and not r['challenge_ids_executed'], r
+          assert r['summary']['trial_count']==6, r['summary']
+          assert not r['summary']['harness_errors'], r['summary']
+          for sid in ('BROWN-001','BROWN-003'):
+              s=r['summary']['scenarios'][sid]
+              assert s['observed_trials']==3 and s['passed_trials']==3, (sid,s)
+              assert s['all_required_trials_pass'] is True, (sid,s)
+          PY
+      - name: Publish harness-reference evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: l2-brownfield-reference-${{ github.run_id }}
+          path: l2-reference-report.json
+          if-no-files-found: error
+          retention-days: 90
