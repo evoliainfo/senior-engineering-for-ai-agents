@@ -4,6 +4,9 @@
   "dev_total": 38,
   "challenge_total": 10,
   "challenge_status": "SEALED",
+  "challenge_partition_semantics": "The 10 original CHALLENGE IDs remain excluded from DEV discovery. SEALED here describes partition/discovery isolation only; it does not mean the first holdout remains independent after remediation used its outcomes.",
+  "challenge_independent_holdout_status": "CONSUMED",
+  "future_independent_holdout_required": "CHALLENGE_V2",
   "harnesses": {
     "general_core": {
       "runner": "evals/run.py",
