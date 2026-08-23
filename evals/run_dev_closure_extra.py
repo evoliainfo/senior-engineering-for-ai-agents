@@ -2,8 +2,8 @@
 """Supplemental deterministic graders for golden-catalog DEV closure.
 
 This runner stays black-box with respect to SEF: it invokes only the public CLI.
-It exists for golden invariants that are intentionally more semantic than the
-core routing harness (for example: block OR establish measurable DoD evidence).
+It grades semantic planning invariants across all observable obligation surfaces,
+not one implementation-specific field.
 """
 from __future__ import annotations
 import argparse, json, shutil, sys, tempfile
@@ -41,16 +41,25 @@ def evaluate_plan(sef_path: Path, scenario_path: Path, fixtures_root: Path) -> d
             assertions,observed=core.grade_plan(scenario,payload)
             plan=payload.get("plan") if isinstance(payload.get("plan"),dict) else {}
             observed["human_decisions_needed"]=plan.get("human_decisions_needed",[])
+            observed["implicit_professional_requirements"]=plan.get("implicit_professional_requirements",[])
+            observed["verification_strategy"]=plan.get("verification_strategy",[])
+            observed["architecture_questions"]=plan.get("architecture_questions",[])
             custom=scenario.get("dev_closure_expect") or {}
             decisions_text=_text(observed["human_decisions_needed"]).lower()
             for term in custom.get("forbidden_human_decision_terms",[]):
                 assertions.append(core.assertion(f"forbidden-human-decision-term:{term}",str(term).lower() not in decisions_text,False,str(term).lower() in decisions_text,critical))
-            groups=custom.get("block_or_dod_term_groups",[])
+            groups=custom.get("block_or_obligation_term_groups",[])
             if groups:
-                dod_text=_text(observed.get("definition_of_done",[]))
+                obligation_surfaces={
+                    "implicit_professional_requirements":plan.get("implicit_professional_requirements",[]),
+                    "definition_of_done":plan.get("definition_of_done",[]),
+                    "verification_strategy":plan.get("verification_strategy",[]),
+                    "architecture_questions":plan.get("architecture_questions",[]),
+                }
+                obligation_text=_text(obligation_surfaces)
                 blocked=observed.get("implementation_allowed") is False
-                group_results=[_contains_group(dod_text,list(g)) for g in groups]
-                assertions.append(core.assertion("blocked-or-observable-dod",blocked or all(group_results),{"blocked":True,"or_all_term_groups":groups},{"blocked":blocked,"group_matches":group_results,"definition_of_done":observed.get("definition_of_done",[])},critical))
+                group_results=[_contains_group(obligation_text,list(g)) for g in groups]
+                assertions.append(core.assertion("blocked-or-observable-obligation",blocked or all(group_results),{"blocked":True,"or_all_term_groups":groups},{"blocked":blocked,"group_matches":group_results,"obligation_surfaces":obligation_surfaces},critical))
             return {"schema":"sef.eval.dev-closure.v1","scenario_id":scenario["id"],"scenario_set":scenario["set"],"severity":scenario["severity"],"sef_source_sha256":core.sha256_file(sef_path),"status":core.scenario_status(assertions),"observed":observed,"assertions":assertions,"limitations":[]}
         except Exception as exc:
             return {"schema":"sef.eval.dev-closure.v1","scenario_id":scenario.get("id"),"scenario_set":scenario.get("set"),"severity":scenario.get("severity"),"sef_source_sha256":core.sha256_file(sef_path),"status":"HARNESS_ERROR","observed":{},"assertions":[],"limitations":[f"{type(exc).__name__}: {exc}"]}
