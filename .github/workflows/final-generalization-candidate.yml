@@ -22,8 +22,8 @@ jobs:
         run: |
           set -euo pipefail
           test "$(sha256sum sef.py | awk '{print $1}')" = 'bfeda790cd70c78ceb9fae862441df35c9bfe819001c0d429c09c0dde2a0c2bd'
-          python3 evals/apply_final_generalization.py --source sef.py --output /tmp/final-sef.py | tee /tmp/final-candidate-sha.txt
-          python3 -m py_compile /tmp/final-sef.py evals/run_final_generalization_controls.py
+          python3 evals/apply_final_generalization_v2.py --source sef.py --output /tmp/final-sef.py | tee /tmp/final-candidate-sha.txt
+          python3 -m py_compile /tmp/final-sef.py evals/run_final_generalization_controls.py evals/apply_final_generalization.py evals/apply_final_generalization_v2.py
           sha256sum /tmp/final-sef.py
 
       - name: Run historical deterministic closure
