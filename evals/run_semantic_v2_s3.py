@@ -46,7 +46,7 @@ def make_ir(facts: list[dict[str, Any]], *, uncertainties: list[dict[str, Any]] 
     if review_state is None:
         review_state = REVIEW_REQUIRED if any(u.get("material") is True for u in uncertainties) else REVIEW_RESOLVED
     request_text = "S3 deterministic composer acceptance fixture"
-    ir = {
+    return {
         "schema": SEMANTIC_IR_SCHEMA,
         "extractor": {"name": "s3-scripted-ir", "version": "1", "mode": "replay"},
         "request": {
@@ -58,7 +58,6 @@ def make_ir(facts: list[dict[str, Any]], *, uncertainties: list[dict[str, Any]] 
         "review_state": review_state,
         "metadata": dict(metadata or {"phase": "S3_ACCEPTANCE"}),
     }
-    return ir
 
 
 def uncertainty() -> dict[str, Any]:
@@ -80,6 +79,7 @@ def policy_view(output: Mapping[str, Any]) -> dict[str, Any]:
         "packs": output.get("packs"),
         "procedures": output.get("procedures"),
         "implementation_allowed": output.get("implementation_allowed"),
+        "implementation_gate": output.get("implementation_gate"),
         "release_decision": output.get("release_decision"),
         "matched_rules": output.get("matched_rules"),
     }
@@ -124,7 +124,10 @@ def run_control(control: Mapping[str, Any], composer: DeterministicPolicyCompose
             and output.get("risk") == "R3"
             and set(output.get("packs", [])) == expected_packs
             and set(output.get("procedures", [])) == expected_procs
-            and output.get("implementation_allowed") is True
+            and output.get("implementation_allowed") is False
+            and output.get("implementation_gate") == "BLOCKED_PENDING_AUTHORITATIVE_CONTEXT"
+            and output.get("release_decision") == "BLOCKED_PENDING_AUTHORITATIVE_CONTEXT"
+            and output.get("metadata", {}).get("authoritative_context_required") is True
             and output.get("metadata", {}).get("provider_calls") == 0
         )
         return result(cid, passed, {"scope_label": label, "policy": policy_view(output)}), policy_view(output)
@@ -150,11 +153,13 @@ def run_control(control: Mapping[str, Any], composer: DeterministicPolicyCompose
         )])
         output = composer.compose(ir)
         passed = (
-            output.get("risk") == "R3"
+            output.get("risk") == "R4"
             and output.get("packs") == ["REGULATED_DOMAIN"]
             and output.get("procedures") == ["regulated-domain-escalation"]
             and output.get("implementation_allowed") is False
+            and output.get("implementation_gate") == "BLOCKED_PENDING_AUTHORITATIVE_CONTEXT"
             and output.get("release_decision") == "BLOCKED_REGULATED_AUTHORITY"
+            and output.get("metadata", {}).get("regulated_authority_required") is True
         )
         return result(cid, passed, policy_view(output)), None
 
@@ -170,7 +175,33 @@ def run_control(control: Mapping[str, Any], composer: DeterministicPolicyCompose
             output.get("risk") == "R3"
             and set(output.get("packs", [])) == expected_packs
             and set(output.get("procedures", [])) == expected_procs
+            and output.get("implementation_allowed") is False
+            and output.get("implementation_gate") == "BLOCKED_PENDING_AUTHORITATIVE_CONTEXT"
             and "composition:large-live-data-release-closure" in output.get("matched_rules", [])
+        )
+        return result(cid, passed, policy_view(output)), None
+
+    if kind == "external_auth_composition":
+        ir = make_ir([
+            fact("AUTHENTICATION_PROTOCOL", fid="authentication-protocol"),
+            fact("EXTERNAL_OPERATIONAL_DEPENDENCY", fid="external-identity-service"),
+        ])
+        output = composer.compose(ir)
+        expected_packs = {"AUTH_PROTOCOL", "EXTERNAL_SUPPLIER", "AUTHORIZATION", "PRIVACY", "WEBHOOK_TRUST"}
+        expected_procs = {
+            "security-authentication-authorization",
+            "external-supplier-saas-governance",
+            "privacy-data-protection",
+            "webhook-external-input-trust",
+        }
+        passed = (
+            output.get("risk") == "R3"
+            and set(output.get("packs", [])) == expected_packs
+            and set(output.get("procedures", [])) == expected_procs
+            and output.get("implementation_allowed") is False
+            and output.get("implementation_gate") == "BLOCKED_PENDING_AUTHORITATIVE_CONTEXT"
+            and "composition:external-authentication-governance-closure" in output.get("matched_rules", [])
+            and output.get("metadata", {}).get("authoritative_context_required") is True
         )
         return result(cid, passed, policy_view(output)), None
 
@@ -186,6 +217,7 @@ def run_control(control: Mapping[str, Any], composer: DeterministicPolicyCompose
             and output.get("minimum_risk_from_resolved_facts") == "R3"
             and output.get("packs") == ["AUTHORIZATION"]
             and output.get("implementation_allowed") is False
+            and output.get("implementation_gate") == "BLOCKED_SEMANTIC_REVIEW"
             and output.get("release_decision") == "BLOCKED_SEMANTIC_REVIEW"
         )
         return result(cid, passed, policy_view(output)), None
@@ -199,6 +231,7 @@ def run_control(control: Mapping[str, Any], composer: DeterministicPolicyCompose
             and output.get("risk") is None
             and output.get("packs") == []
             and output.get("implementation_allowed") is False
+            and output.get("implementation_gate") == "BLOCKED_INVALID_IR"
             and output.get("release_decision") == "BLOCKED_INVALID_IR"
         )
         return result(cid, passed, {"errors": output.get("errors"), "policy": policy_view(output)}), None
@@ -211,6 +244,8 @@ def run_control(control: Mapping[str, Any], composer: DeterministicPolicyCompose
             and output.get("risk") == "R1"
             and output.get("packs") == []
             and output.get("procedures") == []
+            and output.get("implementation_allowed") is True
+            and output.get("implementation_gate") == "READY"
         )
         return result(cid, passed, policy_view(output)), None
 
@@ -235,6 +270,7 @@ def run_control(control: Mapping[str, Any], composer: DeterministicPolicyCompose
             set(base.get("packs", [])).issubset(set(expanded.get("packs", [])))
             and set(base.get("procedures", [])).issubset(set(expanded.get("procedures", [])))
             and RISK_ORDER[expanded_risk] >= RISK_ORDER[base_risk]
+            and (base.get("implementation_allowed") is not False or expanded.get("implementation_allowed") is False)
         )
         return result(cid, passed, {"base": policy_view(base), "expanded": policy_view(expanded)}), None
 
