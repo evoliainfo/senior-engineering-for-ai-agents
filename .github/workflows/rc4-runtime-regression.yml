@@ -1,0 +1,17 @@
+name: RC-4 runtime evidence regression gate
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  rc4-runtime-regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Syntax check runtime
+        run: python3 -m py_compile sef.py
+      - name: Run RC-4 runtime regression suite
+        run: python3 evals/diagnostic/rc4_runtime_integration_test.py
