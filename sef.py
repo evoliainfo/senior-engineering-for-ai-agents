@@ -184,6 +184,13 @@ def _b2_actual_diff_composition(assessment):
         if "RELEASE_ENGINEERING" not in packs:
             packs.add("RELEASE_ENGINEERING")
             evidence.append({"pack":"RELEASE_ENGINEERING","reason":"destructive migration discovered in actual diff requires release/recovery governance","source":"b2_actual_diff"})
+
+    changed_paths=[str(x) for x in assessment.get("changed_paths",[]) if x]
+    delivery_path=any(re.search(r"(?:^|/)(?:deploy|deployment|release|publish|promote|ship|delivery|prod(?:uction)?)[^/]*\.(?:ya?ml|json|toml|sh)$",p,re.I) or re.search(r"(?:^|/)\.github/workflows/[^/]*(?:deploy|release|publish|promote|prod|ship)[^/]*\.ya?ml$",p,re.I) for p in changed_paths)
+    if "CI_WORKFLOW_CHANGED" in triggers and delivery_path and ({"CI_SUPPLY_CHAIN","CONTAINER_ENGINEERING"} & packs):
+        if "RELEASE_ENGINEERING" not in packs:
+            packs.add("RELEASE_ENGINEERING")
+            evidence.append({"pack":"RELEASE_ENGINEERING","reason":"actual diff introduces a delivery/publish workflow with CI or container supply-chain materiality","source":"final_actual_diff"})
     assessment["required_context_packs"]=sorted(packs)
     assessment["b2_actual_diff_composition"]=evidence
     return assessment
@@ -843,6 +850,8 @@ _RC2_NON_GOAL_PATTERNS=(
   ("leave_unchanged",re.compile(r"\b(?:leave|keep)\b.+?\bunchanged\b",re.I)),
   ("no_changes_to",re.compile(r"\bno\s+changes?\s+to\b",re.I)),
   ("no_modifications_to",re.compile(r"\bno\s+modifications?\s+to\b",re.I)),
+  ("do_not_implement",re.compile(r"\b(?:do not|don't)\s+(?:implement|add|introduce|create|configure|deploy|alter|enable)\b",re.I)),
+  ("no_change_planned",re.compile(r"\bno\b.{0,120}\b(?:change|changes|modification|implementation)\b.{0,50}\b(?:is|are|was|were)?\s*(?:planned|intended|requested|required)\b",re.I)),
   ("out_of_scope",re.compile(r"\b(?:out of scope|not in scope)\b",re.I)),
   ("fr_sans_changer",re.compile(r"\bsans\s+(?:changer|modifier|toucher)\b",re.I)),
   ("fr_unchanged",re.compile(r"\b(?:laisser|garder)\b.+?\binchang[ée]s?\b",re.I)),
@@ -952,6 +961,9 @@ def _b1_semantic_materiality(original_request,positive_request):
         r"\b(?:do not|don't|without|no)\b.{0,90}\b(?:change|modify|touch|edit|alter)\b.{0,120}\b(?:images?|dependencies|ci|pipeline|release|deployment|build|configuration|config)\b",
         original,re.I))
     documentation_only=doc_surface and explicit_nonchange
+    content_surface=bool(re.search(r"\b(?:marketing|pricing|public|documentation|docs?|guide|readme)\b.{0,70}\b(?:copy|wording|text|sentence|heading|content|page)\b|\b(?:copy|wording|text|sentence|heading)\b",original,re.I))
+    content_only_cue=bool(re.search(r"\b(?:wording|copy|text|sentence|heading|content|documentation)\s+only\b|\bonly\s+(?:wording|copy|text|sentence|heading|content|documentation)\b",original,re.I))
+    content_only=content_surface and content_only_cue
 
     # Tenant/object authorization is a relation, not a tenant keyword. Require an
     # organization/workspace/customer scope plus an access action and an explicit
@@ -962,6 +974,27 @@ def _b1_semantic_materiality(original_request,positive_request):
     if tenant_scope and access_action and cross_scope:
         add("TENANT_ACCESS_BOUNDARY","MULTI_TENANT","R3","task explicitly constrains object/data access across organization or tenant boundaries")
         add("OBJECT_AUTHORIZATION","AUTHORIZATION","R3","cross-scope denial is an authorization invariant, not only a tenancy label")
+
+
+    # Final-cycle relation generalization: business partitions need not be named
+    # tenant/workspace. Membership in one bounded group/account/unit plus an
+    # explicit peer-boundary denial and a resource access action is equivalent.
+    business_partition=has(r"\b(?:franchise|dealer|partner|merchant|business|customer)\s+(?:group|account|unit|team)s?\b") or has(r"\b(?:group|account|unit|team|department)\b")
+    membership_relation=has(r"\b(?:belong(?:s|ing)?\s+to|assigned\s+to|scoped\s+to)\b.{0,70}\b(?:one|a|an|the|that)\b.{0,45}\b(?:group|account|unit|team|department)\b")
+    peer_boundary=has(r"\b(?:another|other|different)\b.{0,45}\b(?:group|account|unit|team|department)\b")
+    boundary_effect=has(r"\b(?:expose|leak|access|read|view|return|retrieve|show)\w*\b.{0,90}\b(?:data|records?|reports?|stores?|resources?|objects?)\b") or has(r"\b(?:data|records?|reports?|stores?|resources?|objects?)\b.{0,90}\b(?:another|other|different)\b")
+    if business_partition and membership_relation and peer_boundary and access_action and boundary_effect:
+        add("BUSINESS_PARTITION_ACCESS_BOUNDARY","MULTI_TENANT","R3","membership and peer-boundary relations define shared-customer isolation even without tenant vocabulary")
+        add("BUSINESS_OBJECT_AUTHORIZATION","AUTHORIZATION","R3","resource access must be authorized against the caller's business partition rather than caller-supplied scope")
+
+
+    # A real prohibitive access invariant remains positive intent. This protects
+    # polarity filtering from laundering "unauthorized users must not access" into
+    # a non-goal while still allowing "do not implement permissions" to disappear.
+    unauthorized_subject=has(r"\bunauthori[sz]ed\s+(?:users?|callers?|clients?|actors?|operators?)\b")
+    explicit_denial=has(r"\b(?:must not|cannot|may not|shall not|are not allowed to|is not allowed to)\b.{0,70}\b(?:access|read|view|download|export|edit|delete|retrieve)\w*\b")
+    if unauthorized_subject and explicit_denial:
+        add("EXPLICIT_AUTHORIZATION_DENIAL","AUTHORIZATION","R3","explicit denial for unauthorized actors is a material authorization requirement")
 
     # Large online transformations are material migrations even without the word
     # migration/backfill. Scale + stored-row mutation + live-operation pressure
@@ -992,6 +1025,24 @@ def _b1_semantic_materiality(original_request,positive_request):
     if backend_actor and caller_control and remote_destination and server_fetch:
         add("SERVER_SIDE_DESTINATION_TRUST","WEBHOOK_TRUST","R3","caller controls a destination reached by a privileged server-side network client")
 
+
+    # Variable-like locators and business actors are equivalent to URL/user forms.
+    boundary_actor=has(r"\b(?:callers?|users?|clients?|merchants?|customers?|partners?|requesters?|operators?|tenants?)\b")
+    locator_variable=has(r"\b[a-z][a-z0-9]*(?:_[a-z0-9]+)*(?:_url|_uri|_endpoint|_host|_address)\b")
+    locator_phrase=has(r"\b(?:source|remote|target|asset|resource|network)\s+(?:uri|url|endpoint|host|address|location)\b") or has(r"\b(?:that|the|this)\s+address\b")
+    actor_control_v2=has(r"\b(?:caller|user|client|merchant|customer|partner|requester|operator|tenant)s?\b.{0,90}\b(?:submit|submits|supply|supplies|provide|provides|choose|chooses|select|selects|control|controls)\b") or has(r"\b(?:submitted|supplied|provided|selected|controlled)\b.{0,70}\bby\s+(?:the\s+)?(?:caller|user|client|merchant|customer|partner|requester|operator|tenant)\b")
+    if backend_actor and boundary_actor and actor_control_v2 and (remote_destination or locator_variable or locator_phrase) and server_fetch:
+        add("GENERAL_SERVER_DESTINATION_TRUST","WEBHOOK_TRUST","R3","a lower-privilege business actor controls a locator consumed by a privileged backend network operation")
+
+    # Material outbound SaaS/API dependency: integration action plus API/service
+    # semantics plus quota/vendor-failure evidence is supplier governance even
+    # when the request never says 'third-party'.
+    integration_action=has(r"\b(?:sync|synchroni[sz]e|push|send|export|import|call|connect|integrate|forward)\w*\b")
+    api_service=has(r"\b(?:api|saas|crm|erp|hosted service|support platform|payment processor|external service)\b")
+    supplier_failure=has(r"\b(?:rate limits?|quotas?|vendor outages?|provider outages?|service outages?|vendor failures?|provider failures?|deprecation|through its api|via its api)\b")
+    if integration_action and api_service and supplier_failure:
+        add("MATERIAL_EXTERNAL_SERVICE_DEPENDENCY","EXTERNAL_SUPPLIER","R2","outbound integration depends materially on an independently operated API/service contract and failure modes")
+
     # Regulated/high-impact clinical decisions: require both domain semantics and
     # an outcome-affecting recommendation/decision verb. Mere health content or
     # arithmetic remains outside this rule.
@@ -1001,12 +1052,24 @@ def _b1_semantic_materiality(original_request,positive_request):
         add("REGULATED_OUTCOME_DECISION","REGULATED_DOMAIN","R3","software is asked to make or recommend a patient/clinical outcome decision")
         human_decisions.add("REGULATED_DOMAIN")
 
+
+    # High-impact regulated decisions are cross-sector. Require a consequential
+    # domain plus a decision/eligibility verb so calculators/content remain light.
+    high_impact_domain=has(r"\b(?:mortgage|lending|loan|credit[- ]bureau|credit decision|underwriting|underwriter|insurance|claim|benefits?|employment|hiring|housing|legal eligibility)\b")
+    high_impact_decision=has(r"\b(?:approve|approval|decline|deny|denial|underwrite|determine|decide|recommend|eligib(?:le|ility)|accept|reject)\w*\b")
+    arithmetic_surface=bool(re.search(r"\b(?:calculator|calculate|calculation|arithmetic|repayment|monthly payment|payment estimate|amortization)\b",original,re.I))
+    decision_disclaimed=bool(re.search(r"\b(?:do not|don't|does not|will not|no)\b.{0,110}\b(?:determine\s+eligibility|approve|approval|decline|deny|denial|recommend|underwrite)\b",original,re.I))
+    if high_impact_domain and high_impact_decision and not (arithmetic_surface and decision_disclaimed):
+        add("HIGH_IMPACT_REGULATED_DECISION","REGULATED_DOMAIN","R3","software is asked to make or recommend a consequential regulated/high-impact decision")
+        human_decisions.add("REGULATED_DOMAIN")
+
     return {
       "concepts":sorted(concepts),
       "primary_packs":sorted(primary_packs),
       "human_decisions":sorted(human_decisions),
       "risk_floor":risk_floor,
       "documentation_only":documentation_only,
+      "content_only":content_only,
       "evidence":evidence,
       "normalized_request":text,
       "normalized_original_request":original,
@@ -1020,12 +1083,12 @@ def _request_change(profile,request):
     t=request.lower(); triggers=set(); contexts=set(profile.get("contexts",[])); task_contexts=set(); profiles=set(profile.get("profiles",[])); evidence=[]
     def hit(pattern): return re.search(pattern,t,re.I) is not None
     def add(trg,why,ctx=(),prof=()): triggers.add(trg); contexts.update(ctx); task_contexts.update(ctx); profiles.update(prof); evidence.append({"trigger":trg,"reason":why})
-    if hit(r"\b(oauth|oidc|openid|google login|connexion google|sign[ -]?in|log[ -]?in|login|connexion|authentification|authentication|session|jwt)\b"):
+    if hit(r"\b(oauth|oidc|openid|google login|connexion google|sign[ -]?in|log[ -]?in|login|connexion|authentification|authentication|session|jwt)\b") and not b1_observation.get("content_only"):
         add("AUTH_CHANGED","authentication/login semantics in request",["PUBLIC_API"])
         add("SESSION_TOKEN_CHANGED","session/token semantics likely affected")
         if hit(r"\b(oauth|oidc|openid|google)\b"):
             profiles.update(["OAUTH_CLIENT","OIDC_CLIENT","SESSION"]); contexts.add("PII")
-    if hit(r"\b(permission|permissions|rôle|rôles|role|roles|rbac|authori[sz]|autorisation|admin|propriétaire|owner|contrôle d.access|access control)\b"): add("AUTHZ_CHANGED","authorization/role semantics in request")
+    if hit(r"\b(permission|permissions|rôle|rôles|role|roles|rbac|authori[sz]|autorisation|admin|propriétaire|owner|contrôle d.access|access control)\b") and not b1_observation.get("content_only"): add("AUTHZ_CHANGED","authorization/role semantics in request")
     if hit(r"\b(multi[- ]?tenant|multi[- ]?locataire|isolation tenant|tenant isolation|cross[- ]tenant|inter[- ]tenant|workspace isolation)\b"): add("TENANT_BOUNDARY_CHANGED","explicit tenant isolation change",["MULTI_TENANT"])
     if hit(r"\b(upload|téléversement|televersement|pièce jointe|piece jointe|attachment|import fichier|file import|document upload)\b"): add("FILE_UPLOAD_ADDED","file upload surface requested",["FILE_UPLOAD"])
     if hit(r"\b(webhook|callback|endpoint de rappel|callback endpoint)\b"): add("INBOUND_WEBHOOK_ADDED","inbound webhook/callback requested",["INBOUND_WEBHOOK","PUBLIC_API"])
@@ -1071,7 +1134,7 @@ def _request_change(profile,request):
     if hit(r"\b(deploy to production|déployer en production|deployer en production|mise en production|production deploy|go live)\b"): add("PRODUCTION_DEPLOY","production deployment requested",["PRODUCTION"])
     if hit(r"\b(personal data|données personnelles|donnees personnelles|pii|gdpr|rgpd|privacy|vie privée|email address|adresse email|phone number|numéro de téléphone|numero de telephone)\b"): add("PII_TOUCHED","personal-data handling explicitly requested",["PII"])
     if hit(r"\b(css|spacing|espacement|color|couleur|font|police|style only|style uniquement|visual tweak|modification visuelle)\b"): add("UI_STYLE_CHANGED","visual-only UI change requested",["WEB_UI"])
-    if hit(r"\b(form|formulaire|button|bouton|modal|dialog|dialogue|navigation|interactive ui|interface interactive|frontend feature|fonctionnalité frontend|frontend|front-end|page|component|composant|dashboard|tableau de bord)\b"): add("UI_BEHAVIOR_CHANGED","interactive/frontend behavior requested",["WEB_UI"])
+    if hit(r"\b(form|formulaire|button|bouton|modal|dialog|dialogue|navigation|interactive ui|interface interactive|frontend feature|fonctionnalité frontend|frontend|front-end|page|component|composant|dashboard|tableau de bord)\b") and not b1_observation.get("content_only"): add("UI_BEHAVIOR_CHANGED","interactive/frontend behavior requested",["WEB_UI"])
     if hit(r"\b(backend|back-end|api|endpoint|route api|service backend|service api|rest|graphql|rpc|controller|contrôleur|controleur)\b"):
         contexts.add("PUBLIC_API"); task_contexts.add("PUBLIC_API")
         if not triggers: evidence.append({"trigger":"BACKEND_API_SCOPE","reason":"backend/API execution scope requested"})
@@ -1095,7 +1158,9 @@ def _request_change(profile,request):
     rc1_observations=_rc1_detect_concepts(request)
     for observation in rc1_observations:
         concept=str(observation.get("concept") or "")
-        if concept=="AUTHORIZATION": triggers.add("AUTHZ_CHANGED")
+        if concept=="AUTHORIZATION":
+            if b1_observation.get("content_only"): continue
+            triggers.add("AUTHZ_CHANGED")
         elif concept=="DATABASE_MIGRATION":
             triggers.add("DATABASE_SCHEMA_CHANGED"); contexts.add("DATABASE"); task_contexts.add("DATABASE")
         elif concept=="WEBHOOK_TRUST":

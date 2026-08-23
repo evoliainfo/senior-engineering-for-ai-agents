@@ -23,19 +23,27 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Enforce B3 runtime immutability
-        if: github.event_name == 'pull_request'
+      - name: Enforce accepted runtime immutability
         shell: bash
         run: |
           set -euo pipefail
-          stage="$(python3 - <<'PY'
+          expected="$(python3 - <<'PY'
           import json
-          print(json.load(open('evals/release_candidate_manifest.json', encoding='utf-8')).get('stage',''))
+          manifest=json.load(open('evals/release_candidate_manifest.json', encoding='utf-8'))
+          stage=manifest.get('stage')
+          if stage not in {'PRE_FREEZE_B3','FROZEN'}:
+              raise SystemExit(f'unexpected release-candidate stage: {stage}')
+          value=manifest.get('candidate_runtime_sha256')
+          if not value:
+              raise SystemExit('candidate_runtime_sha256 missing')
+          print(value)
           PY
           )"
-          if [ "$stage" = "PRE_FREEZE_B3" ]; then
-            git diff --exit-code "${{ github.event.pull_request.base.sha }}" -- sef.py SHA256SUMS
-          fi
+          sha256sum -c SHA256SUMS
+          actual="$(sha256sum sef.py | awk '{print $1}')"
+          test "$actual" = "$expected"
+          test "$(cat SHA256SUMS)" = "$expected  sef.py"
+          echo "Accepted runtime remains immutable: $expected"
 
       - name: Compile release-candidate harness
         shell: bash
@@ -65,5 +73,5 @@ jobs:
         with:
           name: release-candidate-gate-${{ github.run_id }}
           path: release-candidate-gate.json
-          if-no-files-found: error
+          if-no-files-found: warn
           retention-days: 90

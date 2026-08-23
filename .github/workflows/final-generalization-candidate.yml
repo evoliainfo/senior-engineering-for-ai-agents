@@ -1,0 +1,96 @@
+name: Final generalization canonical gate
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  final-canonical:
+    if: github.event.pull_request.head.ref == 'integration/final-generalization-remediation'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Verify exact canonical runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          accepted='c2203602cb53229aba55bbbb518725c155785838915e75267714bc4e2d3d35ee'
+          sha256sum -c SHA256SUMS
+          test "$(sha256sum sef.py | awk '{print $1}')" = "$accepted"
+          python3 -m py_compile sef.py evals/run_final_generalization_controls.py
+
+      - name: Run deterministic closure on canonical runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 evals/run_dev_closure_all.py --sef sef.py --output final-dev.json
+          python3 evals/run_b1_acceptance.py --sef sef.py --output final-b1.json
+          python3 evals/run_b2_acceptance.py --sef sef.py --output final-b2.json
+          python3 evals/run_rc8_controls_round2_candidate.py --sef sef.py --output final-rc8.json
+          python3 evals/run_consumed_challenge_regression.py --sef sef.py --output final-consumed-v1.json
+          python3 evals/run_final_generalization_controls.py --sef sef.py --output final-generalization.json
+
+      - name: Replay consumed CHALLENGE v2 as regression only
+        shell: bash
+        run: |
+          set -euo pipefail
+          evidence_commit='a155c46367999845e4c6361bb83a4d5bcb2e11a6'
+          git fetch origin eval/challenge-v2-4132711f
+          mkdir -p /tmp/consumed-v2
+          ids='V2-AUTH-001,V2-DATA-001,V2-TRUST-001,V2-REL-001,V2-REG-001,V2-EXT-001,V2-EXT-002,V2-DIFF-001,V2-DIFF-002,V2-PROP-001'
+          for id in ${ids//,/ }; do
+            git show "$evidence_commit:evals/scenarios/challenge_v2/$id.json" > "/tmp/consumed-v2/$id.json"
+          done
+          python3 - <<'PY'
+          import hashlib,json
+          from pathlib import Path
+          scenarios=[json.load(open(p,encoding='utf-8')) for p in Path('/tmp/consumed-v2').glob('*.json')]
+          canonical=''.join(json.dumps(s,sort_keys=True,separators=(',',':'),ensure_ascii=False) for s in sorted(scenarios,key=lambda x:x['id']))
+          assert hashlib.sha256(canonical.encode()).hexdigest()=='9372dec1460c43d96cdca688113fa1a8bf2ca7a74b04008b387d694eb720f041'
+          PY
+          python3 evals/run_challenge_standard.py --sef sef.py --scenarios /tmp/consumed-v2 --ids "$ids" --expected-sef-sha256 'c2203602cb53229aba55bbbb518725c155785838915e75267714bc4e2d3d35ee' --output final-consumed-v2.json
+          python3 - <<'PY'
+          import json
+          r=json.load(open('final-consumed-v2.json',encoding='utf-8'))
+          results=r.get('results') or []
+          counts={}
+          for x in results: counts[x.get('status','UNKNOWN')]=counts.get(x.get('status','UNKNOWN'),0)+1
+          assert len(results)==10 and counts=={'PASS':10},counts
+          assert not [x for x in results if x.get('status')=='HARNESS_ERROR']
+          PY
+
+      - name: Prove exact runtime identity across evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json
+          expected='c2203602cb53229aba55bbbb518725c155785838915e75267714bc4e2d3d35ee'
+          for path in ['final-dev.json','final-b1.json','final-b2.json','final-rc8.json','final-consumed-v1.json','final-generalization.json','final-consumed-v2.json']:
+            got=json.load(open(path,encoding='utf-8')).get('sef_source_sha256')
+            if got!=expected: raise SystemExit(f'{path}: {got} != {expected}')
+          print('Canonical runtime SHA-256:',expected)
+          PY
+
+      - name: Publish canonical evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: final-canonical-${{ github.run_id }}
+          path: |
+            final-dev.json
+            final-b1.json
+            final-b2.json
+            final-rc8.json
+            final-consumed-v1.json
+            final-consumed-v2.json
+            final-generalization.json
+          if-no-files-found: error
+          retention-days: 90
