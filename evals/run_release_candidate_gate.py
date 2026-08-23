@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """Aggregate deterministic release-candidate evidence without opening a fresh holdout.
 
-The runner is valid both immediately before freeze and after a candidate has been
-frozen. It executes only DEV/regression surfaces already available for tuning and
-never discovers or executes CHALLENGE v2 content.
+The runner is valid immediately before the final freeze and after a candidate has
+been frozen. It executes only DEV/regression surfaces already available for tuning
+and never discovers or executes CHALLENGE v3 content.
 """
 from __future__ import annotations
 
@@ -89,9 +89,9 @@ def main() -> int:
     if dev_manifest.get("dev_total") != 38 or dev_manifest.get("challenge_total") != 10:
         blockers.append("DEV/CHALLENGE accounting is not 38+10")
     if dev_manifest.get("challenge_independent_holdout_status") != "CONSUMED":
-        blockers.append("DEV coverage manifest does not explicitly mark the first holdout consumed")
-    if dev_manifest.get("future_independent_holdout_required") != "CHALLENGE_V2":
-        blockers.append("DEV coverage manifest does not require a rotated CHALLENGE v2")
+        blockers.append("DEV coverage manifest does not explicitly mark historical holdout evidence consumed")
+    if dev_manifest.get("future_independent_holdout_required") != "CHALLENGE_V3":
+        blockers.append("DEV coverage manifest does not require rotated CHALLENGE v3")
 
     if first_challenge.get("candidate_commit") != manifest.get("consumed_holdout", {}).get("official_candidate_commit"):
         blockers.append("first challenge candidate commit no longer matches immutable historical evidence")
@@ -100,21 +100,29 @@ def main() -> int:
     if first_challenge.get("runtime_mutation_allowed") is not False:
         blockers.append("first challenge manifest no longer forbids candidate runtime mutation")
 
+    consumed_v2 = manifest.get("consumed_holdout_v2", {})
+    if consumed_v2.get("name") != "CHALLENGE_V2" or consumed_v2.get("independent_holdout_claim") is not False:
+        blockers.append("CHALLENGE v2 is not explicitly preserved as consumed historical evidence")
+    if consumed_v2.get("current_use") != "CONSUMED_REGRESSION_ONLY":
+        blockers.append("CHALLENGE v2 current use is not regression-only")
+
     future = manifest.get("future_holdout", {})
+    if future.get("name") != "CHALLENGE_V3":
+        blockers.append("release candidate manifest does not identify CHALLENGE v3 as the next holdout")
     if future.get("materialized") is not False:
-        blockers.append("release candidate manifest does not keep CHALLENGE v2 unmaterialized")
+        blockers.append("release candidate manifest does not keep CHALLENGE v3 unmaterialized")
     if stage == "PRE_FREEZE_B3" and future.get("creation_allowed_in_b3") is not False:
-        blockers.append("PRE_FREEZE_B3 manifest does not forbid CHALLENGE v2 creation during B3")
+        blockers.append("PRE_FREEZE_B3 manifest does not forbid CHALLENGE v3 creation before freeze")
     if stage == "FROZEN" and future.get("creation_allowed_after_freeze") is not True:
         blockers.append("FROZEN manifest does not explicitly permit fresh holdout creation after freeze")
 
     forbidden_future_paths: list[str] = []
     for path in EVALS.rglob("*"):
         rel = path.relative_to(ROOT).as_posix().lower()
-        if any(token in rel for token in ("challenge_v2", "challenge-v2", "challenge2")):
+        if any(token in rel for token in ("challenge_v3", "challenge-v3", "challenge3")):
             forbidden_future_paths.append(rel)
     if forbidden_future_paths:
-        blockers.append("CHALLENGE v2 content is already materialized under evals: " + ", ".join(sorted(forbidden_future_paths)))
+        blockers.append("CHALLENGE v3 content is already materialized under evals: " + ", ".join(sorted(forbidden_future_paths)))
 
     with tempfile.TemporaryDirectory(prefix="sef-release-candidate-") as tmp:
         t = Path(tmp)
@@ -193,7 +201,7 @@ def main() -> int:
             blockers.append(f"{name}: suite did not execute exact candidate runtime")
 
     readme = (EVALS / "README.md").read_text(encoding="utf-8")
-    for required_text in (expected_sha, "38/38 PASS", "10/10 PASS", "14/14 PASS", "CONSUMED_REGRESSION_ONLY", "CHALLENGE v2"):
+    for required_text in (expected_sha, "38/38 PASS", "10/10 PASS", "14/14 PASS", "CONSUMED_REGRESSION_ONLY", "CHALLENGE v3"):
         if required_text not in readme:
             blockers.append(f"evals/README.md missing current release-state marker: {required_text}")
 
