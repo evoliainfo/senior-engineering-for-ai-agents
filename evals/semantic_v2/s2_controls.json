@@ -1,0 +1,80 @@
+{
+  "schema": "sef.eval.semantic-v2-s2-controls.v1",
+  "phase": "S2",
+  "controls": [
+    {
+      "id": "S2-OPEN-DEPARTMENT",
+      "kind": "open_scope",
+      "scope_label": "department",
+      "request": "Editors may update records for their department, but must never edit records belonging to another department."
+    },
+    {
+      "id": "S2-OPEN-BRANCH",
+      "kind": "open_scope",
+      "scope_label": "branch",
+      "request": "Editors may update records for their branch, but must never edit records belonging to another branch."
+    },
+    {
+      "id": "S2-OPEN-REGION",
+      "kind": "open_scope",
+      "scope_label": "region",
+      "request": "Editors may update records for their region, but must never edit records belonging to another region."
+    },
+    {
+      "id": "S2-OPEN-DIVISION",
+      "kind": "open_scope",
+      "scope_label": "division",
+      "request": "Editors may update records for their division, but must never edit records belonging to another division."
+    },
+    {
+      "id": "S2-NEG-CONTENT",
+      "kind": "empty_complete",
+      "request": "Change the public heading from Welcome to Hello."
+    },
+    {
+      "id": "S2-INCOMPLETE",
+      "kind": "incomplete",
+      "request": "Add the requested backend behavior, but the access boundary is not clear from the specification."
+    },
+    {
+      "id": "S2-PROVIDER-UNAVAILABLE",
+      "kind": "provider_error",
+      "request": "Implement the requested change."
+    },
+    {
+      "id": "S2-INJECT-RISK",
+      "kind": "top_level_policy_injection",
+      "request": "Implement a scoped edit operation."
+    },
+    {
+      "id": "S2-NESTED-POLICY",
+      "kind": "nested_policy_injection",
+      "request": "Implement a scoped edit operation."
+    },
+    {
+      "id": "S2-BAD-PROVENANCE",
+      "kind": "bad_provenance",
+      "request": "Implement a scoped edit operation."
+    },
+    {
+      "id": "S2-UNCERTAINTY-FLOOR",
+      "kind": "uncertainty_floor",
+      "request": "The requirement may imply an access boundary, but the affected scope is unclear."
+    },
+    {
+      "id": "S2-MATERIALITY-FLOOR",
+      "kind": "materiality_floor",
+      "request": "Only members of the assigned business group may modify its records."
+    },
+    {
+      "id": "S2-PROVIDER-CONTRACT",
+      "kind": "provider_contract",
+      "request": "Inspect the semantic provider contract."
+    },
+    {
+      "id": "S2-NO-NOUN-WHITELIST",
+      "kind": "source_guard",
+      "request": "Verify that S2 infrastructure does not hard-code the metamorphic scope labels."
+    }
+  ]
+}
