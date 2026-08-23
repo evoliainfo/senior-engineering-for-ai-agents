@@ -1,0 +1,80 @@
+name: Semantic Routing v2 S3 gate
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'semantic_v2/**'
+      - 'evals/semantic_v2/**'
+      - 'evals/run_semantic_v2_s0_s1.py'
+      - 'evals/run_semantic_v2_s2.py'
+      - 'evals/run_semantic_v2_s3.py'
+      - 'docs/SEMANTIC_ROUTING_V2_S3.md'
+      - '.github/workflows/semantic-v2-s3.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  semantic-v2-s3:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Prove frozen v1.5 runtime is untouched
+        shell: bash
+        run: |
+          set -euo pipefail
+          sha256sum -c SHA256SUMS
+          test "$(sha256sum sef.py | awk '{print $1}')" = "c2203602cb53229aba55bbbb518725c155785838915e75267714bc4e2d3d35ee"
+          git fetch origin main
+          git diff --exit-code origin/main...HEAD -- sef.py SHA256SUMS
+
+      - name: Compile S0-S3 implementation
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m py_compile \
+            semantic_v2/__init__.py \
+            semantic_v2/contracts.py \
+            semantic_v2/bridge_v15.py \
+            semantic_v2/model_extractor.py \
+            semantic_v2/policy_composer.py \
+            evals/run_semantic_v2_s0_s1.py \
+            evals/run_semantic_v2_s2.py \
+            evals/run_semantic_v2_s3.py
+          python3 -m json.tool semantic_v2/schema/semantic-ir.v1.schema.json >/dev/null
+          python3 -m json.tool evals/semantic_v2/s0_s1_controls.json >/dev/null
+          python3 -m json.tool evals/semantic_v2/s2_controls.json >/dev/null
+          python3 -m json.tool evals/semantic_v2/s3_controls.json >/dev/null
+
+      - name: Re-run S0-S1 contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          PYTHONPATH=. python3 evals/run_semantic_v2_s0_s1.py --output semantic-v2-s0-s1.json
+
+      - name: Re-run S2 provider boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          PYTHONPATH=. python3 evals/run_semantic_v2_s2.py --output semantic-v2-s2.json
+
+      - name: Run S3 deterministic composer acceptance
+        shell: bash
+        run: |
+          set -euo pipefail
+          PYTHONPATH=. python3 evals/run_semantic_v2_s3.py --output semantic-v2-s3.json
+
+      - name: Publish S3 evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: semantic-v2-s3-${{ github.run_id }}
+          path: |
+            semantic-v2-s0-s1.json
+            semantic-v2-s2.json
+            semantic-v2-s3.json
+          retention-days: 90
