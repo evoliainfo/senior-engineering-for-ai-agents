@@ -107,7 +107,7 @@ def bridge_legacy_assessment(
             "phase": "S1",
             "mode": "SHADOW_ONLY",
             "coverage": "LEGACY_SIGNALS_ONLY",
-            "open_vocabulary_claim": false,
+            "open_vocabulary_claim": False,
             "mapped_signal_count": len(mapped),
             "unmapped_legacy_signals": unmapped,
         },
