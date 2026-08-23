@@ -1,0 +1,96 @@
+name: Promote final generalization candidate
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  promote:
+    if: github.event.pull_request.head.ref == 'integration/final-generalization-remediation'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: integration/final-generalization-remediation
+          fetch-depth: 0
+          token: ${{ github.token }}
+
+      - name: Resolve promotion state
+        id: state
+        shell: bash
+        run: |
+          set -euo pipefail
+          old='bfeda790cd70c78ceb9fae862441df35c9bfe819001c0d429c09c0dde2a0c2bd'
+          accepted='c2203602cb53229aba55bbbb518725c155785838915e75267714bc4e2d3d35ee'
+          current="$(sha256sum sef.py | awk '{print $1}')"
+          if [ "$current" = "$accepted" ]; then
+            echo 'mode=already-promoted' >> "$GITHUB_OUTPUT"
+          elif [ "$current" = "$old" ]; then
+            echo 'mode=promote' >> "$GITHUB_OUTPUT"
+          else
+            echo "Unexpected canonical sef.py hash: $current" >&2
+            exit 1
+          fi
+
+      - name: Rebuild exact accepted candidate
+        if: steps.state.outputs.mode == 'promote'
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 evals/apply_final_generalization_final.py --source sef.py --output /tmp/final-sef.py
+          test "$(sha256sum /tmp/final-sef.py | awk '{print $1}')" = 'c2203602cb53229aba55bbbb518725c155785838915e75267714bc4e2d3d35ee'
+          python3 -m py_compile /tmp/final-sef.py
+
+      - name: Re-run deterministic promotion gates
+        if: steps.state.outputs.mode == 'promote'
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 evals/run_dev_closure_all.py --sef /tmp/final-sef.py --output /tmp/dev.json
+          python3 evals/run_b1_acceptance.py --sef /tmp/final-sef.py --output /tmp/b1.json
+          python3 evals/run_b2_acceptance.py --sef /tmp/final-sef.py --output /tmp/b2.json
+          python3 evals/run_rc8_controls_round2_candidate.py --sef /tmp/final-sef.py --output /tmp/rc8.json
+          python3 evals/run_consumed_challenge_regression.py --sef /tmp/final-sef.py --output /tmp/v1.json
+          python3 evals/run_final_generalization_controls.py --sef /tmp/final-sef.py --output /tmp/final.json
+          evidence_commit='a155c46367999845e4c6361bb83a4d5bcb2e11a6'
+          git fetch origin eval/challenge-v2-4132711f
+          mkdir -p /tmp/v2
+          ids='V2-AUTH-001,V2-DATA-001,V2-TRUST-001,V2-REL-001,V2-REG-001,V2-EXT-001,V2-EXT-002,V2-DIFF-001,V2-DIFF-002,V2-PROP-001'
+          for id in ${ids//,/ }; do git show "$evidence_commit:evals/scenarios/challenge_v2/$id.json" > "/tmp/v2/$id.json"; done
+          candidate_sha="$(sha256sum /tmp/final-sef.py | awk '{print $1}')"
+          python3 evals/run_challenge_standard.py --sef /tmp/final-sef.py --scenarios /tmp/v2 --ids "$ids" --expected-sef-sha256 "$candidate_sha" --output /tmp/v2.json
+          python3 - <<'PY'
+          import json
+          r=json.load(open('/tmp/v2.json'))
+          results=r.get('results') or []
+          counts={}
+          for x in results: counts[x.get('status','UNKNOWN')]=counts.get(x.get('status','UNKNOWN'),0)+1
+          assert counts=={'PASS':10} and len(results)==10,counts
+          PY
+
+      - name: Promote exact candidate into canonical runtime
+        if: steps.state.outputs.mode == 'promote'
+        shell: bash
+        run: |
+          set -euo pipefail
+          cp /tmp/final-sef.py sef.py
+          printf '%s  sef.py\n' 'c2203602cb53229aba55bbbb518725c155785838915e75267714bc4e2d3d35ee' > SHA256SUMS
+          sha256sum -c SHA256SUMS
+          git config user.name 'SEF Evaluation Automation'
+          git config user.email 'evals@sef.local'
+          git add sef.py SHA256SUMS
+          git diff --cached --quiet && { echo 'No promotion diff'; exit 1; }
+          git commit -m 'feat: promote final generalization runtime'
+          git push origin HEAD:integration/final-generalization-remediation
+
+      - name: Verify already-promoted state
+        if: steps.state.outputs.mode == 'already-promoted'
+        shell: bash
+        run: |
+          set -euo pipefail
+          sha256sum -c SHA256SUMS
+          test "$(awk '{print $1}' SHA256SUMS)" = 'c2203602cb53229aba55bbbb518725c155785838915e75267714bc4e2d3d35ee'
