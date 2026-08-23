@@ -907,10 +907,98 @@ def _rc3_multitenant_materiality(request):
     if any(rx.search(text) for rx in _RC3_AMBIGUOUS_PATTERNS): return 'UNCERTAIN'
     return 'PROJECT_ONLY'
 
+
+# ---------- B1 semantic materiality normalization ----------
+# B1 recognizes task-material semantic relations before downstream composition.
+# It deliberately does not implement transitive pack closure (B2) or actual-diff
+# secondary release routing (B2). Rules require conjunctions of meaning-bearing
+# signals so isolated technology words do not become policy decisions.
+def _b1_semantic_materiality(original_request,positive_request):
+    text=_rc1_normalize_text(positive_request)
+    original=_rc1_normalize_text(original_request)
+    concepts=set(); primary_packs=set(); human_decisions=set(); evidence=[]; risk_floor="R0"
+
+    def has(pattern): return re.search(pattern,text,re.I) is not None
+    def add(concept,pack=None,risk=None,reason=""):
+        nonlocal risk_floor
+        concepts.add(concept)
+        if pack: primary_packs.add(pack)
+        if risk and RISK_ORDER.get(risk,0)>RISK_ORDER.get(risk_floor,0): risk_floor=risk
+        evidence.append({"concept":concept,"reason":reason,"source":"b1_semantic_materiality"})
+
+    # Explicit documentation-only non-goal. This is intentionally narrow: it
+    # suppresses legacy Docker token routing only when the request itself says
+    # runtime/build/delivery configuration must not change.
+    doc_surface=bool(re.search(r"\b(readme|documentation|docs?|documentation note|sentence|example)\b",original,re.I))
+    explicit_nonchange=bool(re.search(
+        r"\b(?:do not|don't|without|no)\b.{0,90}\b(?:change|modify|touch|edit|alter)\b.{0,120}\b(?:images?|dependencies|ci|pipeline|release|deployment|build|configuration|config)\b",
+        original,re.I))
+    documentation_only=doc_surface and explicit_nonchange
+
+    # Tenant/object authorization is a relation, not a tenant keyword. Require an
+    # organization/workspace/customer scope plus an access action and an explicit
+    # cross-scope denial/ownership boundary.
+    tenant_scope=has(r"\b(?:organi[sz]ation|workspace|customer account|client account|tenant)\b")
+    access_action=has(r"\b(?:read|view|download|export|access|write|edit|delete|return|retrieve)\w*\b")
+    cross_scope=has(r"\b(?:other|another|different|any other|cross[- ]?)\b.{0,55}\b(?:organi[sz]ation|workspace|customer|client|tenant)\b") or has(r"\b(?:prevent|deny|block)\b.{0,90}\b(?:other|another|different|cross[- ]?)\b")
+    if tenant_scope and access_action and cross_scope:
+        add("TENANT_ACCESS_BOUNDARY","MULTI_TENANT","R3","task explicitly constrains object/data access across organization or tenant boundaries")
+        add("OBJECT_AUTHORIZATION","AUTHORIZATION","R3","cross-scope denial is an authorization invariant, not only a tenancy label")
+
+    # Large online transformations are material migrations even without the word
+    # migration/backfill. Scale + stored-row mutation + live-operation pressure
+    # are all required, which keeps local fixture generation out.
+    data_objects=has(r"\b(?:rows?|records?|stored data|database entries|existing data)\b")
+    transformation=has(r"\b(?:transform|populate|rewrite|recompute|convert|update|change)\w*\b")
+    large_scale=has(r"\b(?:\d+(?:\.\d+)?\s*(?:million|billion)|millions? of|billions? of|very large|large[- ]scale|tens of millions?)\b")
+    live_pressure=has(r"\b(?:live traffic|normal writes|writes continue|online|without downtime|locking|database load|bound .*load|rollout risk|production traffic)\b")
+    if data_objects and transformation and large_scale and live_pressure:
+        add("LARGE_ONLINE_DATA_TRANSFORMATION","DATABASE_MIGRATION","R3","large mutation of existing stored rows under live traffic has migration semantics")
+        add("LIVE_DATA_CAPACITY_PRESSURE","PERFORMANCE_CAPACITY_COST","R3","online transformation explicitly creates load/locking/capacity risk")
+
+    # Production image build semantics can be expressed without the word Docker.
+    # Require image/artifact semantics plus build/publish/promotion semantics and
+    # production/release materiality; documentation-only requests are excluded.
+    image_semantics=has(r"\b(?:production image|container image|runtime image|oci image|image build|resulting image|release artifact)\b")
+    build_semantics=has(r"\b(?:build|publish|promote|package|packag(?:e|ing)|install)\w*\b")
+    production_semantics=has(r"\b(?:production|release|promot(?:e|ed|ion)|reproducible)\b")
+    if image_semantics and build_semantics and production_semantics and not documentation_only:
+        add("PRODUCTION_IMAGE_BUILD","CONTAINER_ENGINEERING","R2","task materially changes a production/release image build")
+
+    # SSRF-like trust boundary: a lower-privilege caller controls where a more
+    # privileged backend network client connects. No URL keyword is required.
+    backend_actor=has(r"\b(?:backend|server|server-side|service|http client)\b")
+    caller_control=has(r"\b(?:caller|user|client)\b.{0,80}\b(?:suppl(?:y|ies|ied)|provide|provided|choose|chooses|selected?|control(?:s|led)?)\b") or has(r"\b(?:user-provided|caller-provided|caller-selected|user-selected)\b")
+    remote_destination=has(r"\b(?:url|uri|remote resource|remote location|destination|target address|network location|external location)\b")
+    server_fetch=has(r"\b(?:fetch|retrieve|download|request|connect|open|load)\w*\b")
+    if backend_actor and caller_control and remote_destination and server_fetch:
+        add("SERVER_SIDE_DESTINATION_TRUST","WEBHOOK_TRUST","R3","caller controls a destination reached by a privileged server-side network client")
+
+    # Regulated/high-impact clinical decisions: require both domain semantics and
+    # an outcome-affecting recommendation/decision verb. Mere health content or
+    # arithmetic remains outside this rule.
+    clinical_domain=has(r"\b(?:patient|clinical|medication|medicine|treatment|therapy|diagnos(?:is|e)|symptoms?|clinical measurements?|dose|dosing)\b")
+    decision_semantics=has(r"\b(?:decide|decides|determine|determines|recommend|recommends|should receive|prescribe|prescribes|dose|dosing|triage)\b")
+    if clinical_domain and decision_semantics:
+        add("REGULATED_OUTCOME_DECISION","REGULATED_DOMAIN","R3","software is asked to make or recommend a patient/clinical outcome decision")
+        human_decisions.add("REGULATED_DOMAIN")
+
+    return {
+      "concepts":sorted(concepts),
+      "primary_packs":sorted(primary_packs),
+      "human_decisions":sorted(human_decisions),
+      "risk_floor":risk_floor,
+      "documentation_only":documentation_only,
+      "evidence":evidence,
+      "normalized_request":text,
+      "normalized_original_request":original,
+    }
+
 # ---------- request → engineering task plan ----------
 def _request_change(profile,request):
     original_request=request
     request,rc2_suppressed,rc2_observation=_rc2_positive_request_text(request)
+    b1_observation=_b1_semantic_materiality(original_request,request)
     t=request.lower(); triggers=set(); contexts=set(profile.get("contexts",[])); task_contexts=set(); profiles=set(profile.get("profiles",[])); evidence=[]
     def hit(pattern): return re.search(pattern,t,re.I) is not None
     def add(trg,why,ctx=(),prof=()): triggers.add(trg); contexts.update(ctx); task_contexts.update(ctx); profiles.update(prof); evidence.append({"trigger":trg,"reason":why})
@@ -925,7 +1013,7 @@ def _request_change(profile,request):
     if hit(r"\b(webhook|callback|endpoint de rappel|callback endpoint)\b"): add("INBOUND_WEBHOOK_ADDED","inbound webhook/callback requested",["INBOUND_WEBHOOK","PUBLIC_API"])
     if hit(r"\b(migration|schéma|schema|colonne|column|table|base de données|database change|backfill|rattrapage de données)\b"): add("DATABASE_SCHEMA_CHANGED","database/schema change requested",["DATABASE"])
     if hit(r"\b(drop|truncate|supprimer les données|suppression de données|delete data|supprimer colonne|remove column|détruire les données|destroy data)\b"): add("DESTRUCTIVE_DATA_CHANGE","destructive data semantics requested",["DATABASE"])
-    if hit(r"\b(docker|container|compose)\b"): add("DOCKERFILE_CHANGED","containerization change requested",["DOCKER"])
+    if hit(r"\b(docker|container|compose)\b") and not b1_observation.get("documentation_only"): add("DOCKERFILE_CHANGED","containerization change requested",["DOCKER"])
     if hit(r"\b(github actions|ci/cd|pipeline|intégration continue|integration continue|continuous integration)\b"): add("CI_WORKFLOW_CHANGED","CI/CD change requested",["CI_CD"])
     if hit(r"\b(terraform|iac|infrastructure as code|infrastructure comme code|security group|groupe de sécurité|firewall|pare-feu|vpc|subnet|sous-réseau)\b"): add("IAC_CHANGED","infrastructure/IaC change requested",["IAC"])
     if hit(r"\b(public ingress|0\.0\.0\.0/0|open to internet|publicly accessible)\b"): add("NETWORK_EXPOSURE_CHANGED","network exposure change requested",["NETWORK_EXPOSURE"])
@@ -1004,13 +1092,31 @@ def _request_change(profile,request):
         evidence.append({"trigger":"RC1_CONCEPT:"+concept,"reason":"deterministic canonical concept detected","source":"rc1_additive","concept_evidence":observation.get("evidence",[])})
     if rc2_suppressed:
         evidence.append({"trigger":"RC2_POLARITY_FILTER","reason":"bounded request non-goal excluded from request-derived routing","source":"rc2_canonical","suppressed_clauses":rc2_suppressed,"polarity_observation":rc2_observation})
+
+    # B1 primary semantic observations are applied before policy assessment.
+    b1_concepts=set(b1_observation.get("concepts",[]))
+    if "TENANT_ACCESS_BOUNDARY" in b1_concepts:
+        triggers.add("TENANT_BOUNDARY_CHANGED"); contexts.add("MULTI_TENANT"); task_contexts.add("MULTI_TENANT")
+    if "OBJECT_AUTHORIZATION" in b1_concepts: triggers.add("AUTHZ_CHANGED")
+    if "LARGE_ONLINE_DATA_TRANSFORMATION" in b1_concepts:
+        triggers.add("DATABASE_SCHEMA_CHANGED"); contexts.add("DATABASE"); task_contexts.add("DATABASE")
+    if "LIVE_DATA_CAPACITY_PRESSURE" in b1_concepts: triggers.add("PERFORMANCE_SENSITIVE_PATH_CHANGED")
+    if "PRODUCTION_IMAGE_BUILD" in b1_concepts:
+        triggers.add("DOCKERFILE_CHANGED"); contexts.add("DOCKER"); task_contexts.add("DOCKER")
+    if "SERVER_SIDE_DESTINATION_TRUST" in b1_concepts:
+        contexts.add("PUBLIC_API"); task_contexts.add("PUBLIC_API")
+    if "REGULATED_OUTCOME_DECISION" in b1_concepts:
+        contexts.add("REGULATED_DOMAIN"); task_contexts.add("REGULATED_DOMAIN")
+    evidence.extend(b1_observation.get("evidence",[]))
     risk="R0" if triggers=={"UI_STYLE_CHANGED"} else "R1"
+    b1_floor=str(b1_observation.get("risk_floor") or "R0")
+    if RISK_ORDER.get(b1_floor,0)>RISK_ORDER.get(risk,0): risk=b1_floor
     # Generic new product features in an already full-stack repository may reasonably cross layers;
     # bugs/refactors without layer evidence stay on core procedures until inspection/diff reveals scope.
     if not task_contexts and "NEW_FEATURE" in triggers:
         app=[c for c in ("WEB_UI","PUBLIC_API","DATABASE") if c in contexts]
         if len(app)>=2: task_contexts.update(app)
-    return {"summary":original_request,"risk":risk,"action_class":"A1","contexts":sorted(contexts),"execution_contexts":sorted(task_contexts),"triggers":sorted(triggers),"profiles":sorted(profiles),"environment":"LOCAL","request_detection":evidence}
+    return {"summary":original_request,"risk":risk,"action_class":"A1","contexts":sorted(contexts),"execution_contexts":sorted(task_contexts),"triggers":sorted(triggers),"profiles":sorted(profiles),"environment":"LOCAL","request_detection":evidence,"b1_primary_packs":b1_observation.get("primary_packs",[]),"b1_human_decisions":b1_observation.get("human_decisions",[]),"b1_semantic_materiality":b1_observation}
 
 def _assess_request(repo,request):
     repo=Path(repo).resolve(); profile=_load_json(repo/".sef/project-profile.json",scan(repo)); change=_request_change(profile,request)
@@ -1029,6 +1135,14 @@ def _assess_request(repo,request):
         if "EXTERNAL_SUPPLIER" in _rc1_detected_ids(rc2_positive_request):
             selected=set(result.get("required_context_packs",[])); selected.add("EXTERNAL_SUPPLIER")
             result["required_context_packs"]=sorted(selected)
+
+        # B1 adds directly recognized primary packs only; transitive closure is B2.
+        selected=set(result.get("required_context_packs",[])); selected.update(change.get("b1_primary_packs",[]))
+        result["required_context_packs"]=sorted(selected)
+        floor=str(change.get("risk") or "R0")
+        if RISK_ORDER.get(floor,0)>RISK_ORDER.get(str(result.get("risk") or "R0"),0): result["risk"]=floor
+        result["request_human_decisions"]=sorted(set(change.get("b1_human_decisions",[])))
+        result["b1_semantic_materiality"]=change.get("b1_semantic_materiality",{})
         result["request_detection"]=change["request_detection"]
         result["request_execution_contexts"]=change.get("execution_contexts",[])
         return result
@@ -1119,6 +1233,7 @@ def task_plan(repo,request,save=False):
     human_decisions=sorted(set(
         [c.get("context") for c in project_profile.get("context_candidates",[]) if c.get("context") in MATERIAL_CONFIRMATIONS]
         + [ctx for ctx in baseline.get("discovery",{}).get("context_confirmations_needed",[]) if ctx in MATERIAL_CONFIRMATIONS]
+        + [ctx for ctx in assessment.get("request_human_decisions",[]) if ctx in MATERIAL_CONFIRMATIONS]
     ))
     rc3_materiality=_rc3_multitenant_materiality(request) if "MULTI_TENANT" in human_decisions else None
     if rc3_materiality=="PROJECT_ONLY":
