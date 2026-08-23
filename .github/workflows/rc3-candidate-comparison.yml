@@ -40,8 +40,9 @@ jobs:
           run_suite rc3-treatment evals/diagnostic/rc3_materiality/treatment
           run_suite rc3-control evals/diagnostic/rc3_materiality/control
           run_suite rc3-ambiguity evals/diagnostic/rc3_materiality/ambiguity
-          run_suite rc1-negative evals/diagnostic/rc1_preimplementation/negative_controls
-          run_suite rc1-metamorphic evals/diagnostic/rc1_preimplementation/metamorphic
+          run_suite rc1-negative evals/rc1_candidate/negative_controls
+          run_suite rc1-metamorphic evals/rc1_candidate/metamorphic
+          run_suite rc1-probes evals/probes/root_cause/routing
           run_suite rc2-treatment evals/diagnostic/rc2_polarity/treatment
           run_suite rc2-control evals/diagnostic/rc2_polarity/control
 
@@ -49,7 +50,7 @@ jobs:
           import json
           from pathlib import Path
           root=Path('artifacts/rc3-comparison')
-          suites=['official','rc3-treatment','rc3-control','rc3-ambiguity','rc1-negative','rc1-metamorphic','rc2-treatment','rc2-control']
+          suites=['official','rc3-treatment','rc3-control','rc3-ambiguity','rc1-negative','rc1-metamorphic','rc1-probes','rc2-treatment','rc2-control']
           failures=[]; lines=['# RC-3 candidate comparison','', '| Suite | Base PASS | Candidate PASS | PASS→FAIL |','| --- | ---: | ---: | ---: |']
           all_base={}; all_cand={}
           for s in suites:
@@ -60,13 +61,11 @@ jobs:
             lines.append(f'| `{s}` | {bpass}/{len(bm)} | {cpass}/{len(cm)} | {len(regress)} |')
             if regress: failures.append(f'{s} PASS→FAIL: {regress}')
             all_base.update(bm); all_cand.update(cm)
-          # Hard RC-3 gates.
           if all_cand.get('WEB-001',{}).get('status')!='PASS': failures.append('WEB-001 must PASS in candidate')
           for sid in [f'RC3-TREAT-{i:03d}' for i in range(1,9)]:
             if all_cand.get(sid,{}).get('status')!='PASS': failures.append(f'{sid} treatment must PASS')
           for sid in [f'RC3-CTRL-{i:03d}' for i in range(1,9)]+[f'RC3-AMB-{i:03d}' for i in range(1,4)]:
             if all_cand.get(sid,{}).get('status')!='PASS': failures.append(f'{sid} safety control must remain PASS')
-          # Official suite should reach complete pass if WEB-001 is the only residual failure.
           official=json.loads((root/'candidate'/'official.json').read_text())
           if official.get('summary',{}).get('counts',{}).get('PASS')!=official.get('summary',{}).get('total'):
             failures.append(f"official candidate not fully green: {official.get('summary')}")
