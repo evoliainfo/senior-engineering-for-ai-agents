@@ -55,9 +55,23 @@ Build relation-focused DEV controls with positive, negative and metamorphic vari
 
 `V3-AUTH-002` becomes a consumed regression probe here, never a fresh holdout.
 
+## S5R — Provider stability qualification
+
+Before promotion, a stochastic model-assisted provider must pass a bounded stability gate. Run exactly three independent semantic extractions per DEV case using the same provider configuration. Compare the policy-relevant semantic view: review state and material fact kinds.
+
+- unanimous resolved views may proceed as resolved Semantic IR;
+- any material disagreement becomes `CONFLICT` + `SEMANTIC_REVIEW_REQUIRED`;
+- unavailable or invalid samples fail closed;
+- no majority vote, raw intersection or raw union may silently resolve a disagreement;
+- the existing S5 corpus and acceptance expectations remain unchanged.
+
+S5R has one fresh live qualification attempt after implementation and deterministic controls are complete. If it fails, stop rerunning/tuning individual cases and make a provider/configuration architecture decision before another qualification program.
+
+The single-sample S5 live workflow remains diagnostic only after S5R is introduced. It cannot authorize S6 promotion.
+
 ## S6 — Freeze v2
 
-Only after all deterministic and semantic DEV gates are green, promote out of shadow mode and freeze one exact candidate, extractor configuration and runtime identity. No candidate mutation is allowed after this point.
+Only after all deterministic and semantic DEV gates, including S5R, are green, promote out of shadow mode and freeze one exact candidate, extractor configuration and runtime identity. No candidate mutation is allowed after this point.
 
 ## S7 — New independent program
 
