@@ -17,8 +17,7 @@ Declare only the cases that matter to the current product slice. Each case ident
 
 - the critical UI state or journey checkpoint;
 - the viewport class to exercise;
-- whether accessibility evidence is required;
-- the expected visual evidence reference.
+- whether accessibility evidence is required.
 
 Prefer a small set of meaningful cases over an exhaustive screenshot catalog.
 
@@ -30,10 +29,11 @@ For each required case, collect:
 
 - browser interaction status;
 - screenshot or equivalent rendered visual reference;
+- a `capture_context_ref` describing the concrete browser/rendering conditions used for that evidence;
 - accessibility observation/reference when required;
-- any discovered visual discrepancy with severity and resolution state.
+- any discovered visual discrepancy with stable id, severity and resolution state.
 
-Visual screenshot baselines must be compared under sufficiently stable rendering conditions. If the environment is not comparable, mark the case incomplete rather than accepting a noisy result.
+Visual screenshot baselines must be compared under sufficiently stable rendering conditions. A bare `capture_stable=true` is not enough: the observation also needs capture-context evidence. If the environment is not comparable, mark the case incomplete rather than accepting a noisy result.
 
 ## Evaluate
 
@@ -54,8 +54,12 @@ When a case fails:
 1. preserve the failing observation;
 2. correct the UI or accessibility issue;
 3. recapture the same declared case under comparable conditions;
-4. mark the discrepancy resolved only when the new observation supports it;
+4. carry forward the same material discrepancy id and mark it resolved only when the new observation supports that resolution;
 5. rerun the evaluator.
+
+A previously observed blocker/material discrepancy is sticky. Omitting it from a later observation does not erase it or turn the case green.
+
+Each case may have only one observation for a given iteration, avoiding ambiguous latest-state selection.
 
 ## Scope boundary
 
