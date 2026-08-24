@@ -9,6 +9,7 @@
     {
       "id": "OBS-001", "case_id": "home-mobile", "iteration": 1,
       "interaction_status": "PASS", "screenshot_ref": "artifact://home-mobile.png", "capture_stable": true,
+      "capture_context_ref": "artifact://capture-context/mobile.json",
       "accessibility_status": "PASS", "accessibility_ref": "artifact://home-mobile-a11y.json", "discrepancies": []
     }
   ]
