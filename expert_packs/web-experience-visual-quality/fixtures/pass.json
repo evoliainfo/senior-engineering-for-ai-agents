@@ -1,0 +1,27 @@
+{
+  "schema": "sef.web-visual-observations.v1",
+  "target": {"kind": "preview", "locator": "preview://demo"},
+  "required_cases": [
+    {"id": "home-mobile", "state": "home-ready", "viewport": "mobile", "accessibility_required": true},
+    {"id": "home-desktop", "state": "home-ready", "viewport": "desktop", "accessibility_required": true},
+    {"id": "form-error", "state": "contact-validation-error", "viewport": "mobile", "accessibility_required": true}
+  ],
+  "observations": [
+    {
+      "id": "OBS-001", "case_id": "home-mobile", "iteration": 1,
+      "interaction_status": "PASS", "screenshot_ref": "artifact://home-mobile.png", "capture_stable": true,
+      "accessibility_status": "PASS", "accessibility_ref": "artifact://home-mobile-a11y.json", "discrepancies": []
+    },
+    {
+      "id": "OBS-002", "case_id": "home-desktop", "iteration": 1,
+      "interaction_status": "PASS", "screenshot_ref": "artifact://home-desktop.png", "capture_stable": true,
+      "accessibility_status": "PASS", "accessibility_ref": "artifact://home-desktop-a11y.json",
+      "discrepancies": [{"id": "DISC-001", "severity": "ADVISORY", "statement": "Minor non-blocking spacing difference.", "resolved": false}]
+    },
+    {
+      "id": "OBS-003", "case_id": "form-error", "iteration": 1,
+      "interaction_status": "PASS", "screenshot_ref": "artifact://form-error.png", "capture_stable": true,
+      "accessibility_status": "PASS", "accessibility_ref": "artifact://form-error-a11y.json", "discrepancies": []
+    }
+  ]
+}
