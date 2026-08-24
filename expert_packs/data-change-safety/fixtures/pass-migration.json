@@ -1,0 +1,53 @@
+{
+  "schema": "sef.data-change-safety-observations.v1",
+  "change": {
+    "id": "CHG-MIG-001",
+    "kind": "MIGRATION",
+    "target_environment": "production",
+    "destructive": false,
+    "planned_change_ref": "repo://migrations/plan-001",
+    "actual_change_ref": "git://diff/migration-001",
+    "scope_status": "PASS"
+  },
+  "rehearsal": {
+    "status": "PASS",
+    "environment_kind": "SANDBOX",
+    "environment_ref": "sandbox://db/rehearsal-001",
+    "fixture_ref": "artifact://fixtures/rehearsal-001.json",
+    "execution_ref": "artifact://runs/migration-001.json",
+    "verification_ref": "artifact://verification/migration-001.json"
+  },
+  "recovery": {
+    "strategy": "FORWARD_FIX",
+    "status": "PASS",
+    "evidence_ref": "artifact://recovery/forward-fix-001.json",
+    "backup_status": "N_A",
+    "backup_ref": null
+  },
+  "invariants": [
+    {
+      "id": "INV-ROW-COUNT",
+      "statement": "Expected business records remain present after the migration.",
+      "critical": true,
+      "pre_status": "PASS",
+      "pre_ref": "artifact://invariants/row-count-pre.json",
+      "post_status": "PASS",
+      "post_ref": "artifact://invariants/row-count-post.json"
+    },
+    {
+      "id": "INV-UNIQUE",
+      "statement": "The application uniqueness invariant remains satisfied.",
+      "critical": true,
+      "pre_status": "PASS",
+      "pre_ref": "artifact://invariants/unique-pre.json",
+      "post_status": "PASS",
+      "post_ref": "artifact://invariants/unique-post.json"
+    }
+  ],
+  "controls": [
+    {"id": "idempotency", "required": true, "status": "PASS", "evidence_ref": "artifact://controls/idempotency.json"},
+    {"id": "resumability", "required": false, "status": "N_A", "evidence_ref": null},
+    {"id": "chunking", "required": false, "status": "N_A", "evidence_ref": null},
+    {"id": "compatibility", "required": true, "status": "PASS", "evidence_ref": "artifact://controls/compatibility.json"}
+  ]
+}
