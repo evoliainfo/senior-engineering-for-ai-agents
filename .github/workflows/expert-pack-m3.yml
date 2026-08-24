@@ -1,0 +1,46 @@
+name: Stable Expert Pack M3 gate
+
+on:
+  pull_request:
+    paths:
+      - "expert_packs/**"
+      - "evals/run_expert_pack_m3.py"
+      - "docs/STABLE_EXPERT_PACK_CONTRACT_M3.md"
+      - ".github/workflows/expert-pack-m3.yml"
+      - "sef.py"
+      - "SHA256SUMS"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  expert-pack-m3:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Preserve deterministic beta runtime integrity
+        run: sha256sum -c SHA256SUMS
+
+      - name: Compile Expert Pack surfaces
+        run: |
+          python3 -m py_compile \
+            expert_packs/__init__.py \
+            expert_packs/core.py \
+            evals/run_expert_pack_m3.py
+
+      - name: Validate Expert Pack schema JSON
+        run: python3 -m json.tool expert_packs/expert-pack.schema.json >/dev/null
+
+      - name: Run deterministic M3 qualification
+        run: python3 evals/run_expert_pack_m3.py
+
+      - name: Publish M3 evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: expert-pack-m3-${{ github.run_id }}
+          path: eval-results/expert-pack-m3-report.json
+          if-no-files-found: error
