@@ -62,6 +62,20 @@ def _sha256(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
+def _normalize_markdown_text(text: str) -> str:
+    """Normalize presentation-only Markdown so contract checks target meaning.
+
+    C2 method coverage must not fail because emphasis markers split an otherwise
+    identical phrase (for example ``Do **not** ask``). This deliberately removes
+    only lightweight presentation markup and collapses whitespace; it does not
+    rewrite capability semantics or relax required method clauses.
+    """
+    normalized = text.lower()
+    for marker in ("**", "__", "`"):
+        normalized = normalized.replace(marker, "")
+    return re.sub(r"\s+", " ", normalized)
+
+
 def main() -> int:
     checks: list[dict[str, str]] = []
 
@@ -88,14 +102,14 @@ def main() -> int:
     for cap in CAPABILITIES:
         skill_path = CAP_ROOT / cap / "SKILL.md"
         meta_path = CAP_ROOT / cap / "capability.json"
-        skill_text[cap] = skill_path.read_text(encoding="utf-8").lower()
+        skill_text[cap] = _normalize_markdown_text(skill_path.read_text(encoding="utf-8"))
         metadata[cap] = _load_json(meta_path)
 
     # 18 focused DEV method-coverage cases.
     for case in cases:
         cap = case["capability"]
         text = skill_text[cap]
-        patterns = [str(value).lower() for value in case.get("required_patterns", [])]
+        patterns = [_normalize_markdown_text(str(value)) for value in case.get("required_patterns", [])]
         missing = [pattern for pattern in patterns if pattern not in text]
         checks.append(
             _check(
