@@ -1,0 +1,39 @@
+{
+  "activate_when": [
+    "A new product or major capability begins from a rough idea or outcome request",
+    "The user has not supplied a professional product brief",
+    "A proposed technical solution may be standing in for an unstated underlying problem"
+  ],
+  "category": "foundation",
+  "evals": [
+    "C3-PROD-001",
+    "C3-PROD-002",
+    "C3-PROD-003"
+  ],
+  "guardrail_hooks": [],
+  "id": "product-problem-framing",
+  "inputs": [
+    "user product intent",
+    "known business constraints",
+    "existing product context when available"
+  ],
+  "outputs": [
+    "problem and outcome frame",
+    "primary actor and first journey",
+    "first-delivery boundary and non-goals",
+    "assumptions and genuine user decisions"
+  ],
+  "purpose": "Turn rough product intent into a compact, decision-aware problem and outcome frame so engineering solves the right problem without forcing a non-expert user to author a PRD.",
+  "related_capabilities": [
+    "requirements-to-acceptance"
+  ],
+  "schema_version": 1,
+  "status": "experimental",
+  "tags": [
+    "product",
+    "greenfield",
+    "discovery",
+    "user-intent"
+  ],
+  "version": "0.1.0"
+}
