@@ -1,0 +1,39 @@
+{
+  "activate_when": [
+    "A project uses runtime configuration, credentials, or external services",
+    "Local/test/preview/production environments need explicit separation",
+    "Deployment can fail or expose secrets if configuration remains implicit"
+  ],
+  "category": "foundation",
+  "evals": [
+    "C3-ENV-001",
+    "C3-ENV-002",
+    "C3-ENV-003"
+  ],
+  "guardrail_hooks": [],
+  "id": "environment-secrets-configuration",
+  "inputs": [
+    "architecture and integration requirements",
+    "framework/platform configuration conventions",
+    "deployment environment constraints"
+  ],
+  "outputs": [
+    "configuration contract",
+    "secret/public classification",
+    "environment separation model",
+    "configuration-path verification evidence"
+  ],
+  "purpose": "Make runtime configuration explicit and safe across environments while keeping secrets out of source/evidence and avoiding unnecessary credential-related blocking.",
+  "related_capabilities": [
+    "implementation-planning"
+  ],
+  "schema_version": 1,
+  "status": "experimental",
+  "tags": [
+    "configuration",
+    "secrets",
+    "environments",
+    "deployment"
+  ],
+  "version": "0.1.0"
+}
