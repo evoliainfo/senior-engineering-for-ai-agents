@@ -1,0 +1,121 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sef.local/schemas/jit-expertise.v1.json",
+  "title": "SEF Just-In-Time Expertise Capsule v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "capsule_id",
+    "project_id",
+    "mission_need",
+    "subject",
+    "generated_at",
+    "project_context_sha256",
+    "tool_snapshot_sha256",
+    "sources",
+    "constraints",
+    "tools",
+    "verification_paths",
+    "uncertainties",
+    "status",
+    "content_sha256"
+  ],
+  "properties": {
+    "schema": {"const": "sef.jit-expertise.v1"},
+    "capsule_id": {"type": "string", "minLength": 1, "maxLength": 96},
+    "project_id": {"type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"},
+    "mission_need": {"type": "string", "minLength": 1, "maxLength": 800},
+    "subject": {"$ref": "#/$defs/subject"},
+    "generated_at": {"type": "string", "format": "date-time"},
+    "project_context_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "tool_snapshot_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "sources": {"type": "array", "minItems": 1, "maxItems": 16, "items": {"$ref": "#/$defs/source"}},
+    "constraints": {"type": "array", "minItems": 1, "maxItems": 64, "items": {"$ref": "#/$defs/constraint"}},
+    "tools": {"type": "array", "maxItems": 32, "items": {"$ref": "#/$defs/tool"}},
+    "verification_paths": {"type": "array", "maxItems": 32, "items": {"$ref": "#/$defs/verification"}},
+    "uncertainties": {"type": "array", "maxItems": 32, "items": {"$ref": "#/$defs/uncertainty"}},
+    "status": {"enum": ["READY", "REVIEW_REQUIRED", "BLOCKED_SOURCE_GAP", "BLOCKED_TOOL_GAP", "STALE"]},
+    "content_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+  },
+  "$defs": {
+    "subject": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "name", "version_context"],
+      "properties": {
+        "kind": {"enum": ["EXTERNAL_PROVIDER", "FRAMEWORK", "REPOSITORY_CONTRACT", "STANDARD"]},
+        "name": {"type": "string", "minLength": 1, "maxLength": 300},
+        "version_context": {"type": ["string", "null"], "maxLength": 200}
+      }
+    },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "tier", "uri", "observed_at", "max_age_seconds", "content_sha256", "subject_version", "status"],
+      "properties": {
+        "id": {"type": "string", "minLength": 1, "maxLength": 96},
+        "tier": {"enum": ["REPOSITORY", "OFFICIAL", "TOOL_SCHEMA", "STANDARD", "SECONDARY"]},
+        "uri": {"type": "string", "minLength": 1, "maxLength": 1200},
+        "observed_at": {"type": "string", "format": "date-time"},
+        "max_age_seconds": {"type": ["integer", "null"], "minimum": 0},
+        "content_sha256": {"type": ["string", "null"], "pattern": "^[0-9a-f]{64}$"},
+        "subject_version": {"type": ["string", "null"], "maxLength": 200},
+        "status": {"enum": ["OBSERVED", "UNAVAILABLE"]}
+      }
+    },
+    "support": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["source_ref", "anchor"],
+      "properties": {
+        "source_ref": {"type": "string", "minLength": 1, "maxLength": 96},
+        "anchor": {"type": "string", "minLength": 1, "maxLength": 320}
+      }
+    },
+    "constraint": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "statement", "materiality", "supports"],
+      "properties": {
+        "id": {"type": "string", "minLength": 1, "maxLength": 96},
+        "statement": {"type": "string", "minLength": 1, "maxLength": 1200},
+        "materiality": {"enum": ["MATERIAL", "ADVISORY"]},
+        "supports": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"$ref": "#/$defs/support"}}
+      }
+    },
+    "tool": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["capability", "availability", "access", "observed_at"],
+      "properties": {
+        "capability": {"type": "string", "pattern": "^[a-z0-9]+(?:_[a-z0-9]+)*$"},
+        "availability": {"enum": ["AVAILABLE", "UNAVAILABLE", "UNAUTHENTICATED"]},
+        "access": {"enum": ["NONE", "READ", "WRITE"]},
+        "observed_at": {"type": "string", "format": "date-time"}
+      }
+    },
+    "verification": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "description", "required_tools", "supports"],
+      "properties": {
+        "id": {"type": "string", "minLength": 1, "maxLength": 96},
+        "description": {"type": "string", "minLength": 1, "maxLength": 1200},
+        "required_tools": {"type": "array", "uniqueItems": true, "items": {"type": "string", "pattern": "^[a-z0-9]+(?:_[a-z0-9]+)*$"}},
+        "supports": {"type": "array", "uniqueItems": true, "items": {"$ref": "#/$defs/support"}}
+      }
+    },
+    "uncertainty": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "statement", "blocking", "source_refs"],
+      "properties": {
+        "id": {"type": "string", "minLength": 1, "maxLength": 96},
+        "statement": {"type": "string", "minLength": 1, "maxLength": 1200},
+        "blocking": {"type": "boolean"},
+        "source_refs": {"type": "array", "uniqueItems": true, "items": {"type": "string", "minLength": 1, "maxLength": 96}}
+      }
+    }
+  }
+}
