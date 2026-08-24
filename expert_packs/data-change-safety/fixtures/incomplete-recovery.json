@@ -1,0 +1,44 @@
+{
+  "schema": "sef.data-change-safety-observations.v1",
+  "change": {
+    "id": "CHG-TRANSFORM-001",
+    "kind": "DATA_TRANSFORM",
+    "target_environment": "production",
+    "destructive": false,
+    "planned_change_ref": "repo://transforms/plan-001",
+    "actual_change_ref": "git://diff/transform-001",
+    "scope_status": "PASS"
+  },
+  "rehearsal": {
+    "status": "PASS",
+    "environment_kind": "SANDBOX",
+    "environment_ref": "sandbox://db/transform-001",
+    "fixture_ref": "artifact://fixtures/transform-001.json",
+    "execution_ref": "artifact://runs/transform-001.json",
+    "verification_ref": "artifact://verification/transform-001.json"
+  },
+  "recovery": {
+    "strategy": "FORWARD_FIX",
+    "status": "NOT_RUN",
+    "evidence_ref": null,
+    "backup_status": "N_A",
+    "backup_ref": null
+  },
+  "invariants": [
+    {
+      "id": "INV-TRANSFORM",
+      "statement": "Transformed values preserve the documented business meaning.",
+      "critical": true,
+      "pre_status": "PASS",
+      "pre_ref": "artifact://invariants/transform-pre.json",
+      "post_status": "PASS",
+      "post_ref": "artifact://invariants/transform-post.json"
+    }
+  ],
+  "controls": [
+    {"id": "idempotency", "required": true, "status": "PASS", "evidence_ref": "artifact://controls/transform-idempotency.json"},
+    {"id": "resumability", "required": false, "status": "N_A", "evidence_ref": null},
+    {"id": "chunking", "required": false, "status": "N_A", "evidence_ref": null},
+    {"id": "compatibility", "required": true, "status": "PASS", "evidence_ref": "artifact://controls/transform-compatibility.json"}
+  ]
+}
