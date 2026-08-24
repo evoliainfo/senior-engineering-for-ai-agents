@@ -1,0 +1,40 @@
+{
+  "activate_when": [
+    "A greenfield architecture has been chosen and the project repository must be initialized",
+    "An existing empty/minimal repository lacks executable engineering foundations",
+    "Bootstrap decisions must remain compatible with the intended deployment model"
+  ],
+  "category": "foundation",
+  "evals": [
+    "C3-BOOT-001",
+    "C3-BOOT-002",
+    "C3-BOOT-003"
+  ],
+  "guardrail_hooks": [],
+  "id": "project-bootstrap-foundations",
+  "inputs": [
+    "selected architecture and stack",
+    "first-delivery requirements",
+    "deployment/runtime constraints"
+  ],
+  "outputs": [
+    "maintainable minimal repository structure",
+    "executable quality surfaces",
+    "safe configuration boundary",
+    "bootstrap and deployment-compatibility evidence"
+  ],
+  "purpose": "Create the smallest maintainable project foundation required by the chosen architecture without speculative tooling or infrastructure.",
+  "related_capabilities": [
+    "environment-secrets-configuration",
+    "implementation-planning"
+  ],
+  "schema_version": 1,
+  "status": "experimental",
+  "tags": [
+    "bootstrap",
+    "greenfield",
+    "tooling",
+    "project-foundations"
+  ],
+  "version": "0.1.0"
+}
