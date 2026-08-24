@@ -1,0 +1,13 @@
+{
+  "schema": "sef.eval.capability-c2-pilot-reservations.v1",
+  "purpose": "Reserve one future outcome-level brownfield task per C2 capability without exposing scenario content before candidate freeze.",
+  "finalize_after_candidate_freeze": true,
+  "reservations": [
+    {"id": "PILOT-C2-REPO-01", "capability": "repository-discovery", "scenario_content": null},
+    {"id": "PILOT-C2-REQ-01", "capability": "requirements-to-acceptance", "scenario_content": null},
+    {"id": "PILOT-C2-PLAN-01", "capability": "implementation-planning", "scenario_content": null},
+    {"id": "PILOT-C2-TDD-01", "capability": "tdd-bug-reproduction", "scenario_content": null},
+    {"id": "PILOT-C2-DEBUG-01", "capability": "systematic-debugging", "scenario_content": null},
+    {"id": "PILOT-C2-VERIFY-01", "capability": "verification-before-completion", "scenario_content": null}
+  ]
+}
