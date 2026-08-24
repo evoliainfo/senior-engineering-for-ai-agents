@@ -3,7 +3,8 @@
 
 This evaluator never performs browser work itself. It grades observations
 collected by the active harness and distinguishes observed defects from missing
-or inconclusive evidence.
+or inconclusive evidence. Material discrepancy history is sticky until an
+explicit later observation resolves the same discrepancy id.
 """
 from __future__ import annotations
 
@@ -79,7 +80,8 @@ def _validate_observation(obs: Any, index: int) -> dict[str, Any]:
         raise VisualEvidenceError(f"{label} must be an object")
     expected = {
         "id", "case_id", "iteration", "interaction_status", "screenshot_ref",
-        "capture_stable", "accessibility_status", "accessibility_ref", "discrepancies"
+        "capture_stable", "capture_context_ref", "accessibility_status",
+        "accessibility_ref", "discrepancies"
     }
     if set(obs) != expected:
         raise VisualEvidenceError(f"{label} keys must equal {sorted(expected)}")
@@ -93,6 +95,8 @@ def _validate_observation(obs: Any, index: int) -> dict[str, Any]:
         _text(obs["screenshot_ref"], f"{label}.screenshot_ref")
     if not isinstance(obs["capture_stable"], bool):
         raise VisualEvidenceError(f"{label}.capture_stable must be boolean")
+    if obs["capture_context_ref"] is not None:
+        _text(obs["capture_context_ref"], f"{label}.capture_context_ref")
     if obs["accessibility_status"] not in OBS_STATUSES:
         raise VisualEvidenceError(f"{label}.accessibility_status is invalid")
     if obs["accessibility_ref"] is not None:
@@ -129,7 +133,33 @@ def validate_document(document: Any) -> dict[str, Any]:
     unknown = sorted({item["case_id"] for item in observations} - case_ids)
     if unknown:
         raise VisualEvidenceError(f"observations reference unknown cases: {unknown}")
+
+    case_iterations = [(item["case_id"], item["iteration"]) for item in observations]
+    if len(case_iterations) != len(set(case_iterations)):
+        raise VisualEvidenceError("each case iteration may have only one observation")
+
+    discrepancy_identity: dict[str, tuple[str, str, str]] = {}
+    for obs in observations:
+        for item in obs["discrepancies"]:
+            identity = (obs["case_id"], item["severity"], item["statement"])
+            previous = discrepancy_identity.get(item["id"])
+            if previous is not None and previous != identity:
+                raise VisualEvidenceError(
+                    f"discrepancy {item['id']} changed case, severity or statement across iterations"
+                )
+            discrepancy_identity[item["id"]] = identity
     return document
+
+
+def _open_material_discrepancies(history: list[dict[str, Any]]) -> list[str]:
+    latest: dict[str, dict[str, Any]] = {}
+    for obs in history:
+        for item in obs["discrepancies"]:
+            latest[item["id"]] = item
+    return sorted(
+        item_id for item_id, item in latest.items()
+        if item["severity"] in {"BLOCKER", "MATERIAL"} and not item["resolved"]
+    )
 
 
 def evaluate(document: dict[str, Any]) -> dict[str, Any]:
@@ -138,7 +168,7 @@ def evaluate(document: dict[str, Any]) -> dict[str, Any]:
     for obs in document["observations"]:
         by_case.setdefault(obs["case_id"], []).append(obs)
     for items in by_case.values():
-        items.sort(key=lambda item: (item["iteration"], item["id"]))
+        items.sort(key=lambda item: item["iteration"])
 
     case_results = []
     overall = "PASS"
@@ -157,6 +187,8 @@ def evaluate(document: dict[str, Any]) -> dict[str, Any]:
             incomplete_reasons.append("INTERACTION_NOT_PROVEN")
         if current["screenshot_ref"] is None:
             incomplete_reasons.append("VISUAL_CAPTURE_MISSING")
+        if current["capture_context_ref"] is None:
+            incomplete_reasons.append("CAPTURE_CONTEXT_MISSING")
         if not current["capture_stable"]:
             incomplete_reasons.append("CAPTURE_NOT_COMPARABLE")
         if case["accessibility_required"]:
@@ -166,12 +198,11 @@ def evaluate(document: dict[str, Any]) -> dict[str, Any]:
                 incomplete_reasons.append("ACCESSIBILITY_NOT_PROVEN")
             if current["accessibility_ref"] is None:
                 incomplete_reasons.append("ACCESSIBILITY_EVIDENCE_MISSING")
-        unresolved_material = [
-            item["id"] for item in current["discrepancies"]
-            if not item["resolved"] and item["severity"] in {"BLOCKER", "MATERIAL"}
-        ]
+
+        unresolved_material = _open_material_discrepancies(history)
         if unresolved_material:
             fail_reasons.append("UNRESOLVED_MATERIAL_DISCREPANCY")
+
         if fail_reasons:
             status = "FAIL"
             reason = ",".join(sorted(set(fail_reasons)))
