@@ -1,0 +1,24 @@
+{
+  "activate_when": [
+    "Replace with an evidence-based activation condition"
+  ],
+  "category": "foundation",
+  "evals": [
+    "CAP-REPLACE-001"
+  ],
+  "guardrail_hooks": [],
+  "id": "replace-with-capability-id",
+  "inputs": [
+    "user intent",
+    "repository evidence"
+  ],
+  "outputs": [
+    "verified engineering outcome"
+  ],
+  "purpose": "Replace with the capability's engineering purpose.",
+  "related_capabilities": [],
+  "schema_version": 1,
+  "status": "experimental",
+  "tags": [],
+  "version": "0.1.0"
+}

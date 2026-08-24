@@ -1,0 +1,42 @@
+name: Capability System C1 contract gate
+
+on:
+  pull_request:
+    paths:
+      - "capabilities/**"
+      - "tools/capability_registry.py"
+      - "evals/run_capability_contract_c1.py"
+      - ".github/workflows/capability-system-c1.yml"
+      - "sef.py"
+      - "SHA256SUMS"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  capability-contract-c1:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Prove deterministic v1.5 runtime is untouched
+        run: sha256sum -c SHA256SUMS
+
+      - name: Compile registry and C1 qualification
+        run: python3 -m py_compile tools/capability_registry.py evals/run_capability_contract_c1.py
+
+      - name: Validate committed capability manifest
+        run: python3 tools/capability_registry.py check-manifest --root capabilities --manifest capabilities/manifest.json
+
+      - name: Run C1 capability contract controls
+        run: python3 evals/run_capability_contract_c1.py --report artifacts/capability-c1-report.json
+
+      - name: Publish C1 evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: capability-system-c1-${{ github.run_id }}
+          path: artifacts/capability-c1-report.json
+          if-no-files-found: error
