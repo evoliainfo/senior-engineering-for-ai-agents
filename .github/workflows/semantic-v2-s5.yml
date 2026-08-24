@@ -81,7 +81,10 @@ jobs:
             semantic-v2-s5-replay.json
           retention-days: 90
 
+  # A single model sample is retained only as an explicit manual diagnostic.
+  # PR promotion now uses the bounded three-sample S5R stability workflow.
   semantic-v2-s5-openai:
+    if: ${{ github.event_name == 'workflow_dispatch' }}
     runs-on: ubuntu-24.04
     needs: semantic-v2-s5-replay
     env:
