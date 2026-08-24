@@ -4,6 +4,10 @@
 This evaluates capability contracts, method coverage, flexibility/context properties,
 registry integrity, reserved pilot separation, lifecycle coverage documentation and
 legacy runtime integrity. It does not call a model and does not claim agent outcome value.
+
+C2 is a regression gate after later capability tranches are added. It therefore proves
+that the six C2 capabilities remain present and satisfy their original contracts; it
+must not require the entire catalog to remain permanently fixed at six entries.
 """
 from __future__ import annotations
 
@@ -63,13 +67,7 @@ def _sha256(path: Path) -> str:
 
 
 def _normalize_markdown_text(text: str) -> str:
-    """Normalize presentation-only Markdown so contract checks target meaning.
-
-    C2 method coverage must not fail because emphasis markers split an otherwise
-    identical phrase (for example ``Do **not** ask``). This deliberately removes
-    only lightweight presentation markup and collapses whitespace; it does not
-    rewrite capability semantics or relax required method clauses.
-    """
+    """Normalize presentation-only Markdown so contract checks target meaning."""
     normalized = text.lower()
     for marker in ("**", "__", "`"):
         normalized = normalized.replace(marker, "")
@@ -105,7 +103,6 @@ def main() -> int:
         skill_text[cap] = _normalize_markdown_text(skill_path.read_text(encoding="utf-8"))
         metadata[cap] = _load_json(meta_path)
 
-    # 18 focused DEV method-coverage cases.
     for case in cases:
         cap = case["capability"]
         text = skill_text[cap]
@@ -119,13 +116,11 @@ def main() -> int:
             )
         )
 
-    # Metadata must link exactly to the three preregistered DEV cases per skill.
     for cap in CAPABILITIES:
         expected = sorted(case["id"] for case in cases_by_cap[cap])
         actual = sorted(metadata[cap].get("evals", []))
         checks.append(_check(f"C2-EVAL-LINK-{cap}", actual == expected, f"expected={expected} actual={actual}"))
 
-    # Capability quality contract: method depth without unnecessary rigidity/context loading.
     for cap in CAPABILITIES:
         text = skill_text[cap]
         words = re.findall(r"\b[\w'-]+\b", text)
@@ -142,7 +137,6 @@ def main() -> int:
         )
         checks.append(_check(f"C2-QUALITY-{cap}", quality_ok, detail))
 
-    # Reserve pilot slots without exposing/tuning against outcome task content.
     reservations_doc = _load_json(RESERVATIONS_PATH)
     reservations = reservations_doc.get("reservations", [])
     reservation_caps = [item.get("capability") for item in reservations]
@@ -155,13 +149,20 @@ def main() -> int:
     )
     checks.append(_check("C2-PILOT-SEPARATION", pilot_ok, f"reservations={len(reservations)} content_redacted={pilot_ok}"))
 
-    # Registry must accept exactly the C2 tranche and produce a deterministic manifest.
+    # C2 is a regression slice of an extensible registry. Later tranches may add
+    # entries, but every original C2 capability must remain registered and valid.
     manifest = build_manifest(CAP_ROOT)
     manifest_ids = [entry["id"] for entry in manifest["capabilities"]]
-    registry_ok = manifest["capability_count"] == 6 and manifest_ids == sorted(CAPABILITIES)
-    checks.append(_check("C2-REGISTRY", registry_ok, f"count={manifest['capability_count']} ids={manifest_ids}"))
+    missing_c2 = sorted(set(CAPABILITIES) - set(manifest_ids))
+    registry_ok = not missing_c2 and manifest_ids == sorted(manifest_ids)
+    checks.append(
+        _check(
+            "C2-REGISTRY",
+            registry_ok,
+            f"catalog_count={manifest['capability_count']} c2_present={not missing_c2} missing_c2={missing_c2}",
+        )
+    )
 
-    # Product contract must preserve full idea-to-production lifecycle gaps explicitly.
     lifecycle = DELIVERY_CONTRACT.read_text(encoding="utf-8").lower()
     required_lifecycle = [
         "stage 0 — problem and outcome framing",
@@ -182,7 +183,6 @@ def main() -> int:
     missing_lifecycle = [value for value in required_lifecycle if value not in lifecycle]
     checks.append(_check("C2-SENIOR-DELIVERY-CONTRACT", not missing_lifecycle, f"missing={missing_lifecycle}"))
 
-    # Legacy deterministic beta runtime remains untouched during capability migration.
     sums = (ROOT / "SHA256SUMS").read_text(encoding="utf-8").splitlines()
     expected_sef = None
     for line in sums:
@@ -206,6 +206,7 @@ def main() -> int:
         "agent_outcome_claim": False,
         "provider_calls": 0,
         "capability_count": manifest["capability_count"],
+        "c2_capability_count": len(CAPABILITIES),
         "case_count": len(cases),
         "check_count": len(checks),
         "pass_count": pass_count,
