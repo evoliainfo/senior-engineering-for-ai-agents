@@ -1,0 +1,30 @@
+{
+  "schema": "sef.eval.capability-c3.v1",
+  "independent_holdout": false,
+  "purpose": "DEV contract coverage for the six C3 senior-inception capabilities. These cases validate declared methods and flexibility; they do not measure agent outcome superiority.",
+  "cases": [
+    {"id":"C3-PROD-001","capability":"product-problem-framing","required_patterns":["do not make the user write a prd","separate problem from proposed solution","smallest coherent first delivery"]},
+    {"id":"C3-PROD-002","capability":"product-problem-framing","required_patterns":["delivery success","business outcome hypothesis","longer-term outcome"]},
+    {"id":"C3-PROD-003","capability":"product-problem-framing","required_patterns":["which database/framework should i use?","user question vs professional inference","ask only when different answers would materially change"]},
+
+    {"id":"C3-ARCH-001","capability":"solution-architecture-stack-selection","required_patterns":["choose the simplest architecture","define system boundaries before products","start with one deployable application/service"]},
+    {"id":"C3-ARCH-002","capability":"solution-architecture-stack-selection","required_patterns":["prefer boring, supported technology","include deployment reality in architecture","do not treat deployment as an afterthought"]},
+    {"id":"C3-ARCH-003","capability":"solution-architecture-stack-selection","required_patterns":["do not ask a non-expert user to choose ordinary implementation technology","record only material decisions","formal adr only when"]},
+
+    {"id":"C3-BOOT-001","capability":"project-bootstrap-foundations","required_patterns":["bootstrap the engineering foundation","minimal repository shape","avoid placeholder directories"]},
+    {"id":"C3-BOOT-002","capability":"project-bootstrap-foundations","required_patterns":["establish executable quality surfaces","first useful test/verification anchor","check deployment compatibility early"]},
+    {"id":"C3-BOOT-003","capability":"project-bootstrap-foundations","required_patterns":["do not equate \"senior\" with generating every possible tool","a generator is scaffolding, not architecture authority","do not build a complex delivery pipeline"]},
+
+    {"id":"C3-ENV-001","capability":"environment-secrets-configuration","required_patterns":["configuration should be explicit, validated, environment-aware","classify secret vs non-secret","server secrets in client-exposed configuration"]},
+    {"id":"C3-ENV-002","capability":"environment-secrets-configuration","required_patterns":["define environment boundaries","establish a configuration contract","validate early and clearly"]},
+    {"id":"C3-ENV-003","capability":"environment-secrets-configuration","required_patterns":["ask the user for credential provisioning/authorization only when","do not block unrelated implementation","not_run"]},
+
+    {"id":"C3-IMPL-001","capability":"architecture-conformant-implementation","required_patterns":["change the authoritative layer","repository reality outranks personal preference","smallest maintainable change"]},
+    {"id":"C3-IMPL-002","capability":"architecture-conformant-implementation","required_patterns":["implement from authoritative state outward","preserve contracts deliberately","maintain evidence while coding"]},
+    {"id":"C3-IMPL-003","capability":"architecture-conformant-implementation","required_patterns":["reassess the actual diff","greenfield adaptation","brownfield adaptation"]},
+
+    {"id":"C3-REVIEW-001","capability":"code-review-diff-review","required_patterns":["review the actual diff first","correctness before style","findings need evidence"]},
+    {"id":"C3-REVIEW-002","capability":"code-review-diff-review","required_patterns":["review architecture and ownership","review tests as evidence, not decoration","review deployability signals"]},
+    {"id":"C3-REVIEW-003","capability":"code-review-diff-review","required_patterns":["classify findings by severity and confidence","defect vs preference","ready_for_final_verification"]}
+  ]
+}
