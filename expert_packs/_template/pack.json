@@ -1,0 +1,47 @@
+{
+  "schema": "sef.expert-pack.v1",
+  "id": "replace-with-pack-id",
+  "version": "0.1.0",
+  "status": "experimental",
+  "purpose": "Replace with the durable executable specialty supplied by this pack.",
+  "activate_when": [
+    "Replace with an evidence-based activation condition."
+  ],
+  "tool_requirements": [
+    {
+      "capability": "replace_tool_capability",
+      "access": "READ",
+      "sensitivity": "LOCAL",
+      "required": true,
+      "evidence": [
+        "Replace with observable evidence obtainable through this tool."
+      ]
+    }
+  ],
+  "entry_points": [
+    {
+      "id": "replace-entry-point",
+      "kind": "SCRIPT",
+      "path": "scripts/replace.py",
+      "purpose": "Replace with the executable behavior provided by this entry point."
+    }
+  ],
+  "evidence_contract": {
+    "requires": [],
+    "produces": [
+      "replace-with-evidence-kind"
+    ]
+  },
+  "failure_recovery": {
+    "failure_modes": [
+      "Replace with a material failure mode."
+    ],
+    "recovery_actions": [
+      "Replace with a safe recovery action."
+    ],
+    "stop_conditions": [
+      "Replace with a condition where the pack must stop rather than claim success."
+    ]
+  },
+  "tags": []
+}
