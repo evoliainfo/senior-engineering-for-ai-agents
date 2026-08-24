@@ -1,0 +1,18 @@
+{
+  "schema": "sef.web-visual-observations.v1",
+  "target": {"kind": "preview", "locator": "preview://demo"},
+  "required_cases": [
+    {"id": "dashboard-desktop", "state": "dashboard-ready", "viewport": "desktop", "accessibility_required": true}
+  ],
+  "observations": [
+    {
+      "id": "OBS-001", "case_id": "dashboard-desktop", "iteration": 1,
+      "interaction_status": "PASS", "screenshot_ref": "artifact://dashboard.png", "capture_stable": true,
+      "capture_context_ref": "artifact://capture-context/desktop.json",
+      "accessibility_status": "PASS", "accessibility_ref": "artifact://dashboard-a11y.json",
+      "discrepancies": [
+        {"id": "DISC-001", "severity": "MATERIAL", "statement": "Primary action is clipped below the viewport and cannot be used as designed.", "resolved": false}
+      ]
+    }
+  ]
+}

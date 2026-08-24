@@ -1,0 +1,77 @@
+{
+  "schema": "sef.expert-pack.v1",
+  "id": "web-experience-visual-quality",
+  "version": "0.1.0",
+  "status": "experimental",
+  "purpose": "Evaluate evidence-backed web experience quality across declared critical states and responsive viewports without inventing browser observations or visual thresholds.",
+  "activate_when": [
+    "A web UI change has user-visible layout, interaction-state, responsive, accessibility or visual-regression risk.",
+    "A Delivery Mission claims preview or production web experience quality that requires browser-observed evidence."
+  ],
+  "tool_requirements": [
+    {
+      "capability": "browser",
+      "access": "READ",
+      "sensitivity": "SANDBOX",
+      "required": true,
+      "evidence": [
+        "Observed critical-state behavior and accessibility structure in a real browser."
+      ]
+    },
+    {
+      "capability": "visual_capture",
+      "access": "READ",
+      "sensitivity": "SANDBOX",
+      "required": true,
+      "evidence": [
+        "Screenshot or equivalent rendered visual evidence for every declared visual case."
+      ]
+    }
+  ],
+  "entry_points": [
+    {
+      "id": "evaluate-web-visual-evidence",
+      "kind": "EVALUATOR",
+      "path": "evaluators/evaluate.py",
+      "purpose": "Evaluate declared critical-state, responsive, accessibility and visual-discrepancy evidence and return PASS, FAIL or INCOMPLETE."
+    }
+  ],
+  "evidence_contract": {
+    "requires": [
+      "declared visual QA cases",
+      "browser-observed state evidence",
+      "visual capture references",
+      "accessibility observations where required"
+    ],
+    "produces": [
+      "web-visual-quality-report"
+    ]
+  },
+  "failure_recovery": {
+    "failure_modes": [
+      "A required critical state or viewport has no observation.",
+      "Browser interaction for a required case failed or was not run.",
+      "Required accessibility evidence failed or is absent.",
+      "A blocker or material visual discrepancy remains unresolved.",
+      "Visual evidence was captured in an unstable or incomparable environment and cannot support the claim."
+    ],
+    "recovery_actions": [
+      "Capture or rerun the missing required case in the resolved browser/visual tool surface.",
+      "Correct the UI or accessibility defect and submit a new observation linked to the declared case.",
+      "Resolve material discrepancies with a new evidence iteration rather than weakening the acceptance claim.",
+      "If rendering conditions are not comparable, recapture baseline and actual evidence under a controlled common environment."
+    ],
+    "stop_conditions": [
+      "Required browser or visual-capture capability is unavailable.",
+      "A required case cannot be exercised without unavailable authorization or data.",
+      "Evidence is insufficient to distinguish a real visual defect from an unstable capture environment."
+    ]
+  },
+  "tags": [
+    "frontend",
+    "visual-qa",
+    "responsive",
+    "accessibility",
+    "browser-evidence"
+  ]
+}
