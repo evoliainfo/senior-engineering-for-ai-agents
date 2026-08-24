@@ -1,0 +1,21 @@
+{
+  "schema": "sef.eval.capability-c4-pilot-reservations.v1",
+  "candidate_freeze_required_before_finalization": true,
+  "scenario_content_withheld": true,
+  "independent_holdout_claim": false,
+  "purpose": "Reserve the 12 mixed pilot slots without revealing task content before the 12-capability C3 candidate is frozen.",
+  "reservations": [
+    {"id":"C4-PILOT-G-001","track":"greenfield","scenario_content":null},
+    {"id":"C4-PILOT-G-002","track":"greenfield","scenario_content":null},
+    {"id":"C4-PILOT-G-003","track":"greenfield","scenario_content":null},
+    {"id":"C4-PILOT-G-004","track":"greenfield","scenario_content":null},
+    {"id":"C4-PILOT-G-005","track":"greenfield","scenario_content":null},
+    {"id":"C4-PILOT-G-006","track":"greenfield","scenario_content":null},
+    {"id":"C4-PILOT-B-001","track":"brownfield","scenario_content":null},
+    {"id":"C4-PILOT-B-002","track":"brownfield","scenario_content":null},
+    {"id":"C4-PILOT-B-003","track":"brownfield","scenario_content":null},
+    {"id":"C4-PILOT-B-004","track":"brownfield","scenario_content":null},
+    {"id":"C4-PILOT-B-005","track":"brownfield","scenario_content":null},
+    {"id":"C4-PILOT-B-006","track":"brownfield","scenario_content":null}
+  ]
+}
