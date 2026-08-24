@@ -20,17 +20,26 @@ Record the planned change and the actual change reference. Classify the change a
 - `DATA_TRANSFORM`
 - `DESTRUCTIVE_CLEANUP`
 
-Declare whether the change is destructive and which execution controls are required for this change: `idempotency`, `resumability`, `chunking`, `compatibility`.
+Declare whether the change is destructive. `DESTRUCTIVE_CLEANUP` must always set `destructive=true`.
+
+Account explicitly for all four durable execution controls:
+
+- `idempotency`
+- `resumability`
+- `chunking`
+- `compatibility`
+
+Each control is either `required=true` with observable evidence, or `required=false` with status `N_A`. Do not omit a control simply because it looks inconvenient or irrelevant.
 
 ## Rehearse with real data tooling
 
-Resolve `database_admin` through M4/tool resolution. Rehearse against a non-production surface with representative fixtures.
+Resolve `database_admin` through M4/tool resolution. Rehearse only against a non-production `SANDBOX` or `PREVIEW` surface with representative fixtures. Production is a target environment, not a rehearsal environment.
 
 Collect:
 
 - reviewed-plan and actual-change references;
 - scope-match status;
-- rehearsal execution and verification evidence;
+- rehearsal environment, fixture, execution and verification evidence;
 - pre/post critical data invariants;
 - evidence for every required execution control;
 - recovery strategy and recovery exercise evidence;
@@ -42,7 +51,7 @@ Run `evaluators/evaluate.py` against the structured evidence document.
 
 The evaluator returns:
 
-- `PASS` only when the change scope matches, rehearsal passes, critical invariants pass, required controls pass with evidence, recovery is proven, and destructive changes have backup evidence;
+- `PASS` only when the change scope matches, rehearsal passes, invariants pass, required controls pass with evidence, recovery is proven, and destructive changes have backup evidence;
 - `FAIL` when observed evidence demonstrates a material safety defect or an explicitly unsafe recovery state;
 - `INCOMPLETE` when evidence was not run, is missing or remains inconclusive.
 
@@ -50,9 +59,9 @@ Never reinterpret `NOT_RUN` as success.
 
 ## Recovery semantics
 
-A data change must declare one of `ROLLBACK`, `RESTORE` or `FORWARD_FIX` as its recovery strategy. `NONE` cannot support a passing safety claim.
+A data change must declare one of `ROLLBACK`, `RESTORE` or `FORWARD_FIX` as its recovery strategy. `NONE` cannot support a passing safety claim and, when declared, must use status `N_A` with no recovery evidence. This prevents contradictory evidence such as “no recovery strategy” combined with “recovery passed.”
 
-For a destructive change, backup evidence is mandatory. The backup reference is not itself proof that restore works: the recovery exercise must also pass with evidence.
+For a destructive change, backup evidence is mandatory. The backup reference is not itself proof that recovery works: the recovery exercise must also pass with evidence.
 
 ## Scope boundary
 
