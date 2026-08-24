@@ -8,10 +8,14 @@ from __future__ import annotations
 
 import argparse
 import json
+import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
-from project_state import (
+REPO_ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(REPO_ROOT))
+
+from project_state import (  # noqa: E402
     ProjectStateError,
     add_entry,
     add_evidence,
