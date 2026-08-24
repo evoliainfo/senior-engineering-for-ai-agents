@@ -44,6 +44,28 @@ Therefore the following are **not differentiators by themselves**:
 
 They can remain useful internal primitives only when they improve outcomes measurably or support a higher-order capability.
 
+## Broader 2026 coding-agent baseline
+
+SEF must benchmark against the market ceiling, not only one harness.
+
+Current competing agent environments also expose high-level capabilities that make many generic skills commodity:
+
+### Cursor
+
+Current Cursor Agent includes native browser control with visual screenshots, console output and network inspection. It explicitly supports application testing, accessibility auditing, design-to-code, screenshot-guided UI refinement and automated browser workflows without requiring a separate browser plugin.
+
+### GitHub Copilot agents
+
+Current GitHub Copilot agent surfaces support asynchronous repository work, planning/coding/PR workflows, parallel session orchestration, built-in agent skills, MCP connectivity and cloud-agent web interaction through Playwright. The GitHub Copilot app also positions itself around managing parallel workstreams and the PR lifecycle.
+
+### Consequence for SEF
+
+The competitive baseline is therefore no longer "can the agent write, test and review code?" It is closer to:
+
+> Can an agent autonomously navigate code and tools, use a real browser, operate parallel workstreams, connect to external systems and progress toward a deployable outcome?
+
+SEF must add value above that baseline.
+
 ## ECC baseline
 
 ECC currently provides a broad engineering operating system rather than a small prompt pack. Its public repository includes hundreds of skills, dozens of specialized agents, hooks, rules, memory/continuous-learning concepts, security scanning, deployment patterns, production-audit methods and multi-harness support.
