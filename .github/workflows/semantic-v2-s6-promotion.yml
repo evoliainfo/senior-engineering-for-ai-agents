@@ -1,0 +1,72 @@
+name: Semantic Routing v2 S6 promotion gate
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'semantic_v2/**'
+      - 'evals/run_semantic_v2_s6.py'
+      - 'docs/SEMANTIC_ROUTING_V2_S6.md'
+      - '.github/workflows/semantic-v2-s6-promotion.yml'
+permissions:
+  contents: read
+jobs:
+  semantic-v2-s6-promotion:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Prove frozen v1.5 runtime and S5-qualified semantic inputs are untouched
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin main
+          sha256sum -c SHA256SUMS
+          test "$(sha256sum sef.py | awk '{print $1}')" = "c2203602cb53229aba55bbbb518725c155785838915e75267714bc4e2d3d35ee"
+          git diff --exit-code origin/main...HEAD -- \
+            sef.py SHA256SUMS \
+            semantic_v2/contracts.py \
+            semantic_v2/model_extractor.py \
+            semantic_v2/openai_responses_provider.py \
+            semantic_v2/policy_composer.py \
+            evals/semantic_v2/s5_corpus.json
+      - name: Compile S0-S6 implementation
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m py_compile \
+            semantic_v2/contracts.py \
+            semantic_v2/bridge_v15.py \
+            semantic_v2/model_extractor.py \
+            semantic_v2/openai_responses_provider.py \
+            semantic_v2/policy_composer.py \
+            semantic_v2/shadow_integration.py \
+            semantic_v2/active_routing.py \
+            evals/run_semantic_v2_s0_s1.py \
+            evals/run_semantic_v2_s2.py \
+            evals/run_semantic_v2_s3.py \
+            evals/run_semantic_v2_s4.py \
+            evals/run_semantic_v2_s5.py \
+            evals/run_semantic_v2_s6.py
+      - name: Re-run S0-S1
+        run: PYTHONPATH=. python3 evals/run_semantic_v2_s0_s1.py
+      - name: Re-run S2
+        run: PYTHONPATH=. python3 evals/run_semantic_v2_s2.py
+      - name: Re-run S3
+        run: PYTHONPATH=. python3 evals/run_semantic_v2_s3.py
+      - name: Re-run S4
+        run: PYTHONPATH=. python3 evals/run_semantic_v2_s4.py
+      - name: Re-run S5 replay qualification
+        run: PYTHONPATH=. python3 evals/run_semantic_v2_s5.py --provider replay --output semantic-v2-s5-replay-s6.json
+      - name: Run S6 active promotion controls
+        run: PYTHONPATH=. python3 evals/run_semantic_v2_s6.py
+      - name: Publish S6 promotion evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: semantic-v2-s6-promotion-${{ github.run_id }}
+          path: |
+            semantic-v2-s5-replay-s6.json
+            semantic-v2-s6-promotion.json
+          if-no-files-found: error
+          retention-days: 90
