@@ -1,0 +1,40 @@
+{
+  "activate_when": [
+    "Material work in an unfamiliar existing repository",
+    "The responsible files or architecture boundary are not yet clear",
+    "Repository conventions should determine the implementation approach"
+  ],
+  "category": "foundation",
+  "evals": [
+    "C2-REPO-001",
+    "C2-REPO-002",
+    "C2-REPO-003"
+  ],
+  "guardrail_hooks": [],
+  "id": "repository-discovery",
+  "inputs": [
+    "user intent",
+    "repository state",
+    "applicable project instructions"
+  ],
+  "outputs": [
+    "task-scoped repository map",
+    "likely change surface",
+    "repository-native verification path",
+    "explicit unresolved uncertainties"
+  ],
+  "purpose": "Map the smallest relevant portion of an existing repository before material change, grounding implementation choices in actual project architecture and conventions.",
+  "related_capabilities": [
+    "requirements-to-acceptance",
+    "implementation-planning"
+  ],
+  "schema_version": 1,
+  "status": "experimental",
+  "tags": [
+    "brownfield",
+    "discovery",
+    "architecture",
+    "context"
+  ],
+  "version": "0.1.0"
+}
