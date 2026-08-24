@@ -1,0 +1,48 @@
+name: Project State Spine M1 gate
+
+on:
+  pull_request:
+    paths:
+      - "project_state/**"
+      - "tools/project_state.py"
+      - "evals/run_project_state_m1.py"
+      - "docs/PROJECT_STATE_SPINE_M1.md"
+      - ".github/workflows/project-state-m1.yml"
+      - "sef.py"
+      - "SHA256SUMS"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  project-state-m1:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Preserve deterministic beta runtime integrity
+        run: sha256sum -c SHA256SUMS
+
+      - name: Compile project-state surfaces
+        run: |
+          python3 -m py_compile \
+            project_state/__init__.py \
+            project_state/core.py \
+            tools/project_state.py \
+            evals/run_project_state_m1.py
+
+      - name: Validate schema JSON
+        run: python3 -m json.tool project_state/project-state.schema.json >/dev/null
+
+      - name: Run deterministic M1 qualification
+        run: python3 evals/run_project_state_m1.py
+
+      - name: Publish M1 evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: project-state-m1-${{ github.run_id }}
+          path: eval-results/project-state-m1-report.json
+          if-no-files-found: error
