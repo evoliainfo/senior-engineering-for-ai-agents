@@ -1,5 +1,10 @@
 #!/usr/bin/env python3
-"""Evaluate structured rehearsal/recovery evidence for data changes."""
+"""Evaluate structured rehearsal/recovery evidence for data changes.
+
+The evaluator never performs database work itself. It grades evidence collected
+through the active harness and distinguishes observed unsafe conditions from
+missing or inconclusive evidence.
+"""
 from __future__ import annotations
 
 import argparse
@@ -13,6 +18,7 @@ SCHEMA = "sef.data-change-safety-observations.v1"
 REPORT_SCHEMA = "sef.data-change-safety-report.v1"
 STATUSES = {"PASS", "FAIL", "NOT_RUN", "INCONCLUSIVE", "N_A"}
 CHANGE_KINDS = {"MIGRATION", "BACKFILL", "DATA_TRANSFORM", "DESTRUCTIVE_CLEANUP"}
+REHEARSAL_ENVIRONMENTS = {"SANDBOX", "PREVIEW"}
 RECOVERY_STRATEGIES = {"ROLLBACK", "RESTORE", "FORWARD_FIX", "NONE"}
 CONTROL_IDS = {"idempotency", "resumability", "chunking", "compatibility"}
 ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:-]{0,95}$")
@@ -58,6 +64,8 @@ def _validate_change(value: Any) -> dict[str, Any]:
     _text(value["target_environment"], "change.target_environment")
     if not isinstance(value["destructive"], bool):
         raise DataChangeEvidenceError("change.destructive must be boolean")
+    if value["kind"] == "DESTRUCTIVE_CLEANUP" and not value["destructive"]:
+        raise DataChangeEvidenceError("DESTRUCTIVE_CLEANUP must set change.destructive=true")
     _text(value["planned_change_ref"], "change.planned_change_ref")
     _text(value["actual_change_ref"], "change.actual_change_ref")
     _status(value["scope_status"], "change.scope_status")
@@ -69,12 +77,14 @@ def _validate_change(value: Any) -> dict[str, Any]:
 def _validate_rehearsal(value: Any) -> dict[str, Any]:
     if not isinstance(value, dict):
         raise DataChangeEvidenceError("rehearsal must be an object")
-    expected = {"status", "environment_ref", "fixture_ref", "execution_ref", "verification_ref"}
+    expected = {"status", "environment_kind", "environment_ref", "fixture_ref", "execution_ref", "verification_ref"}
     if set(value) != expected:
         raise DataChangeEvidenceError(f"rehearsal keys must equal {sorted(expected)}")
     status = _status(value["status"], "rehearsal.status")
     if status == "N_A":
         raise DataChangeEvidenceError("rehearsal.status cannot be N_A")
+    if value["environment_kind"] not in REHEARSAL_ENVIRONMENTS:
+        raise DataChangeEvidenceError("rehearsal.environment_kind must be SANDBOX or PREVIEW")
     for key in ("environment_ref", "fixture_ref", "execution_ref", "verification_ref"):
         _nullable_ref(value[key], f"rehearsal.{key}")
     return value
@@ -89,11 +99,14 @@ def _validate_recovery(value: Any) -> dict[str, Any]:
     if value["strategy"] not in RECOVERY_STRATEGIES:
         raise DataChangeEvidenceError("recovery.strategy is invalid")
     status = _status(value["status"], "recovery.status")
-    if status == "N_A" and value["strategy"] != "NONE":
-        raise DataChangeEvidenceError("recovery.status can be N_A only when strategy is NONE")
-    _nullable_ref(value["evidence_ref"], "recovery.evidence_ref")
+    evidence_ref = _nullable_ref(value["evidence_ref"], "recovery.evidence_ref")
     _status(value["backup_status"], "recovery.backup_status")
     _nullable_ref(value["backup_ref"], "recovery.backup_ref")
+    if value["strategy"] == "NONE":
+        if status != "N_A" or evidence_ref is not None:
+            raise DataChangeEvidenceError("recovery strategy NONE requires status N_A and no evidence_ref")
+    elif status == "N_A":
+        raise DataChangeEvidenceError("non-NONE recovery strategy cannot use status N_A")
     return value
 
 
@@ -165,15 +178,6 @@ def validate_document(document: Any) -> dict[str, Any]:
     if set(control_ids) != CONTROL_IDS:
         raise DataChangeEvidenceError(f"controls must account for exactly {sorted(CONTROL_IDS)}")
     return document
-
-
-def _required_evidence(status: str, ref: Any, missing_reason: str, fail_reason: str, incomplete: list[str], failures: list[str]) -> None:
-    if status == "FAIL":
-        failures.append(fail_reason)
-    elif status != "PASS":
-        incomplete.append(missing_reason)
-    if status == "PASS" and ref is None:
-        incomplete.append(missing_reason + "_REF")
 
 
 def evaluate(document: dict[str, Any]) -> dict[str, Any]:
