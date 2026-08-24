@@ -1,0 +1,39 @@
+{
+  "activate_when": [
+    "A material implementation has a coherent repository diff ready for senior review",
+    "The actual changed files may differ from the original plan or introduce hidden release implications",
+    "The agent must validate correctness, architecture fit, scope, evidence, and maintainability before completion"
+  ],
+  "category": "foundation",
+  "evals": [
+    "C3-REVIEW-001",
+    "C3-REVIEW-002",
+    "C3-REVIEW-003"
+  ],
+  "guardrail_hooks": [],
+  "id": "code-review-diff-review",
+  "inputs": [
+    "actual repository diff",
+    "acceptance criteria and architecture contract",
+    "test and verification evidence"
+  ],
+  "outputs": [
+    "prioritized evidence-backed review findings",
+    "architecture and scope assessment",
+    "test/evidence and deployability implications",
+    "review verdict"
+  ],
+  "purpose": "Review the actual code diff like a skeptical senior engineer, prioritizing correctness and project-specific risk over stylistic churn before final verification.",
+  "related_capabilities": [
+    "verification-before-completion"
+  ],
+  "schema_version": 1,
+  "status": "experimental",
+  "tags": [
+    "code-review",
+    "diff",
+    "quality",
+    "evidence"
+  ],
+  "version": "0.1.0"
+}
