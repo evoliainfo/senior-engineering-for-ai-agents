@@ -1,0 +1,115 @@
+{
+  "schema": "sef.eval.capability-c2.v1",
+  "independent_holdout": false,
+  "purpose": "Deterministic DEV qualification of the six C2 foundation capability contracts. These cases validate method coverage and anti-rigidity properties; they are not outcome-level claims about Codex.",
+  "cases": [
+    {
+      "id": "C2-REPO-001",
+      "capability": "repository-discovery",
+      "scenario": "An unfamiliar brownfield repository needs a material feature change and the responsible code is not named.",
+      "required_patterns": ["smallest useful repository map", "instruction surfaces", "existing analogue", "repository-native"]
+    },
+    {
+      "id": "C2-REPO-002",
+      "capability": "repository-discovery",
+      "scenario": "A tiny local edit has obvious responsible code and should not trigger repository-wide exploration.",
+      "required_patterns": ["keep it lightweight", "do not keep reading files", "localized task"]
+    },
+    {
+      "id": "C2-REPO-003",
+      "capability": "repository-discovery",
+      "scenario": "The repository answers ordinary technical choices but one product decision remains genuinely ambiguous.",
+      "required_patterns": ["do not ask the user to choose technical details", "product/business decision", "source code, tests, manifests, or docs"]
+    },
+    {
+      "id": "C2-REQ-001",
+      "capability": "requirements-to-acceptance",
+      "scenario": "A non-expert user describes an outcome but not the engineering details required to make it credible.",
+      "required_patterns": ["requirement classes", "professional inference", "decision required", "optional improvement"]
+    },
+    {
+      "id": "C2-REQ-002",
+      "capability": "requirements-to-acceptance",
+      "scenario": "A small feature must not become an enterprise checklist or silently widened scope.",
+      "required_patterns": ["do not add generic non-functional requirements by reflex", "skip a formal acceptance contract for trivial", "scope has not silently expanded"]
+    },
+    {
+      "id": "C2-REQ-003",
+      "capability": "requirements-to-acceptance",
+      "scenario": "Acceptance criteria need observable proof and must distinguish evidence gaps from success.",
+      "required_patterns": ["observable acceptance criteria", "plausible verification path", "mark the evidence gap"]
+    },
+    {
+      "id": "C2-PLAN-001",
+      "capability": "implementation-planning",
+      "scenario": "A multi-layer change needs the smallest dependency-aware path rather than a ceremonial long plan.",
+      "required_patterns": ["smallest credible execution path", "plan outcomes, not keystrokes", "verification is part of the plan"]
+    },
+    {
+      "id": "C2-PLAN-002",
+      "capability": "implementation-planning",
+      "scenario": "Some file-level details are uncertain and the plan must remain adaptable under new repository evidence.",
+      "required_patterns": ["known", "likely", "open", "replanning triggers"]
+    },
+    {
+      "id": "C2-PLAN-003",
+      "capability": "implementation-planning",
+      "scenario": "A trivial local edit should receive a tiny plan and no invented process overhead.",
+      "required_patterns": ["for a trivial local edit", "three precise steps are better than twenty generic ones", "plan can shrink for small tasks"]
+    },
+    {
+      "id": "C2-TDD-001",
+      "capability": "tdd-bug-reproduction",
+      "scenario": "A reproducible bug should have truthful pre-fix evidence that fails for the intended reason.",
+      "required_patterns": ["first prove the failure", "fails for the reason", "do not fabricate a pre-fix failure"]
+    },
+    {
+      "id": "C2-TDD-002",
+      "capability": "tdd-bug-reproduction",
+      "scenario": "The repository already has a test system and SEF must not impose a universal framework or coverage percentage.",
+      "required_patterns": ["repository conventions outrank generic tooling", "do not impose a universal line-coverage threshold", "avoid creating a parallel test framework"]
+    },
+    {
+      "id": "C2-TDD-003",
+      "capability": "tdd-bug-reproduction",
+      "scenario": "Bootstrap/infrastructure work has no meaningful pre-implementation executable behavior and must not fake TDD.",
+      "required_patterns": ["do not force a synthetic red phase", "verification-first", "no meaningful executable behavior exists yet"]
+    },
+    {
+      "id": "C2-DEBUG-001",
+      "capability": "systematic-debugging",
+      "scenario": "A non-obvious cross-layer failure has several plausible causes and needs causal diagnosis.",
+      "required_patterns": ["separate observation from explanation", "discriminating experiments", "root cause"]
+    },
+    {
+      "id": "C2-DEBUG-002",
+      "capability": "systematic-debugging",
+      "scenario": "An intermittent failure passes once after a change but that is insufficient evidence of a fix.",
+      "required_patterns": ["flaky", "reduction in failure frequency is not proof of elimination", "one successful run"]
+    },
+    {
+      "id": "C2-DEBUG-003",
+      "capability": "systematic-debugging",
+      "scenario": "The agent is tempted to patch multiple hypotheses simultaneously rather than learn from an experiment.",
+      "required_patterns": ["shotgun edits", "one causal variable at a time", "destroy information"]
+    },
+    {
+      "id": "C2-VERIFY-001",
+      "capability": "verification-before-completion",
+      "scenario": "A task is implemented locally but the user did not ask for deployment, so the completion claim must stay narrow.",
+      "required_patterns": ["implemented", "locally verified", "deployable", "deployed", "post-deploy verified"]
+    },
+    {
+      "id": "C2-VERIFY-002",
+      "capability": "verification-before-completion",
+      "scenario": "Some required evidence cannot run in the current environment and must not be relabeled PASS.",
+      "required_patterns": ["not_run", "unavailable", "inconclusive", "strength of the completion claim"]
+    },
+    {
+      "id": "C2-VERIFY-003",
+      "capability": "verification-before-completion",
+      "scenario": "Implementation touched more than planned and verification must follow the actual change surface with repository-native checks.",
+      "required_patterns": ["actual change surface", "smallest sufficient evidence set", "repository-native verification"]
+    }
+  ]
+}

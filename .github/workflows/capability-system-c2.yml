@@ -1,0 +1,58 @@
+name: Capability System C2 foundation gate
+
+on:
+  pull_request:
+    paths:
+      - "capabilities/**"
+      - "evals/capability_c2_cases.json"
+      - "evals/capability_c2_pilot_reservations.json"
+      - "evals/run_capability_c2.py"
+      - "docs/SENIOR_DELIVERY_CONTRACT.md"
+      - "tools/capability_registry.py"
+      - ".github/workflows/capability-system-c2.yml"
+      - "sef.py"
+      - "SHA256SUMS"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  capability-foundation-c2:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Preserve deterministic beta runtime integrity
+        run: sha256sum -c SHA256SUMS
+
+      - name: Compile C2 tooling
+        run: python3 -m py_compile tools/capability_registry.py evals/run_capability_c2.py
+
+      - name: Validate capability graph
+        run: python3 tools/capability_registry.py validate --root capabilities
+
+      - name: Run C2 qualification and compare generated manifest
+        shell: bash
+        run: |
+          set +e
+          python3 evals/run_capability_c2.py
+          eval_rc=$?
+          cmp eval-results/capabilities-manifest.generated.json capabilities/manifest.json
+          manifest_rc=$?
+          set -e
+          if [ "$eval_rc" -ne 0 ] || [ "$manifest_rc" -ne 0 ]; then
+            echo "C2 qualification rc=$eval_rc manifest rc=$manifest_rc"
+            exit 1
+          fi
+
+      - name: Publish C2 evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: capability-system-c2-${{ github.run_id }}
+          path: |
+            eval-results/capability-c2-report.json
+            eval-results/capabilities-manifest.generated.json
+          if-no-files-found: error

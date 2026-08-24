@@ -1,0 +1,39 @@
+{
+  "activate_when": [
+    "A failure exists but its root cause is not established",
+    "Several plausible causes require evidence to discriminate",
+    "An intermittent or cross-layer defect needs a controlled diagnosis"
+  ],
+  "category": "foundation",
+  "evals": [
+    "C2-DEBUG-001",
+    "C2-DEBUG-002",
+    "C2-DEBUG-003"
+  ],
+  "guardrail_hooks": [],
+  "id": "systematic-debugging",
+  "inputs": [
+    "observed failure evidence",
+    "expected behavior",
+    "relevant repository/runtime context"
+  ],
+  "outputs": [
+    "reproduction or observation loop",
+    "ranked hypotheses and discriminating evidence",
+    "verified root-cause explanation",
+    "causal fix and regression evidence"
+  ],
+  "purpose": "Diagnose non-obvious failures through causal evidence and discriminating experiments before applying the narrowest verified fix.",
+  "related_capabilities": [
+    "verification-before-completion"
+  ],
+  "schema_version": 1,
+  "status": "experimental",
+  "tags": [
+    "debugging",
+    "root-cause",
+    "diagnostics",
+    "evidence"
+  ],
+  "version": "0.1.0"
+}

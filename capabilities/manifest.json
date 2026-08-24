@@ -1,6 +1,262 @@
 {
-  "capabilities": [],
-  "capability_count": 0,
-  "content_sha256": "07eb7c40177d65489ad5790b41619a9608b332bfea6030b1d361476c9f238806",
+  "capabilities": [
+    {
+      "activate_when": [
+        "A material change requires sequencing across multiple engineering units",
+        "Unknowns or dependencies make direct editing likely to create rework",
+        "Acceptance criteria need to trace into implementation and verification"
+      ],
+      "category": "foundation",
+      "description": "Build a proportionate, repository-aware implementation plan from acceptance criteria, sequencing the smallest safe change and its evidence without pretending uncertain file-level details are known.",
+      "evals": [
+        "C2-PLAN-001",
+        "C2-PLAN-002",
+        "C2-PLAN-003"
+      ],
+      "guardrail_hooks": [],
+      "id": "implementation-planning",
+      "inputs": [
+        "acceptance criteria",
+        "task-scoped repository map",
+        "project constraints and uncertainties"
+      ],
+      "metadata_sha256": "f8cad83f81ad652c59aa115013337770b7462d9def2e69d62b8edac5d9fef1b1",
+      "outputs": [
+        "dependency-ordered implementation steps",
+        "step-level evidence contracts",
+        "scope boundaries",
+        "replanning triggers"
+      ],
+      "purpose": "Plan the smallest safe repository-aware path from accepted outcome to verified implementation while preserving flexibility under new evidence.",
+      "related_capabilities": [
+        "tdd-bug-reproduction",
+        "systematic-debugging",
+        "verification-before-completion"
+      ],
+      "resources": [],
+      "skill_sha256": "c8b5a2d3efba21bf8c1d88ca53836437a9359a24af5c725773f450c1281e3774",
+      "status": "experimental",
+      "tags": [
+        "planning",
+        "scope",
+        "verification",
+        "brownfield"
+      ],
+      "version": "0.1.0"
+    },
+    {
+      "activate_when": [
+        "Material work in an unfamiliar existing repository",
+        "The responsible files or architecture boundary are not yet clear",
+        "Repository conventions should determine the implementation approach"
+      ],
+      "category": "foundation",
+      "description": "Map an unfamiliar or materially relevant existing repository before changing it, finding the smallest architecture, conventions, tests, and change surface needed for the task.",
+      "evals": [
+        "C2-REPO-001",
+        "C2-REPO-002",
+        "C2-REPO-003"
+      ],
+      "guardrail_hooks": [],
+      "id": "repository-discovery",
+      "inputs": [
+        "user intent",
+        "repository state",
+        "applicable project instructions"
+      ],
+      "metadata_sha256": "c4e149ed3dc4bacc931c3ab3983bb93fb90ab7eea32fc8adc28db74556d49d78",
+      "outputs": [
+        "task-scoped repository map",
+        "likely change surface",
+        "repository-native verification path",
+        "explicit unresolved uncertainties"
+      ],
+      "purpose": "Map the smallest relevant portion of an existing repository before material change, grounding implementation choices in actual project architecture and conventions.",
+      "related_capabilities": [
+        "requirements-to-acceptance",
+        "implementation-planning"
+      ],
+      "resources": [],
+      "skill_sha256": "247d89dcd18d1ee68d8c989761677d791c5db442af2ff6caa8abfdf5c1bcea22",
+      "status": "experimental",
+      "tags": [
+        "brownfield",
+        "discovery",
+        "architecture",
+        "context"
+      ],
+      "version": "0.1.0"
+    },
+    {
+      "activate_when": [
+        "User intent is outcome-oriented but not yet testable",
+        "Material behavior has multiple plausible interpretations",
+        "Completion criteria must distinguish explicit requirements from engineering inferences"
+      ],
+      "category": "foundation",
+      "description": "Turn user intent and repository context into testable acceptance criteria, separating explicit requirements, justified engineering inferences, assumptions, and decisions that genuinely require the user.",
+      "evals": [
+        "C2-REQ-001",
+        "C2-REQ-002",
+        "C2-REQ-003"
+      ],
+      "guardrail_hooks": [],
+      "id": "requirements-to-acceptance",
+      "inputs": [
+        "user intent",
+        "repository-derived behavior",
+        "known constraints and uncertainties"
+      ],
+      "metadata_sha256": "3821f615997b389167a9c101a4bcec5b3d94c3226d9f7bad853452d6712004f8",
+      "outputs": [
+        "observable acceptance criteria",
+        "explicit versus inferred requirement classification",
+        "assumptions and user decisions",
+        "criterion-to-evidence map"
+      ],
+      "purpose": "Turn user intent and project evidence into a scoped, observable acceptance contract without forcing users to specify inferable engineering details.",
+      "related_capabilities": [
+        "implementation-planning"
+      ],
+      "resources": [],
+      "skill_sha256": "a05597f1d47f8f78484538fb13111d1bfc5a1d61c21ba00a744ee8dbb80181e8",
+      "status": "experimental",
+      "tags": [
+        "requirements",
+        "acceptance",
+        "scope",
+        "definition-of-done"
+      ],
+      "version": "0.1.0"
+    },
+    {
+      "activate_when": [
+        "A failure exists but its root cause is not established",
+        "Several plausible causes require evidence to discriminate",
+        "An intermittent or cross-layer defect needs a controlled diagnosis"
+      ],
+      "category": "foundation",
+      "description": "Diagnose non-obvious failures by reproducing the symptom, separating facts from hypotheses, narrowing the causal path with discriminating experiments, and fixing the smallest verified root cause.",
+      "evals": [
+        "C2-DEBUG-001",
+        "C2-DEBUG-002",
+        "C2-DEBUG-003"
+      ],
+      "guardrail_hooks": [],
+      "id": "systematic-debugging",
+      "inputs": [
+        "observed failure evidence",
+        "expected behavior",
+        "relevant repository/runtime context"
+      ],
+      "metadata_sha256": "c522e55a36f3cce8068a63ab9ae9236a7c9a5be942e40c9a93157a18efb0319e",
+      "outputs": [
+        "reproduction or observation loop",
+        "ranked hypotheses and discriminating evidence",
+        "verified root-cause explanation",
+        "causal fix and regression evidence"
+      ],
+      "purpose": "Diagnose non-obvious failures through causal evidence and discriminating experiments before applying the narrowest verified fix.",
+      "related_capabilities": [
+        "verification-before-completion"
+      ],
+      "resources": [],
+      "skill_sha256": "75722ed3860032e0c9af68e71726be49eebdbb18ec311b2d0839ffe83e6b571f",
+      "status": "experimental",
+      "tags": [
+        "debugging",
+        "root-cause",
+        "diagnostics",
+        "evidence"
+      ],
+      "version": "0.1.0"
+    },
+    {
+      "activate_when": [
+        "Fixing a reproducible defect",
+        "Changing observable behavior where repository-native executable evidence can be written first",
+        "Preventing a regression with a focused behavioral test"
+      ],
+      "category": "foundation",
+      "description": "Establish executable behavioral evidence before fixing bugs or changing testable behavior, using the repository's existing test surfaces and proportionate RED-GREEN-refactor discipline rather than universal coverage or tooling rules.",
+      "evals": [
+        "C2-TDD-001",
+        "C2-TDD-002",
+        "C2-TDD-003"
+      ],
+      "guardrail_hooks": [],
+      "id": "tdd-bug-reproduction",
+      "inputs": [
+        "behavior or defect contract",
+        "repository test surfaces",
+        "relevant acceptance criteria"
+      ],
+      "metadata_sha256": "6c59b3786803fac4c779a5dea7b7b78782ed4e00ac42cbc3a3dcfaba52543740",
+      "outputs": [
+        "pre-fix reproduction when practical",
+        "focused regression evidence",
+        "minimal behavior change discipline",
+        "truthful RED/GREEN evidence"
+      ],
+      "purpose": "Establish executable evidence around defects and testable behavior changes using proportionate repository-native TDD rather than universal tooling or coverage rules.",
+      "related_capabilities": [
+        "systematic-debugging",
+        "verification-before-completion"
+      ],
+      "resources": [],
+      "skill_sha256": "aef1fd11a448d84001e6c95baf580d184b28d50b62d4c8309d2580cf99709c54",
+      "status": "experimental",
+      "tags": [
+        "tdd",
+        "testing",
+        "regression",
+        "bugs"
+      ],
+      "version": "0.1.0"
+    },
+    {
+      "activate_when": [
+        "A material change appears complete and the completion claim needs evidence",
+        "The actual diff may have introduced verification obligations beyond the original plan",
+        "A distinction is needed between implemented, deployable, deployed, and post-deploy verified"
+      ],
+      "category": "foundation",
+      "description": "Verify that the evidence actually supports the completion claim before saying work is done. Use after implementation, debugging, refactoring, or any material change, and distinguish code-complete, deployable, deployed, and post-deploy-verified states.",
+      "evals": [
+        "C2-VERIFY-001",
+        "C2-VERIFY-002",
+        "C2-VERIFY-003"
+      ],
+      "guardrail_hooks": [],
+      "id": "verification-before-completion",
+      "inputs": [
+        "acceptance criteria",
+        "actual change set",
+        "repository-native verification surfaces",
+        "available runtime or deployment evidence"
+      ],
+      "metadata_sha256": "36fcb045eee72bb1e691e4f08c8360398c4badbaaf234f338954c7498c63a6a7",
+      "outputs": [
+        "criterion-to-evidence map",
+        "truthful evidence states",
+        "claim-level completion decision",
+        "explicit residual uncertainty"
+      ],
+      "purpose": "Ensure completion claims do not exceed actual evidence by verifying the changed behavior with proportionate repository-native checks and explicit claim boundaries.",
+      "related_capabilities": [],
+      "resources": [],
+      "skill_sha256": "6030da317d57279bdd2e84b829d23b52f7666baccbaa580318e160f40776184b",
+      "status": "experimental",
+      "tags": [
+        "verification",
+        "evidence",
+        "completion",
+        "release-readiness"
+      ],
+      "version": "0.1.0"
+    }
+  ],
+  "capability_count": 6,
+  "content_sha256": "b6d337afc1d9bf7d78ce9aa033bc071718e8cef420704c1a378afd163b0bcbed",
   "schema": "sef.capability-manifest.v1"
 }

@@ -1,0 +1,41 @@
+{
+  "activate_when": [
+    "A material change requires sequencing across multiple engineering units",
+    "Unknowns or dependencies make direct editing likely to create rework",
+    "Acceptance criteria need to trace into implementation and verification"
+  ],
+  "category": "foundation",
+  "evals": [
+    "C2-PLAN-001",
+    "C2-PLAN-002",
+    "C2-PLAN-003"
+  ],
+  "guardrail_hooks": [],
+  "id": "implementation-planning",
+  "inputs": [
+    "acceptance criteria",
+    "task-scoped repository map",
+    "project constraints and uncertainties"
+  ],
+  "outputs": [
+    "dependency-ordered implementation steps",
+    "step-level evidence contracts",
+    "scope boundaries",
+    "replanning triggers"
+  ],
+  "purpose": "Plan the smallest safe repository-aware path from accepted outcome to verified implementation while preserving flexibility under new evidence.",
+  "related_capabilities": [
+    "tdd-bug-reproduction",
+    "systematic-debugging",
+    "verification-before-completion"
+  ],
+  "schema_version": 1,
+  "status": "experimental",
+  "tags": [
+    "planning",
+    "scope",
+    "verification",
+    "brownfield"
+  ],
+  "version": "0.1.0"
+}

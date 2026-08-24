@@ -1,0 +1,38 @@
+{
+  "activate_when": [
+    "A material change appears complete and the completion claim needs evidence",
+    "The actual diff may have introduced verification obligations beyond the original plan",
+    "A distinction is needed between implemented, deployable, deployed, and post-deploy verified"
+  ],
+  "category": "foundation",
+  "evals": [
+    "C2-VERIFY-001",
+    "C2-VERIFY-002",
+    "C2-VERIFY-003"
+  ],
+  "guardrail_hooks": [],
+  "id": "verification-before-completion",
+  "inputs": [
+    "acceptance criteria",
+    "actual change set",
+    "repository-native verification surfaces",
+    "available runtime or deployment evidence"
+  ],
+  "outputs": [
+    "criterion-to-evidence map",
+    "truthful evidence states",
+    "claim-level completion decision",
+    "explicit residual uncertainty"
+  ],
+  "purpose": "Ensure completion claims do not exceed actual evidence by verifying the changed behavior with proportionate repository-native checks and explicit claim boundaries.",
+  "related_capabilities": [],
+  "schema_version": 1,
+  "status": "experimental",
+  "tags": [
+    "verification",
+    "evidence",
+    "completion",
+    "release-readiness"
+  ],
+  "version": "0.1.0"
+}

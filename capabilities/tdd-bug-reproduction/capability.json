@@ -1,0 +1,40 @@
+{
+  "activate_when": [
+    "Fixing a reproducible defect",
+    "Changing observable behavior where repository-native executable evidence can be written first",
+    "Preventing a regression with a focused behavioral test"
+  ],
+  "category": "foundation",
+  "evals": [
+    "C2-TDD-001",
+    "C2-TDD-002",
+    "C2-TDD-003"
+  ],
+  "guardrail_hooks": [],
+  "id": "tdd-bug-reproduction",
+  "inputs": [
+    "behavior or defect contract",
+    "repository test surfaces",
+    "relevant acceptance criteria"
+  ],
+  "outputs": [
+    "pre-fix reproduction when practical",
+    "focused regression evidence",
+    "minimal behavior change discipline",
+    "truthful RED/GREEN evidence"
+  ],
+  "purpose": "Establish executable evidence around defects and testable behavior changes using proportionate repository-native TDD rather than universal tooling or coverage rules.",
+  "related_capabilities": [
+    "systematic-debugging",
+    "verification-before-completion"
+  ],
+  "schema_version": 1,
+  "status": "experimental",
+  "tags": [
+    "tdd",
+    "testing",
+    "regression",
+    "bugs"
+  ],
+  "version": "0.1.0"
+}
