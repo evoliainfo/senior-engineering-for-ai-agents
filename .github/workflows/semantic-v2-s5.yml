@@ -86,10 +86,47 @@ jobs:
     needs: semantic-v2-s5-replay
     env:
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-      OPENAI_MODEL: gpt-5.6-sol
+      # OpenAI's current API examples use gpt-5.6 for GPT-5.6 Sol.
+      OPENAI_MODEL: gpt-5.6
       OPENAI_REASONING_EFFORT: medium
     steps:
       - uses: actions/checkout@v4
+
+      - name: Preflight exact OpenAI semantic provider contract
+        if: ${{ env.OPENAI_API_KEY != '' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          PYTHONPATH=. python3 - <<'PY'
+          import os
+          from semantic_v2.model_extractor import ModelAssistedExtractor
+          from semantic_v2.openai_responses_provider import OpenAIResponsesSemanticProvider
+
+          provider = OpenAIResponsesSemanticProvider(
+              model=os.environ["OPENAI_MODEL"],
+              reasoning_effort=os.environ["OPENAI_REASONING_EFFORT"],
+          )
+          contract = ModelAssistedExtractor(
+              provider,
+              provider_name=f"openai-responses:{os.environ['OPENAI_MODEL']}",
+          ).provider_contract()
+          try:
+              provider.extract_semantics(
+                  "Rename a local display label in documentation only. No permissions, external calls, production data, deployment, or consequential decisions change.",
+                  {"evaluation": "S5-provider-preflight", "development_only": True},
+                  contract,
+              )
+          except Exception as exc:
+              # Provider exceptions contain HTTP status / OpenAI error bodies but never the API key.
+              print(f"OPENAI_SEMANTIC_PREFLIGHT_FAILED: {type(exc).__name__}: {exc}")
+              raise
+          print(
+              "OPENAI_SEMANTIC_PREFLIGHT_OK",
+              f"response_id={provider.last_response_id}",
+              f"model={provider.last_model}",
+              f"total_tokens={(provider.last_usage or {}).get('total_tokens')}",
+          )
+          PY
 
       - name: Run live OpenAI Semantic DEV qualification when credential exists
         shell: bash
@@ -106,8 +143,10 @@ jobs:
           fi
 
       - name: Publish live-provider evidence or explicit NOT_RUN record
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: semantic-v2-s5-openai-${{ github.run_id }}
           path: semantic-v2-s5-openai.json
+          if-no-files-found: warn
           retention-days: 90
