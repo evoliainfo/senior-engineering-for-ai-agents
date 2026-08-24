@@ -1,0 +1,39 @@
+{
+  "activate_when": [
+    "A material feature or fix is ready for implementation against an established architecture",
+    "Implementation crosses one or more meaningful repository or system boundaries",
+    "The agent must preserve authoritative ownership and repository conventions while changing behavior"
+  ],
+  "category": "foundation",
+  "evals": [
+    "C3-IMPL-001",
+    "C3-IMPL-002",
+    "C3-IMPL-003"
+  ],
+  "guardrail_hooks": [],
+  "id": "architecture-conformant-implementation",
+  "inputs": [
+    "acceptance criteria and implementation plan",
+    "repository or selected solution architecture",
+    "applicable project instructions and verification surfaces"
+  ],
+  "outputs": [
+    "architecture-conformant implementation",
+    "preserved or explicitly changed contracts",
+    "focused implementation evidence",
+    "actual-diff drift and uncertainty assessment"
+  ],
+  "purpose": "Implement accepted behavior through the authoritative project architecture with minimal maintainable change, preserving contracts and implementation freedom without generic stack mandates.",
+  "related_capabilities": [
+    "verification-before-completion"
+  ],
+  "schema_version": 1,
+  "status": "experimental",
+  "tags": [
+    "implementation",
+    "architecture",
+    "brownfield",
+    "greenfield"
+  ],
+  "version": "0.1.0"
+}
