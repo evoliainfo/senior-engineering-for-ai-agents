@@ -117,6 +117,15 @@ def control_unstable_capture_is_incomplete() -> dict:
     return {"status": report["status"]}
 
 
+def control_missing_capture_context_is_incomplete() -> dict:
+    document = _fixture("pass.json")
+    document["observations"][0]["capture_context_ref"] = None
+    report = evaluate(document)
+    assert report["status"] == "INCOMPLETE"
+    assert "CAPTURE_CONTEXT_MISSING" in report["case_results"][0]["reason"]
+    return {"status": report["status"]}
+
+
 def control_missing_screenshot_is_incomplete() -> dict:
     document = _fixture("pass.json")
     document["observations"][0]["screenshot_ref"] = None
@@ -127,8 +136,7 @@ def control_missing_screenshot_is_incomplete() -> dict:
 
 
 def control_advisory_discrepancy_does_not_fail() -> dict:
-    document = _fixture("pass.json")
-    report = evaluate(document)
+    report = evaluate(_fixture("pass.json"))
     advisory_case = next(item for item in report["case_results"] if item["case_id"] == "home-desktop")
     assert advisory_case["status"] == "PASS"
     return {"status": advisory_case["status"]}
@@ -148,7 +156,33 @@ def control_correction_loop_uses_latest_iteration() -> dict:
     result = report["case_results"][0]
     assert result["observation_id"] == "OBS-002"
     assert result["history_count"] == 2
+    assert result["unresolved_material_discrepancies"] == []
     return {"status": report["status"], "history_count": result["history_count"]}
+
+
+def control_material_discrepancy_cannot_silently_disappear() -> dict:
+    document = _fixture("fail-material-discrepancy.json")
+    first = document["observations"][0]
+    second = copy.deepcopy(first)
+    second["id"] = "OBS-002"
+    second["iteration"] = 2
+    second["screenshot_ref"] = "artifact://dashboard-second.png"
+    second["discrepancies"] = []
+    document["observations"].append(second)
+    report = evaluate(document)
+    assert report["status"] == "FAIL"
+    result = report["case_results"][0]
+    assert result["unresolved_material_discrepancies"] == ["DISC-001"]
+    return {"status": report["status"], "sticky_discrepancy": "DISC-001"}
+
+
+def control_duplicate_case_iteration_rejected() -> dict:
+    document = _fixture("pass.json")
+    duplicate = copy.deepcopy(document["observations"][0])
+    duplicate["id"] = "OBS-DUP"
+    document["observations"].append(duplicate)
+    message = _expect_error(lambda: validate_document(document), "only one observation")
+    return {"rejected": message}
 
 
 def control_not_run_is_not_success() -> dict:
@@ -207,14 +241,17 @@ CONTROLS = [
     ("WV-07-accessibility-failure", control_accessibility_failure_fails),
     ("WV-08-accessibility-evidence", control_missing_accessibility_evidence_is_incomplete),
     ("WV-09-capture-stability", control_unstable_capture_is_incomplete),
-    ("WV-10-screenshot-required", control_missing_screenshot_is_incomplete),
-    ("WV-11-advisory-proportionality", control_advisory_discrepancy_does_not_fail),
-    ("WV-12-correction-loop", control_correction_loop_uses_latest_iteration),
-    ("WV-13-not-run-truth", control_not_run_is_not_success),
-    ("WV-14-unknown-case", control_unknown_case_reference_rejected),
-    ("WV-15-duplicate-case", control_duplicate_case_rejected),
-    ("WV-16-non-claims", control_no_wcag_or_pixel_perfect_claim),
-    ("WV-17-runtime-integrity", control_legacy_runtime_integrity),
+    ("WV-10-capture-context", control_missing_capture_context_is_incomplete),
+    ("WV-11-screenshot-required", control_missing_screenshot_is_incomplete),
+    ("WV-12-advisory-proportionality", control_advisory_discrepancy_does_not_fail),
+    ("WV-13-correction-loop", control_correction_loop_uses_latest_iteration),
+    ("WV-14-sticky-material-discrepancy", control_material_discrepancy_cannot_silently_disappear),
+    ("WV-15-unique-case-iteration", control_duplicate_case_iteration_rejected),
+    ("WV-16-not-run-truth", control_not_run_is_not_success),
+    ("WV-17-unknown-case", control_unknown_case_reference_rejected),
+    ("WV-18-duplicate-case", control_duplicate_case_rejected),
+    ("WV-19-non-claims", control_no_wcag_or_pixel_perfect_claim),
+    ("WV-20-runtime-integrity", control_legacy_runtime_integrity),
 ]
 
 
