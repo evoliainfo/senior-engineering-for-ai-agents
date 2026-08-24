@@ -1,0 +1,41 @@
+{
+  "activate_when": [
+    "A greenfield product needs system boundaries and a technology stack before implementation",
+    "A material architecture change has several plausible technical options",
+    "Deployment or operational constraints can materially change the right design"
+  ],
+  "category": "foundation",
+  "evals": [
+    "C3-ARCH-001",
+    "C3-ARCH-002",
+    "C3-ARCH-003"
+  ],
+  "guardrail_hooks": [],
+  "id": "solution-architecture-stack-selection",
+  "inputs": [
+    "product and acceptance requirements",
+    "repository architecture when brownfield",
+    "operational and deployment constraints"
+  ],
+  "outputs": [
+    "system and data boundaries",
+    "defensible stack selection",
+    "deployment-aware architecture",
+    "material trade-offs and revisit triggers"
+  ],
+  "purpose": "Choose a simple, defensible architecture and stack from project evidence rather than habit, while incorporating deployment and operational reality from the start.",
+  "related_capabilities": [
+    "project-bootstrap-foundations",
+    "environment-secrets-configuration",
+    "implementation-planning"
+  ],
+  "schema_version": 1,
+  "status": "experimental",
+  "tags": [
+    "architecture",
+    "greenfield",
+    "stack",
+    "deployment"
+  ],
+  "version": "0.1.0"
+}
