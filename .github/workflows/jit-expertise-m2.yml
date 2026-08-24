@@ -1,0 +1,47 @@
+name: JIT Expertise M2 gate
+
+on:
+  pull_request:
+    paths:
+      - "jit_expertise/**"
+      - "evals/run_jit_expertise_m2.py"
+      - "docs/JIT_EXPERTISE_CONTRACT_M2.md"
+      - ".github/workflows/jit-expertise-m2.yml"
+      - "project_state/**"
+      - "sef.py"
+      - "SHA256SUMS"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  jit-expertise-m2:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Preserve deterministic beta runtime integrity
+        run: sha256sum -c SHA256SUMS
+
+      - name: Compile JIT expertise surfaces
+        run: |
+          python3 -m py_compile \
+            jit_expertise/__init__.py \
+            jit_expertise/core.py \
+            evals/run_jit_expertise_m2.py
+
+      - name: Validate capsule schema JSON
+        run: python3 -m json.tool jit_expertise/jit-expertise.schema.json >/dev/null
+
+      - name: Run deterministic M2 qualification
+        run: python3 evals/run_jit_expertise_m2.py
+
+      - name: Publish M2 evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: jit-expertise-m2-${{ github.run_id }}
+          path: eval-results/jit-expertise-m2-report.json
+          if-no-files-found: error
