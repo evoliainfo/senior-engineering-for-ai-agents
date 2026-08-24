@@ -1,0 +1,39 @@
+{
+  "activate_when": [
+    "User intent is outcome-oriented but not yet testable",
+    "Material behavior has multiple plausible interpretations",
+    "Completion criteria must distinguish explicit requirements from engineering inferences"
+  ],
+  "category": "foundation",
+  "evals": [
+    "C2-REQ-001",
+    "C2-REQ-002",
+    "C2-REQ-003"
+  ],
+  "guardrail_hooks": [],
+  "id": "requirements-to-acceptance",
+  "inputs": [
+    "user intent",
+    "repository-derived behavior",
+    "known constraints and uncertainties"
+  ],
+  "outputs": [
+    "observable acceptance criteria",
+    "explicit versus inferred requirement classification",
+    "assumptions and user decisions",
+    "criterion-to-evidence map"
+  ],
+  "purpose": "Turn user intent and project evidence into a scoped, observable acceptance contract without forcing users to specify inferable engineering details.",
+  "related_capabilities": [
+    "implementation-planning"
+  ],
+  "schema_version": 1,
+  "status": "experimental",
+  "tags": [
+    "requirements",
+    "acceptance",
+    "scope",
+    "definition-of-done"
+  ],
+  "version": "0.1.0"
+}
