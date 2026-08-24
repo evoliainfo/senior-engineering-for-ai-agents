@@ -1,0 +1,62 @@
+name: Capability System C3 senior-inception gate
+
+on:
+  pull_request:
+    paths:
+      - "capabilities/**"
+      - "tools/capability_registry.py"
+      - "evals/capability_c3_cases.json"
+      - "evals/capability_c4_pilot_reservations.json"
+      - "evals/run_capability_c3.py"
+      - "evals/run_capability_c2.py"
+      - "docs/SENIOR_DELIVERY_BUILD_PLAN_V2.md"
+      - ".github/workflows/capability-system-c3.yml"
+      - "sef.py"
+      - "SHA256SUMS"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  capability-senior-inception-c3:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Preserve deterministic beta runtime integrity
+        run: sha256sum -c SHA256SUMS
+
+      - name: Compile capability tooling
+        run: python3 -m py_compile tools/capability_registry.py evals/run_capability_c2.py evals/run_capability_c3.py
+
+      - name: Validate full capability graph
+        run: python3 tools/capability_registry.py validate --root capabilities
+
+      - name: Prove C2 regression slice survives catalog extension
+        run: python3 evals/run_capability_c2.py
+
+      - name: Run C3 qualification and compare generated manifest
+        shell: bash
+        run: |
+          set +e
+          python3 evals/run_capability_c3.py
+          eval_rc=$?
+          cmp eval-results/capabilities-manifest.generated.json capabilities/manifest.json
+          manifest_rc=$?
+          set -e
+          if [ "$eval_rc" -ne 0 ] || [ "$manifest_rc" -ne 0 ]; then
+            echo "C3 qualification rc=$eval_rc manifest rc=$manifest_rc"
+            exit 1
+          fi
+
+      - name: Publish C3 evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: capability-system-c3-${{ github.run_id }}
+          path: |
+            eval-results/capability-c3-report.json
+            eval-results/capabilities-manifest.generated.json
+          if-no-files-found: error
