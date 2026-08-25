@@ -1,0 +1,25 @@
+{
+  "requirements": [
+    {
+      "id": "REQ-browser",
+      "capability": "browser",
+      "access": "READ",
+      "sensitivity": "SANDBOX",
+      "required_evidence_kinds": ["browser_observation"]
+    },
+    {
+      "id": "REQ-visual",
+      "capability": "visual_capture",
+      "access": "READ",
+      "sensitivity": "SANDBOX",
+      "required_evidence_kinds": ["screenshot"]
+    },
+    {
+      "id": "REQ-hosting",
+      "capability": "hosting",
+      "access": "WRITE",
+      "sensitivity": "PRODUCTION_SENSITIVE",
+      "required_evidence_kinds": ["deployment_result", "runtime_identity"]
+    }
+  ]
+}
