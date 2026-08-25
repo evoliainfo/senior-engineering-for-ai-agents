@@ -1,0 +1,73 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sef.local/schemas/agent-run.launch-production-web-product.v1.json",
+  "title": "SEF Agent-Native Mission Run",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "run_id",
+    "mission_id",
+    "project_id",
+    "decision_sha256",
+    "project_state_sha256",
+    "plan_sha256",
+    "created_at",
+    "status",
+    "evidence_namespace",
+    "artifacts",
+    "pack_observations",
+    "execution_result_ref",
+    "evidence_receipt_ref",
+    "state_after_sha256",
+    "content_sha256"
+  ],
+  "properties": {
+    "schema": {"const": "sef.agent-native-mission-run.launch-production-web-product.v1"},
+    "run_id": {"type": "string", "minLength": 1, "maxLength": 96},
+    "mission_id": {"type": "string", "minLength": 1, "maxLength": 96},
+    "project_id": {"type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"},
+    "decision_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "project_state_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "plan_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "created_at": {"type": "string", "minLength": 1},
+    "status": {"enum": ["PREPARED", "COLLECTING", "FINALIZED", "ACCEPTED"]},
+    "evidence_namespace": {"type": "string", "pattern": "^artifact://.+/$"},
+    "artifacts": {
+      "type": "array",
+      "maxItems": 128,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "slot_id", "ref", "kind", "path", "sha256", "producer", "capability", "surface_id"],
+        "properties": {
+          "id": {"type": "string", "minLength": 1, "maxLength": 96},
+          "slot_id": {"type": ["string", "null"], "maxLength": 96},
+          "ref": {"type": "string", "pattern": "^artifact://"},
+          "kind": {"type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"},
+          "path": {"type": "string", "minLength": 1, "maxLength": 512},
+          "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+          "producer": {"enum": ["AGENT", "SYSTEM", "TOOL"]},
+          "capability": {"type": ["string", "null"]},
+          "surface_id": {"type": ["string", "null"]}
+        }
+      }
+    },
+    "pack_observations": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["pack_id", "artifact_ref"],
+        "properties": {
+          "pack_id": {"type": "string", "minLength": 1, "maxLength": 96},
+          "artifact_ref": {"type": "string", "pattern": "^artifact://"}
+        }
+      }
+    },
+    "execution_result_ref": {"type": ["string", "null"]},
+    "evidence_receipt_ref": {"type": ["string", "null"]},
+    "state_after_sha256": {"type": ["string", "null"], "pattern": "^[0-9a-f]{64}$"},
+    "content_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+  }
+}
