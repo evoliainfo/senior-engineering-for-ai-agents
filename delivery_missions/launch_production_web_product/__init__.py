@@ -4,6 +4,7 @@ from __future__ import annotations
 import copy
 import hashlib
 import json
+import re
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Iterable, Mapping
@@ -27,6 +28,12 @@ from .evidence import (
     validate_evidence_receipt,
     validate_execution_result,
 )
+from .execution_plan import (
+    EXECUTION_PLAN_SCHEMA_ID,
+    ExecutionPlanError,
+    build_execution_plan,
+    validate_execution_plan,
+)
 
 
 _VISUAL_TARGET_BY_ACTION = {
@@ -34,6 +41,7 @@ _VISUAL_TARGET_BY_ACTION = {
     "DEPLOY_AND_VERIFY_PREVIEW": "preview",
     "PROVE_RELEASE_READINESS": "preview",
 }
+_SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
 
 
 def _parse_time(value: str, label: str) -> datetime:
@@ -54,6 +62,39 @@ def _reseal(decision: dict[str, Any]) -> dict[str, Any]:
     value["content_sha256"] = hashlib.sha256(rendered.encode("utf-8")).hexdigest()
     validate_decision(value)
     return value
+
+
+def _bind_jit_capsule_digests(
+    decision: dict[str, Any],
+    capsules: Iterable[Mapping[str, Any]],
+) -> dict[str, Any]:
+    """Bind public M5 decisions to the exact JIT capsule bytes they approved.
+
+    The M5 core historically exposed capsule ids in ``jit_readiness``.  An id is
+    not version identity: a capsule can be regenerated under the same stable id.
+    The public mission surface therefore also records the already-validated
+    capsule ``content_sha256`` and reseals the decision.  Execution plans can now
+    require the exact capsule version without duplicating M2 invalidation logic.
+    """
+    value = copy.deepcopy(decision)
+    by_id: dict[str, str] = {}
+    for capsule in capsules:
+        capsule_id = capsule.get("capsule_id")
+        digest = capsule.get("content_sha256")
+        if not isinstance(capsule_id, str) or not capsule_id:
+            continue
+        if capsule_id in by_id:
+            raise MissionError(f"duplicate JIT capsule id supplied to mission: {capsule_id}")
+        if isinstance(digest, str) and _SHA256_RE.fullmatch(digest):
+            by_id[capsule_id] = digest
+
+    for item in value.get("jit_readiness", []):
+        capsule_id = item.get("capsule_id")
+        digest = by_id.get(capsule_id) if isinstance(capsule_id, str) else None
+        item["capsule_sha256"] = digest
+        if value.get("status") == "READY_FOR_AGENT" and capsule_id is not None and digest is None:
+            raise MissionError(f"READY decision cannot bind JIT capsule without exact digest: {capsule_id}")
+    return _reseal(value)
 
 
 def _pack_observation_document(
@@ -143,19 +184,22 @@ def decide_next_action(
     capsules: Iterable[Mapping[str, Any]] = (),
     max_tool_age_seconds: int = 300,
 ) -> dict[str, Any]:
-    """Public mission decision with a current-time guard around M4 snapshots."""
+    """Public mission decision with current-tool and exact-JIT-version guards."""
     if not isinstance(max_tool_age_seconds, int) or isinstance(max_tool_age_seconds, bool) or not 1 <= max_tool_age_seconds <= 86400:
         raise MissionError("max_tool_age_seconds must be integer between 1 and 86400")
 
+    capsule_list = [copy.deepcopy(dict(item)) for item in capsules]
+
     if tool_inventory is None:
-        return _decide_next_action(
+        decision = _decide_next_action(
             spec,
             state,
             at=at,
             tool_inventory=None,
-            capsules=capsules,
+            capsules=capsule_list,
             max_tool_age_seconds=max_tool_age_seconds,
         )
+        return _bind_jit_capsule_digests(decision, capsule_list)
 
     current = _parse_time(at, "at")
     captured = _parse_time(tool_inventory.get("captured_at"), "tool_inventory.captured_at")
@@ -163,14 +207,15 @@ def decide_next_action(
         raise MissionError("tool inventory cannot be captured after mission decision time")
     age_seconds = (current - captured).total_seconds()
     if age_seconds <= max_tool_age_seconds:
-        return _decide_next_action(
+        decision = _decide_next_action(
             spec,
             state,
             at=at,
             tool_inventory=tool_inventory,
-            capsules=capsules,
+            capsules=capsule_list,
             max_tool_age_seconds=max_tool_age_seconds,
         )
+        return _bind_jit_capsule_digests(decision, capsule_list)
 
     # Evaluate without the stale snapshot so the core can reveal whether the
     # current action actually needs tool/JIT observations. Do not block a purely
@@ -180,21 +225,20 @@ def decide_next_action(
         state,
         at=at,
         tool_inventory=None,
-        capsules=capsules,
+        capsules=capsule_list,
         max_tool_age_seconds=max_tool_age_seconds,
     )
     needs_inventory = bool(decision["tool_requirements"]) or any(
         "TOOL_STATE_NOT_REOBSERVED" in item.get("reasons", []) for item in decision["jit_readiness"]
     )
-    if not needs_inventory:
-        return decision
-
-    blockers = [item for item in decision["blockers"] if item != "TOOL_INVENTORY_REQUIRED"]
-    blockers.append("TOOL_INVENTORY_STALE")
-    decision["blockers"] = sorted(set(blockers))
-    decision["status"] = "BLOCKED"
-    decision["tool_bridge"] = None
-    return _reseal(decision)
+    if needs_inventory:
+        blockers = [item for item in decision["blockers"] if item != "TOOL_INVENTORY_REQUIRED"]
+        blockers.append("TOOL_INVENTORY_STALE")
+        decision["blockers"] = sorted(set(blockers))
+        decision["status"] = "BLOCKED"
+        decision["tool_bridge"] = None
+        decision = _reseal(decision)
+    return _bind_jit_capsule_digests(decision, capsule_list)
 
 
 def evaluate_execution_result(
@@ -251,17 +295,21 @@ def advance_from_execution(
 __all__ = [
     "DECISION_SCHEMA_ID",
     "EVIDENCE_RECEIPT_SCHEMA_ID",
+    "EXECUTION_PLAN_SCHEMA_ID",
     "EXECUTION_RESULT_SCHEMA_ID",
     "MISSION_SCHEMA_ID",
+    "ExecutionPlanError",
     "MissionError",
     "MissionEvidenceError",
     "advance_from_execution",
+    "build_execution_plan",
     "decide_next_action",
     "evaluate_execution_result",
     "initialize_project_state",
     "seal_execution_result",
     "validate_decision",
     "validate_evidence_receipt",
+    "validate_execution_plan",
     "validate_execution_result",
     "validate_spec",
 ]
