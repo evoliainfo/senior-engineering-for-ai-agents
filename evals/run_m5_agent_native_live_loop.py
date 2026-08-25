@@ -275,9 +275,9 @@ def main() -> int:
             drifted = add_entry(
                 state,
                 domain="open_decisions",
-                entry_id="ASSUMP-DRIFT",
-                kind="ASSUMPTION",
-                statement="A harmless concurrent assumption changed the state digest.",
+                entry_id="UNRESOLVED-DRIFT",
+                kind="UNRESOLVED",
+                statement="A concurrent unresolved decision changed the state digest.",
                 authority="ENGINEERING",
                 evidence_refs=[],
                 updated_at=base.TIMES[3],
