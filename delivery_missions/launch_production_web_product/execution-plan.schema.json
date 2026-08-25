@@ -1,0 +1,133 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sef.local/schemas/codex-execution-plan-launch-production-web-product.v1.json",
+  "title": "SEF Codex execution plan for launch-production-web-product v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "mission_id",
+    "project_id",
+    "decision_sha256",
+    "project_state_sha256",
+    "delivery_state",
+    "action",
+    "generated_at",
+    "status",
+    "evidence_namespace",
+    "selected_tools",
+    "artifact_slots",
+    "pack_tasks",
+    "result_contract",
+    "sequence",
+    "claims",
+    "content_sha256"
+  ],
+  "properties": {
+    "schema": {"const": "sef.codex-execution-plan.launch-production-web-product.v1"},
+    "mission_id": {"type": "string", "minLength": 1, "maxLength": 96},
+    "project_id": {"type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"},
+    "decision_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "project_state_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "delivery_state": {"enum": ["FRAMED", "ARCHITECTED", "IMPLEMENTED", "VERIFIED_LOCAL", "PREVIEW_VERIFIED", "RELEASE_READY", "DEPLOYED"]},
+    "action": {"type": "string", "minLength": 1, "maxLength": 96},
+    "generated_at": {"type": "string", "format": "date-time"},
+    "status": {"const": "READY"},
+    "evidence_namespace": {"type": "string", "pattern": "^artifact://[A-Za-z0-9._/-]+/$"},
+    "selected_tools": {"type": "array", "items": {"$ref": "#/$defs/selectedTool"}},
+    "artifact_slots": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/artifactSlot"}},
+    "pack_tasks": {"type": "array", "items": {"$ref": "#/$defs/packTask"}},
+    "result_contract": {"$ref": "#/$defs/resultContract"},
+    "sequence": {
+      "const": [
+        "EXECUTE_ACTION",
+        "COLLECT_SELECTED_TOOL_ARTIFACTS",
+        "BUILD_ACTIVE_PACK_OBSERVATIONS",
+        "SEAL_EXECUTION_RESULT",
+        "SUBMIT_RESULT_TO_SEF_EVIDENCE_API"
+      ]
+    },
+    "claims": {
+      "const": {
+        "tool_execution_performed": false,
+        "evidence_collected": false,
+        "state_advanced": false,
+        "authorization_granted": false,
+        "agent_may_change_selected_surface": false
+      }
+    },
+    "content_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+  },
+  "$defs": {
+    "selectedTool": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["capability", "surface_id", "source_kind", "access", "sensitivity", "evidence_kinds", "evidence_ref", "authorization_ref"],
+      "properties": {
+        "capability": {"type": "string", "pattern": "^[a-z0-9]+(?:_[a-z0-9]+)*$"},
+        "surface_id": {"type": "string", "minLength": 1, "maxLength": 96},
+        "source_kind": {"type": "string", "minLength": 1},
+        "access": {"enum": ["READ", "WRITE"]},
+        "sensitivity": {"enum": ["LOCAL", "SANDBOX", "PRODUCTION_SENSITIVE"]},
+        "evidence_kinds": {"type": "array", "items": {"type": "string"}},
+        "evidence_ref": {"type": ["string", "null"]},
+        "authorization_ref": {"type": ["string", "null"]}
+      }
+    },
+    "artifactSlot": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "role", "kind", "required", "allowed_producers", "capability", "surface_id", "artifact_ref_hint"],
+      "properties": {
+        "id": {"type": "string", "minLength": 1, "maxLength": 96},
+        "role": {"enum": ["PRIMARY", "TOOL_SUPPORT", "PACK_OBSERVATION"]},
+        "kind": {"type": "string", "minLength": 1},
+        "required": {"type": "boolean"},
+        "allowed_producers": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"enum": ["AGENT", "SYSTEM", "TOOL"]}},
+        "capability": {"type": ["string", "null"]},
+        "surface_id": {"type": ["string", "null"]},
+        "artifact_ref_hint": {"type": "string", "pattern": "^artifact://[^\\s]+$"}
+      }
+    },
+    "toolBinding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["capability", "surface_id", "access", "sensitivity"],
+      "properties": {
+        "capability": {"type": "string"},
+        "surface_id": {"type": "string"},
+        "access": {"enum": ["READ", "WRITE"]},
+        "sensitivity": {"enum": ["LOCAL", "SANDBOX", "PRODUCTION_SENSITIVE"]}
+      }
+    },
+    "packTask": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["pack_id", "skill_ref", "evaluator_ref", "observation_schema", "expected_scope", "required_tool_bindings", "evidence_requires", "evidence_produces", "observation_artifact_ref_hint"],
+      "properties": {
+        "pack_id": {"type": "string", "minLength": 1},
+        "skill_ref": {"type": "string", "minLength": 1},
+        "evaluator_ref": {"type": "string", "minLength": 1},
+        "observation_schema": {"type": "string", "minLength": 1},
+        "expected_scope": {"type": "object", "additionalProperties": {"type": "string"}},
+        "required_tool_bindings": {"type": "array", "items": {"$ref": "#/$defs/toolBinding"}},
+        "evidence_requires": {"type": "array", "items": {"type": "string"}},
+        "evidence_produces": {"type": "array", "items": {"type": "string"}},
+        "observation_artifact_ref_hint": {"type": "string", "pattern": "^artifact://[^\\s]+$"}
+      }
+    },
+    "resultContract": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema", "mission_id", "project_id", "decision_sha256", "project_state_sha256", "action"],
+      "properties": {
+        "schema": {"const": "sef.delivery-mission-execution-result.launch-production-web-product.v1"},
+        "mission_id": {"type": "string"},
+        "project_id": {"type": "string"},
+        "decision_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "project_state_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "action": {"type": "string"}
+      }
+    }
+  }
+}
