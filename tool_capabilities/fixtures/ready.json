@@ -1,0 +1,55 @@
+{
+  "schema": "sef.tool-capability-observations.v1",
+  "resolved_at": "2026-08-25T06:55:00Z",
+  "max_observation_age_seconds": 300,
+  "requirements": [
+    {
+      "id": "REQ-browser",
+      "capability": "browser",
+      "access": "READ",
+      "sensitivity": "SANDBOX",
+      "required_evidence_kinds": ["browser_observation"]
+    },
+    {
+      "id": "REQ-visual",
+      "capability": "visual_capture",
+      "access": "READ",
+      "sensitivity": "SANDBOX",
+      "required_evidence_kinds": ["screenshot"]
+    }
+  ],
+  "observations": [
+    {
+      "id": "OBS-browser-1",
+      "capability": "browser",
+      "surface_id": "builtin-browser",
+      "source_kind": "BUILTIN",
+      "source_ref": "tool-schema://builtin/browser",
+      "observed_at": "2026-08-25T06:54:30Z",
+      "availability": "AVAILABLE",
+      "authentication": "NOT_APPLICABLE",
+      "access": "READ",
+      "sensitivity": "SANDBOX",
+      "evidence_kinds": ["browser_observation"],
+      "evidence_ref": "evidence://tool-list/browser",
+      "authorization_required": "NOT_REQUIRED",
+      "authorization_ref": "policy://session/browser-read"
+    },
+    {
+      "id": "OBS-visual-1",
+      "capability": "visual_capture",
+      "surface_id": "mcp-visual",
+      "source_kind": "MCP",
+      "source_ref": "tool-schema://mcp/visual-capture",
+      "observed_at": "2026-08-25T06:54:40Z",
+      "availability": "AVAILABLE",
+      "authentication": "AUTHENTICATED",
+      "access": "READ",
+      "sensitivity": "SANDBOX",
+      "evidence_kinds": ["screenshot"],
+      "evidence_ref": "evidence://mcp-list/visual-capture",
+      "authorization_required": "NOT_REQUIRED",
+      "authorization_ref": "policy://session/visual-read"
+    }
+  ]
+}
