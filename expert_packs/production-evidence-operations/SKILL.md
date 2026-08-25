@@ -17,6 +17,7 @@ Declare the release target and the intended/deployed release references. Collect
 
 - deployment completion;
 - runtime identity showing which release is actually serving;
+- the observed runtime release identity itself, which must match the deployed release identity;
 - health verification;
 - at least one blocking smoke journey;
 - operational observability controls;
@@ -27,7 +28,7 @@ Declare the release target and the intended/deployed release references. Collect
 
 Resolve `hosting` and `observability` through M4/tool resolution. The active harness may use Codex-native tools, plugins, MCP or project tooling; this pack does not invent credentials or provider availability.
 
-For the deployed target, capture evidence that binds checks to the current running release rather than to source code or a previous deployment.
+For the deployed target, capture evidence that binds checks to the current running release rather than to source code or a previous deployment. Record `observed_release_ref` from that runtime evidence. A `runtime_identity_status=PASS` declaration is insufficient if `observed_release_ref` is absent or differs from `deployed_release_ref`.
 
 ## Evaluate
 
@@ -35,7 +36,7 @@ Run `evaluators/evaluate.py` against the structured evidence document.
 
 The evaluator returns:
 
-- `PASS` only when deployment and runtime identity are proven, health passes, every blocking smoke check passes, required observability controls pass with evidence, recovery is proven, and post-deploy monitoring is clear;
+- `PASS` only when deployment is proven, the observed runtime release matches the deployed release, health passes, every blocking smoke check passes, required observability controls pass with evidence, recovery is proven, and post-deploy monitoring is clear;
 - `FAIL` when observed evidence demonstrates a material deployment/runtime/health/smoke/observability/recovery/post-deploy defect;
 - `INCOMPLETE` when required evidence is missing, not run or inconclusive.
 
