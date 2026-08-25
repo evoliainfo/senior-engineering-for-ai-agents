@@ -9,7 +9,8 @@
     "deployment_status": "PASS",
     "deployment_ref": "artifact://deployment-result.json",
     "runtime_identity_status": "PASS",
-    "runtime_identity_ref": "artifact://runtime-version.json"
+    "runtime_identity_ref": "artifact://runtime-version.json",
+    "observed_release_ref": "release://artifact-def456"
   },
   "health": {"status": "PASS", "evidence_ref": "artifact://health-check.json"},
   "smoke_checks": [
