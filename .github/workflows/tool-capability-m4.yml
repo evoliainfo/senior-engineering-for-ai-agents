@@ -1,0 +1,50 @@
+name: Tool Capability M4 gate
+
+on:
+  pull_request:
+    paths:
+      - "tool_capabilities/**"
+      - "evals/run_tool_capability_m4.py"
+      - "docs/TOOL_CAPABILITY_RESOLUTION_M4.md"
+      - ".github/workflows/tool-capability-m4.yml"
+      - "sef.py"
+      - "SHA256SUMS"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  tool-capability-m4:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Preserve deterministic beta runtime integrity
+        run: sha256sum -c SHA256SUMS
+
+      - name: Compile M4 surfaces
+        run: |
+          python3 -m py_compile \
+            tool_capabilities/__init__.py \
+            tool_capabilities/core.py \
+            evals/run_tool_capability_m4.py
+
+      - name: Validate M4 JSON schema and fixtures
+        run: |
+          python3 -m json.tool tool_capabilities/tool-capabilities.schema.json >/dev/null
+          for f in tool_capabilities/fixtures/*.json; do
+            python3 -m json.tool "$f" >/dev/null
+          done
+
+      - name: Run deterministic M4 qualification
+        run: python3 evals/run_tool_capability_m4.py
+
+      - name: Publish M4 evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tool-capability-m4-${{ github.run_id }}
+          path: eval-results/tool-capability-m4-report.json
+          if-no-files-found: error
