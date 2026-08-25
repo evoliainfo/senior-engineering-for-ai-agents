@@ -1,0 +1,67 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sef.local/schemas/launch-production-web-product-execution-result.v1.json",
+  "title": "SEF launch-production-web-product execution result v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "mission_id",
+    "project_id",
+    "decision_sha256",
+    "project_state_sha256",
+    "action",
+    "observed_at",
+    "status",
+    "artifacts",
+    "pack_observations",
+    "content_sha256"
+  ],
+  "properties": {
+    "schema": {"const": "sef.delivery-mission-execution-result.launch-production-web-product.v1"},
+    "mission_id": {"type": "string", "minLength": 1, "maxLength": 96},
+    "project_id": {"type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"},
+    "decision_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "project_state_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "action": {"type": "string", "minLength": 1, "maxLength": 96},
+    "observed_at": {"type": "string", "format": "date-time"},
+    "status": {"enum": ["SUCCEEDED", "FAILED", "INCOMPLETE"]},
+    "artifacts": {
+      "type": "array",
+      "maxItems": 128,
+      "items": {"$ref": "#/$defs/artifact"}
+    },
+    "pack_observations": {
+      "type": "array",
+      "maxItems": 16,
+      "items": {"$ref": "#/$defs/packObservation"}
+    },
+    "content_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+  },
+  "$defs": {
+    "artifact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "ref", "kind", "path", "sha256", "producer", "capability", "surface_id"],
+      "properties": {
+        "id": {"type": "string", "minLength": 1, "maxLength": 96},
+        "ref": {"type": "string", "pattern": "^artifact://[^\\s]+$"},
+        "kind": {"type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"},
+        "path": {"type": "string", "minLength": 1, "maxLength": 512},
+        "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "producer": {"enum": ["AGENT", "TOOL", "SYSTEM"]},
+        "capability": {"type": ["string", "null"], "pattern": "^[a-z0-9]+(?:_[a-z0-9]+)*$"},
+        "surface_id": {"type": ["string", "null"], "minLength": 1, "maxLength": 96}
+      }
+    },
+    "packObservation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["pack_id", "artifact_ref"],
+      "properties": {
+        "pack_id": {"type": "string", "minLength": 1, "maxLength": 96},
+        "artifact_ref": {"type": "string", "pattern": "^artifact://[^\\s]+$"}
+      }
+    }
+  }
+}
