@@ -54,7 +54,8 @@ def _validate_release(value: Any) -> dict[str, Any]:
         raise ProductionEvidenceError("release must be an object")
     expected = {
         "id", "environment_kind", "target_ref", "planned_release_ref", "deployed_release_ref",
-        "deployment_status", "deployment_ref", "runtime_identity_status", "runtime_identity_ref"
+        "deployment_status", "deployment_ref", "runtime_identity_status", "runtime_identity_ref",
+        "observed_release_ref"
     }
     if set(value) != expected:
         raise ProductionEvidenceError(f"release keys must equal {sorted(expected)}")
@@ -67,6 +68,7 @@ def _validate_release(value: Any) -> dict[str, Any]:
     _nullable_ref(value["deployment_ref"], "release.deployment_ref")
     _status(value["runtime_identity_status"], "release.runtime_identity_status", allow_na=False)
     _nullable_ref(value["runtime_identity_ref"], "release.runtime_identity_ref")
+    _nullable_ref(value["observed_release_ref"], "release.observed_release_ref")
     return value
 
 
@@ -202,11 +204,16 @@ def evaluate(document: dict[str, Any]) -> dict[str, Any]:
         incomplete.append("DEPLOYMENT_EVIDENCE_MISSING")
 
     if release["runtime_identity_status"] == "FAIL":
-        failures.append("RUNTIME_IDENTITY_MISMATCH")
+        failures.append("RUNTIME_IDENTITY_FAILED")
     elif release["runtime_identity_status"] != "PASS":
         incomplete.append("RUNTIME_IDENTITY_NOT_PROVEN")
     elif release["runtime_identity_ref"] is None:
         incomplete.append("RUNTIME_IDENTITY_EVIDENCE_MISSING")
+
+    if release["runtime_identity_status"] in {"PASS", "FAIL"} and release["observed_release_ref"] is None:
+        incomplete.append("OBSERVED_RELEASE_IDENTITY_MISSING")
+    elif release["observed_release_ref"] is not None and release["observed_release_ref"] != release["deployed_release_ref"]:
+        failures.append("RUNTIME_IDENTITY_MISMATCH")
 
     health = document["health"]
     if health["status"] == "FAIL":
@@ -298,6 +305,8 @@ def evaluate(document: dict[str, Any]) -> dict[str, Any]:
         "status": overall,
         "release_id": release["id"],
         "environment_kind": release["environment_kind"],
+        "deployed_release_ref": release["deployed_release_ref"],
+        "observed_release_ref": release["observed_release_ref"],
         "failures": sorted(set(failures)),
         "incomplete": sorted(set(incomplete)),
         "warnings": sorted(set(warnings)),
