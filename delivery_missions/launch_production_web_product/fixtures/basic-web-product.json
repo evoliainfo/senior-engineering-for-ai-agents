@@ -1,0 +1,30 @@
+{
+  "schema": "sef.delivery-mission.launch-production-web-product.v1",
+  "mission_id": "MISSION-WEB-001",
+  "project_id": "demo-web-product",
+  "outcome": "Launch a production web application where a visitor can submit the primary form and receive a confirmed success state.",
+  "acceptance": [
+    {
+      "id": "primary-journey",
+      "statement": "A visitor can complete the primary form from the web UI and observe a confirmed success state.",
+      "authority": "USER",
+      "blocking": true
+    },
+    {
+      "id": "responsive-quality",
+      "statement": "The primary journey remains usable at the declared desktop and mobile viewports without a blocking accessibility or visual defect.",
+      "authority": "ENGINEERING",
+      "blocking": true
+    }
+  ],
+  "surfaces": {
+    "web_ui": true,
+    "persistent_data": false,
+    "material_data_change": false,
+    "identity_access": false,
+    "billing": false,
+    "external_integrations": []
+  },
+  "expertise_needs": [],
+  "created_at": "2026-08-25T07:30:00Z"
+}
