@@ -68,8 +68,23 @@ def _add_tool(
 ) -> dict:
     value = copy.deepcopy(inventory)
     surface_id = "mcp-" + capability.replace("_", "-")
-    value["surfaces"] = [item for item in value["surfaces"] if item["id"] != surface_id]
-    value["bindings"] = [item for item in value["bindings"] if item["surface_id"] != surface_id]
+    # Replacing a synthetic capability must also remove any pre-existing
+    # concrete surfaces explicitly bound to that capability. Otherwise a base
+    # fixture such as BIND-hosting plus a synthetic BIND-hosting would make the
+    # inventory invalid for reasons unrelated to the M5 scenario under test.
+    replaced_surface_ids = {
+        item["surface_id"]
+        for item in value["bindings"]
+        if item["capability"] == capability
+    }
+    value["bindings"] = [
+        item for item in value["bindings"] if item["capability"] != capability
+    ]
+    value["surfaces"] = [
+        item
+        for item in value["surfaces"]
+        if item["id"] not in replaced_surface_ids and item["id"] != surface_id
+    ]
     value["surfaces"].append(
         {
             "id": surface_id,
