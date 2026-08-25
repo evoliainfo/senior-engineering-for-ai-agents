@@ -1,0 +1,52 @@
+name: Data Change Safety Expert Pack M3 gate
+
+on:
+  pull_request:
+    paths:
+      - "expert_packs/data-change-safety/**"
+      - "expert_packs/core.py"
+      - "evals/run_data_change_safety_pack_m3.py"
+      - "docs/DATA_CHANGE_SAFETY_M3.md"
+      - ".github/workflows/data-change-safety-pack-m3.yml"
+      - "sef.py"
+      - "SHA256SUMS"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  data-change-safety-pack-m3:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Preserve deterministic beta runtime integrity
+        run: sha256sum -c SHA256SUMS
+
+      - name: Compile pack evaluator and qualification
+        run: |
+          python3 -m py_compile \
+            expert_packs/data-change-safety/evaluators/evaluate.py \
+            evals/run_data_change_safety_pack_m3.py
+
+      - name: Validate pack metadata JSON
+        run: python3 -m json.tool expert_packs/data-change-safety/pack.json >/dev/null
+
+      - name: Validate pack fixtures JSON
+        run: |
+          for f in expert_packs/data-change-safety/fixtures/*.json; do
+            python3 -m json.tool "$f" >/dev/null
+          done
+
+      - name: Run deterministic pack qualification
+        run: python3 evals/run_data_change_safety_pack_m3.py
+
+      - name: Publish pack evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: data-change-safety-pack-m3-${{ github.run_id }}
+          path: eval-results/data-change-safety-pack-m3-report.json
+          if-no-files-found: error

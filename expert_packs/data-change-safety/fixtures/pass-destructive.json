@@ -1,0 +1,44 @@
+{
+  "schema": "sef.data-change-safety-observations.v1",
+  "change": {
+    "id": "CHG-DEL-001",
+    "kind": "DESTRUCTIVE_CLEANUP",
+    "target_environment": "production",
+    "destructive": true,
+    "planned_change_ref": "repo://data-cleanup/plan-001",
+    "actual_change_ref": "git://diff/cleanup-001",
+    "scope_status": "PASS"
+  },
+  "rehearsal": {
+    "status": "PASS",
+    "environment_kind": "PREVIEW",
+    "environment_ref": "preview://db/rehearsal-delete-001",
+    "fixture_ref": "artifact://fixtures/delete-001.json",
+    "execution_ref": "artifact://runs/delete-001.json",
+    "verification_ref": "artifact://verification/delete-001.json"
+  },
+  "recovery": {
+    "strategy": "RESTORE",
+    "status": "PASS",
+    "evidence_ref": "artifact://recovery/restore-001.json",
+    "backup_status": "PASS",
+    "backup_ref": "artifact://backup/pre-cleanup-001.json"
+  },
+  "invariants": [
+    {
+      "id": "INV-KEEP-ELIGIBLE",
+      "statement": "Records outside the approved deletion set remain unchanged.",
+      "critical": true,
+      "pre_status": "PASS",
+      "pre_ref": "artifact://invariants/keep-pre.json",
+      "post_status": "PASS",
+      "post_ref": "artifact://invariants/keep-post.json"
+    }
+  ],
+  "controls": [
+    {"id": "idempotency", "required": true, "status": "PASS", "evidence_ref": "artifact://controls/delete-idempotency.json"},
+    {"id": "resumability", "required": true, "status": "PASS", "evidence_ref": "artifact://controls/delete-resumability.json"},
+    {"id": "chunking", "required": true, "status": "PASS", "evidence_ref": "artifact://controls/delete-chunking.json"},
+    {"id": "compatibility", "required": false, "status": "N_A", "evidence_ref": null}
+  ]
+}

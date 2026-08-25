@@ -1,0 +1,71 @@
+{
+  "schema": "sef.expert-pack.v1",
+  "id": "data-change-safety",
+  "version": "0.1.0",
+  "status": "experimental",
+  "purpose": "Evaluate rehearsal, integrity and recovery evidence for migrations, backfills and material data transformations without embedding provider-specific database instructions.",
+  "activate_when": [
+    "A mission changes persistent data shape, transforms existing records, performs a backfill or removes data.",
+    "A release claim depends on proving that a material data change can be rehearsed, verified and recovered safely."
+  ],
+  "tool_requirements": [
+    {
+      "capability": "database_admin",
+      "access": "WRITE",
+      "sensitivity": "SANDBOX",
+      "required": true,
+      "evidence": [
+        "Rehearsal execution, invariant inspection and recovery exercise evidence from a non-production database surface."
+      ]
+    }
+  ],
+  "entry_points": [
+    {
+      "id": "evaluate-data-change-safety",
+      "kind": "EVALUATOR",
+      "path": "evaluators/evaluate.py",
+      "purpose": "Evaluate change-scope, rehearsal, data-integrity, execution-control and recovery evidence and return PASS, FAIL or INCOMPLETE."
+    }
+  ],
+  "evidence_contract": {
+    "requires": [
+      "planned and actual data-change references",
+      "sandbox rehearsal evidence",
+      "pre/post data-integrity invariant evidence",
+      "recovery exercise evidence",
+      "backup evidence for destructive changes"
+    ],
+    "produces": [
+      "data-change-safety-report"
+    ]
+  },
+  "failure_recovery": {
+    "failure_modes": [
+      "The actual data change differs materially from the reviewed plan.",
+      "The migration/backfill rehearsal fails.",
+      "A critical data invariant fails before or after rehearsal.",
+      "A required idempotency, resumability, chunking or compatibility control fails.",
+      "Recovery cannot be demonstrated for the proposed change.",
+      "A destructive change lacks backup evidence."
+    ],
+    "recovery_actions": [
+      "Stop release progression and preserve the failing rehearsal evidence.",
+      "Correct the migration/backfill or execution control and rerun the rehearsal from a known fixture state.",
+      "Restore the rehearsal fixture and prove the selected rollback, restore or forward-fix strategy.",
+      "Recapture pre/post invariant evidence after correction instead of weakening the invariant."
+    ],
+    "stop_conditions": [
+      "A required database-admin sandbox capability is unavailable.",
+      "The data change cannot be rehearsed against representative fixtures.",
+      "A destructive change has no recoverable backup/restore path.",
+      "Required integrity evidence remains unavailable or inconclusive."
+    ]
+  },
+  "tags": [
+    "database",
+    "migration",
+    "backfill",
+    "data-integrity",
+    "recovery"
+  ]
+}

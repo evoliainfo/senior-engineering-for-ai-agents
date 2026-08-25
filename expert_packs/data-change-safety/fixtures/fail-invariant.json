@@ -1,0 +1,44 @@
+{
+  "schema": "sef.data-change-safety-observations.v1",
+  "change": {
+    "id": "CHG-BACKFILL-001",
+    "kind": "BACKFILL",
+    "target_environment": "production",
+    "destructive": false,
+    "planned_change_ref": "repo://backfills/plan-001",
+    "actual_change_ref": "git://diff/backfill-001",
+    "scope_status": "PASS"
+  },
+  "rehearsal": {
+    "status": "PASS",
+    "environment_kind": "SANDBOX",
+    "environment_ref": "sandbox://db/backfill-001",
+    "fixture_ref": "artifact://fixtures/backfill-001.json",
+    "execution_ref": "artifact://runs/backfill-001.json",
+    "verification_ref": "artifact://verification/backfill-001.json"
+  },
+  "recovery": {
+    "strategy": "ROLLBACK",
+    "status": "PASS",
+    "evidence_ref": "artifact://recovery/backfill-rollback-001.json",
+    "backup_status": "N_A",
+    "backup_ref": null
+  },
+  "invariants": [
+    {
+      "id": "INV-NO-NULLS",
+      "statement": "Every targeted row has a valid transformed value after backfill.",
+      "critical": true,
+      "pre_status": "PASS",
+      "pre_ref": "artifact://invariants/no-nulls-pre.json",
+      "post_status": "FAIL",
+      "post_ref": "artifact://invariants/no-nulls-post-fail.json"
+    }
+  ],
+  "controls": [
+    {"id": "idempotency", "required": true, "status": "PASS", "evidence_ref": "artifact://controls/backfill-idempotency.json"},
+    {"id": "resumability", "required": true, "status": "PASS", "evidence_ref": "artifact://controls/backfill-resumability.json"},
+    {"id": "chunking", "required": true, "status": "PASS", "evidence_ref": "artifact://controls/backfill-chunking.json"},
+    {"id": "compatibility", "required": false, "status": "N_A", "evidence_ref": null}
+  ]
+}
