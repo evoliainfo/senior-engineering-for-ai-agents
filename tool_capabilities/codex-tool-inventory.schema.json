@@ -1,0 +1,59 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sef.local/schemas/codex-tool-inventory.schema.json",
+  "title": "SEF Codex Tool Inventory v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "harness", "session_ref", "captured_at", "surfaces", "bindings"],
+  "properties": {
+    "schema": {"const": "sef.codex-tool-inventory.v1"},
+    "harness": {"const": "CODEX"},
+    "session_ref": {"type": "string", "minLength": 1},
+    "captured_at": {"type": "string", "format": "date-time"},
+    "surfaces": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id", "source_kind", "tool_name", "source_ref", "availability",
+          "authentication", "access", "sensitivity", "evidence_kinds",
+          "evidence_ref", "authorization_required", "authorization_ref"
+        ],
+        "properties": {
+          "id": {"type": "string", "minLength": 1, "maxLength": 128},
+          "source_kind": {"enum": ["BUILTIN", "MCP", "FUNCTION", "CLI", "PROJECT"]},
+          "tool_name": {"type": "string", "minLength": 1, "maxLength": 160},
+          "source_ref": {"type": "string", "minLength": 1},
+          "availability": {"enum": ["AVAILABLE", "UNAVAILABLE", "UNKNOWN"]},
+          "authentication": {"enum": ["AUTHENTICATED", "UNAUTHENTICATED", "NOT_APPLICABLE", "UNKNOWN"]},
+          "access": {"enum": ["NONE", "READ", "WRITE"]},
+          "sensitivity": {"enum": ["LOCAL", "SANDBOX", "PRODUCTION_SENSITIVE"]},
+          "evidence_kinds": {
+            "type": "array",
+            "uniqueItems": true,
+            "items": {"type": "string", "pattern": "^[a-z0-9]+(?:_[a-z0-9]+)*$"}
+          },
+          "evidence_ref": {"type": ["string", "null"]},
+          "authorization_required": {"enum": ["REQUIRED", "NOT_REQUIRED", "UNKNOWN"]},
+          "authorization_ref": {"type": ["string", "null"]}
+        }
+      }
+    },
+    "bindings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "surface_id", "capability", "binding_kind", "binding_ref"],
+        "properties": {
+          "id": {"type": "string", "minLength": 1, "maxLength": 128},
+          "surface_id": {"type": "string", "minLength": 1, "maxLength": 128},
+          "capability": {"type": "string", "pattern": "^[a-z0-9]+(?:_[a-z0-9]+)*$"},
+          "binding_kind": {"enum": ["SEF_ADAPTER", "REPOSITORY_CONTRACT", "HARNESS_METADATA"]},
+          "binding_ref": {"type": "string", "minLength": 1}
+        }
+      }
+    }
+  }
+}

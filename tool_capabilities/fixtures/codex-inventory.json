@@ -1,0 +1,87 @@
+{
+  "schema": "sef.codex-tool-inventory.v1",
+  "harness": "CODEX",
+  "session_ref": "session://fixture/codex-001",
+  "captured_at": "2026-08-25T07:10:00Z",
+  "surfaces": [
+    {
+      "id": "builtin-browser",
+      "source_kind": "BUILTIN",
+      "tool_name": "browser",
+      "source_ref": "tool-schema://codex/builtin/browser",
+      "availability": "AVAILABLE",
+      "authentication": "NOT_APPLICABLE",
+      "access": "READ",
+      "sensitivity": "SANDBOX",
+      "evidence_kinds": ["browser_observation"],
+      "evidence_ref": "inventory-evidence://codex/builtin/browser",
+      "authorization_required": "NOT_REQUIRED",
+      "authorization_ref": "policy://session/browser-read"
+    },
+    {
+      "id": "mcp-visual-capture",
+      "source_kind": "MCP",
+      "tool_name": "visual.capture",
+      "source_ref": "tool-schema://codex/mcp/visual-capture",
+      "availability": "AVAILABLE",
+      "authentication": "AUTHENTICATED",
+      "access": "READ",
+      "sensitivity": "SANDBOX",
+      "evidence_kinds": ["screenshot"],
+      "evidence_ref": "inventory-evidence://codex/mcp/visual-capture",
+      "authorization_required": "NOT_REQUIRED",
+      "authorization_ref": "policy://session/visual-read"
+    },
+    {
+      "id": "mcp-hosting-deploy",
+      "source_kind": "MCP",
+      "tool_name": "hosting.deploy",
+      "source_ref": "tool-schema://codex/mcp/hosting-deploy",
+      "availability": "AVAILABLE",
+      "authentication": "AUTHENTICATED",
+      "access": "WRITE",
+      "sensitivity": "PRODUCTION_SENSITIVE",
+      "evidence_kinds": ["deployment_result", "runtime_identity"],
+      "evidence_ref": "inventory-evidence://codex/mcp/hosting-deploy",
+      "authorization_required": "REQUIRED",
+      "authorization_ref": "policy://production/deploy-approval"
+    },
+    {
+      "id": "builtin-web-search",
+      "source_kind": "BUILTIN",
+      "tool_name": "web_search",
+      "source_ref": "tool-schema://codex/builtin/web-search",
+      "availability": "AVAILABLE",
+      "authentication": "NOT_APPLICABLE",
+      "access": "READ",
+      "sensitivity": "LOCAL",
+      "evidence_kinds": ["web_research"],
+      "evidence_ref": "inventory-evidence://codex/builtin/web-search",
+      "authorization_required": "NOT_REQUIRED",
+      "authorization_ref": "policy://session/web-search"
+    }
+  ],
+  "bindings": [
+    {
+      "id": "BIND-browser",
+      "surface_id": "builtin-browser",
+      "capability": "browser",
+      "binding_kind": "SEF_ADAPTER",
+      "binding_ref": "sef-binding://codex/builtin-browser-to-browser/v1"
+    },
+    {
+      "id": "BIND-visual",
+      "surface_id": "mcp-visual-capture",
+      "capability": "visual_capture",
+      "binding_kind": "HARNESS_METADATA",
+      "binding_ref": "harness-metadata://mcp/visual-capture"
+    },
+    {
+      "id": "BIND-hosting",
+      "surface_id": "mcp-hosting-deploy",
+      "capability": "hosting",
+      "binding_kind": "REPOSITORY_CONTRACT",
+      "binding_ref": "repo-contract://tools/hosting-deploy"
+    }
+  ]
+}

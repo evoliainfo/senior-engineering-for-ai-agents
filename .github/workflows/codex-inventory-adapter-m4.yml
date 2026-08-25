@@ -1,0 +1,73 @@
+name: Codex Inventory Adapter M4 gate
+
+on:
+  pull_request:
+    paths:
+      - "tool_capabilities/**"
+      - "evals/run_codex_inventory_adapter_m4.py"
+      - "docs/CODEX_TOOL_INVENTORY_ADAPTER_M4.md"
+      - ".github/workflows/codex-inventory-adapter-m4.yml"
+      - "sef.py"
+      - "SHA256SUMS"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  codex-inventory-adapter-m4:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Preserve deterministic beta runtime integrity
+        run: sha256sum -c SHA256SUMS
+
+      - name: Compile adapter and resolver surfaces
+        run: |
+          python3 -m py_compile \
+            tool_capabilities/__init__.py \
+            tool_capabilities/core.py \
+            tool_capabilities/codex_adapter.py \
+            tool_capabilities/codex_bridge.py \
+            evals/run_codex_inventory_adapter_m4.py
+
+      - name: Validate public adapter API
+        run: |
+          python3 - <<'PY'
+          from tool_capabilities import (
+              CodexInventoryError,
+              adapt_inventory,
+              resolve_codex_inventory,
+              validate_adapter_report,
+              validate_bridge_report,
+              validate_inventory,
+          )
+          assert CodexInventoryError
+          assert all(callable(fn) for fn in (
+              adapt_inventory,
+              resolve_codex_inventory,
+              validate_adapter_report,
+              validate_bridge_report,
+              validate_inventory,
+          ))
+          PY
+
+      - name: Validate adapter JSON schemas and fixtures
+        run: |
+          python3 -m json.tool tool_capabilities/tool-capabilities.schema.json >/dev/null
+          python3 -m json.tool tool_capabilities/codex-tool-inventory.schema.json >/dev/null
+          python3 -m json.tool tool_capabilities/fixtures/codex-inventory.json >/dev/null
+          python3 -m json.tool tool_capabilities/fixtures/codex-requirements.json >/dev/null
+
+      - name: Run deterministic Codex adapter qualification
+        run: python3 evals/run_codex_inventory_adapter_m4.py
+
+      - name: Publish Codex adapter evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: codex-inventory-adapter-m4-${{ github.run_id }}
+          path: eval-results/codex-inventory-adapter-m4-report.json
+          if-no-files-found: error
