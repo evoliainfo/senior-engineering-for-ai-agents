@@ -61,6 +61,7 @@ def inventory_for(state_name: str, at: str):
     if state_name == "RELEASE_READY":
         return base._add_tool(value, "hosting", access="WRITE", sensitivity="PRODUCTION_SENSITIVE", authorization="NOT_REQUIRED")
     if state_name == "DEPLOYED":
+        value = base._add_tool(value, "hosting", access="WRITE", sensitivity="PRODUCTION_SENSITIVE", authorization="NOT_REQUIRED")
         value = base._add_tool(value, "browser", access="READ", sensitivity="PRODUCTION_SENSITIVE")
         return base._add_tool(value, "observability", access="READ", sensitivity="PRODUCTION_SENSITIVE")
     raise AssertionError(state_name)
