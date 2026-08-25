@@ -1,0 +1,64 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sef.local/schemas/launch-production-web-product-evidence-receipt.v1.json",
+  "title": "SEF launch-production-web-product evidence receipt v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "mission_id",
+    "project_id",
+    "decision_sha256",
+    "input_state_sha256",
+    "input_delivery_state",
+    "action",
+    "target_delivery_state",
+    "required_evidence_kind",
+    "observed_at",
+    "execution_result_sha256",
+    "status",
+    "artifact_verification",
+    "tool_evidence",
+    "pack_reports",
+    "blockers",
+    "claims",
+    "content_sha256"
+  ],
+  "properties": {
+    "schema": {"const": "sef.delivery-mission-evidence-receipt.launch-production-web-product.v1"},
+    "mission_id": {"type": "string", "minLength": 1, "maxLength": 96},
+    "project_id": {"type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"},
+    "decision_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "input_state_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "input_delivery_state": {"enum": ["FRAMED", "ARCHITECTED", "IMPLEMENTED", "VERIFIED_LOCAL", "PREVIEW_VERIFIED", "RELEASE_READY", "DEPLOYED"]},
+    "action": {"type": "string", "minLength": 1, "maxLength": 96},
+    "target_delivery_state": {"enum": ["ARCHITECTED", "IMPLEMENTED", "VERIFIED_LOCAL", "PREVIEW_VERIFIED", "RELEASE_READY", "DEPLOYED", "POST_DEPLOY_VERIFIED"]},
+    "required_evidence_kind": {"type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"},
+    "observed_at": {"type": "string", "format": "date-time"},
+    "execution_result_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "status": {"enum": ["PASS", "FAIL"]},
+    "artifact_verification": {"type": "array", "items": {"type": "object"}},
+    "tool_evidence": {"type": "array", "items": {"type": "object"}},
+    "pack_reports": {"type": "array", "items": {"type": "object"}},
+    "blockers": {"type": "array", "uniqueItems": true, "items": {"type": "string", "minLength": 1}},
+    "claims": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "artifact_bytes_verified",
+        "pack_reports_computed_by_sef",
+        "state_advanced_by_evaluation",
+        "external_truth_cryptographically_proven",
+        "model_assertion_sufficient"
+      ],
+      "properties": {
+        "artifact_bytes_verified": {"const": true},
+        "pack_reports_computed_by_sef": {"const": true},
+        "state_advanced_by_evaluation": {"const": false},
+        "external_truth_cryptographically_proven": {"const": false},
+        "model_assertion_sufficient": {"const": false}
+      }
+    },
+    "content_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+  }
+}
