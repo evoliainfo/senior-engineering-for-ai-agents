@@ -1,0 +1,72 @@
+name: Launch Production Web Product M5 gate
+
+on:
+  pull_request:
+    paths:
+      - "delivery_missions/**"
+      - "evals/run_launch_production_web_product_m5.py"
+      - "docs/LAUNCH_PRODUCTION_WEB_PRODUCT_M5.md"
+      - ".github/workflows/launch-production-web-product-m5.yml"
+      - "project_state/**"
+      - "jit_expertise/**"
+      - "expert_packs/**"
+      - "tool_capabilities/**"
+      - "sef.py"
+      - "SHA256SUMS"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  launch-production-web-product-m5:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Preserve deterministic beta runtime integrity
+        run: sha256sum -c SHA256SUMS
+
+      - name: Compile mission composition surfaces
+        run: |
+          python3 -m py_compile \
+            delivery_missions/__init__.py \
+            delivery_missions/launch_production_web_product/__init__.py \
+            delivery_missions/launch_production_web_product/core.py \
+            evals/run_launch_production_web_product_m5.py
+
+      - name: Validate mission schema and fixtures
+        run: |
+          python3 -m json.tool delivery_missions/launch_production_web_product/mission.schema.json >/dev/null
+          for f in delivery_missions/launch_production_web_product/fixtures/*.json; do
+            python3 -m json.tool "$f" >/dev/null
+          done
+
+      - name: Validate public mission API
+        run: |
+          python3 - <<'PY'
+          from delivery_missions import (
+              decide_next_action,
+              initialize_project_state,
+              validate_decision,
+              validate_spec,
+          )
+          assert all(callable(fn) for fn in (
+              decide_next_action,
+              initialize_project_state,
+              validate_decision,
+              validate_spec,
+          ))
+          PY
+
+      - name: Run deterministic M5 orchestration qualification
+        run: python3 evals/run_launch_production_web_product_m5.py
+
+      - name: Publish M5 orchestration evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: launch-production-web-product-m5-${{ github.run_id }}
+          path: eval-results/launch-production-web-product-m5-report.json
+          if-no-files-found: error
