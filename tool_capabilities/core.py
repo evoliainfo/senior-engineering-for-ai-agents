@@ -68,7 +68,7 @@ OBSERVATION_KEYS = {
     "authorization_ref",
 }
 REQUIREMENT_KEYS = {"id", "capability", "access", "sensitivity", "required_evidence_kinds"}
-ROOT_KEYS = {"schema", "requirements", "observations"}
+ROOT_KEYS = {"schema", "resolved_at", "max_observation_age_seconds", "requirements", "observations"}
 
 
 class ToolCapabilityError(ValueError):
@@ -189,9 +189,10 @@ def _validate_observation(value: Any, index: int) -> dict[str, Any]:
         raise ToolCapabilityError(f"{label}.authorization_required is invalid")
     _optional_ref(value["authorization_ref"], f"{label}.authorization_ref")
 
+    if value["availability"] != "UNKNOWN" and value["evidence_ref"] is None:
+        raise ToolCapabilityError(f"{label}: known availability requires evidence_ref")
     positive = (
-        value["availability"] == "AVAILABLE"
-        or value["authentication"] == "AUTHENTICATED"
+        value["authentication"] == "AUTHENTICATED"
         or value["access"] in {"READ", "WRITE"}
         or bool(kinds)
     )
@@ -215,6 +216,10 @@ def validate_document(document: Any) -> dict[str, Any]:
     _exact(document, ROOT_KEYS, "root")
     if document["schema"] != SCHEMA_ID:
         raise ToolCapabilityError(f"schema must equal {SCHEMA_ID}")
+    resolved_at = _parse_time(document["resolved_at"], "resolved_at")
+    max_age = document["max_observation_age_seconds"]
+    if not isinstance(max_age, int) or isinstance(max_age, bool) or not 1 <= max_age <= 86400:
+        raise ToolCapabilityError("max_observation_age_seconds must be integer between 1 and 86400")
     if not isinstance(document["requirements"], list) or not document["requirements"]:
         raise ToolCapabilityError("requirements must be a non-empty list")
     requirements = [_validate_requirement(item, i) for i, item in enumerate(document["requirements"])]
@@ -227,26 +232,37 @@ def validate_document(document: Any) -> dict[str, Any]:
     observation_ids = [item["id"] for item in observations]
     if len(observation_ids) != len(set(observation_ids)):
         raise ToolCapabilityError("observations contain duplicate ids")
+    future = [item["id"] for item in observations if _parse_time(item["observed_at"], "observed_at") > resolved_at]
+    if future:
+        raise ToolCapabilityError(f"observations must not be newer than resolved_at: {sorted(future)}")
     return document
 
 
-def _latest_surfaces(observations: list[dict[str, Any]]) -> tuple[list[dict[str, Any]], list[str]]:
-    """Collapse observation history per capability/surface and surface tie conflicts."""
+def _latest_surfaces(
+    observations: list[dict[str, Any]], resolved_at: datetime, max_age_seconds: int
+) -> tuple[list[dict[str, Any]], list[str], list[str]]:
+    """Collapse history per capability/surface and reject stale/tied latest state."""
     grouped: dict[tuple[str, str], list[dict[str, Any]]] = {}
     for obs in observations:
         grouped.setdefault((obs["capability"], obs["surface_id"]), []).append(obs)
 
     latest: list[dict[str, Any]] = []
     conflicts: list[str] = []
+    stale: list[str] = []
     for (capability, surface_id), items in sorted(grouped.items()):
         newest_time = max(_parse_time(item["observed_at"], "observed_at") for item in items)
+        surface_key = f"{capability}:{surface_id}"
+        age_seconds = (resolved_at - newest_time).total_seconds()
+        if age_seconds > max_age_seconds:
+            stale.append(surface_key)
+            continue
         newest = [item for item in items if _parse_time(item["observed_at"], "observed_at") == newest_time]
         normalized = {_canonical_json(item) for item in newest}
         if len(normalized) > 1:
-            conflicts.append(f"{capability}:{surface_id}")
+            conflicts.append(surface_key)
             continue
         latest.append(sorted(newest, key=lambda item: item["id"])[0])
-    return latest, conflicts
+    return latest, conflicts, stale
 
 
 def _candidate_sort_key(obs: dict[str, Any], requirement: dict[str, Any]) -> tuple[int, int, int, str]:
@@ -255,30 +271,27 @@ def _candidate_sort_key(obs: dict[str, Any], requirement: dict[str, Any]) -> tup
     return (scope_excess, access_excess, SOURCE_PRIORITY[obs["source_kind"]], obs["surface_id"])
 
 
-def _technical_fit(obs: dict[str, Any], requirement: dict[str, Any]) -> tuple[bool, list[str]]:
-    reasons: list[str] = []
-    if obs["availability"] != "AVAILABLE":
-        reasons.append("NOT_AVAILABLE")
-    if obs["authentication"] not in {"AUTHENTICATED", "NOT_APPLICABLE"}:
-        reasons.append("NOT_AUTHENTICATED")
-    if ACCESS_RANK[obs["access"]] < ACCESS_RANK[requirement["access"]]:
-        reasons.append("ACCESS_TOO_LOW")
-    if SENSITIVITY_RANK[obs["sensitivity"]] < SENSITIVITY_RANK[requirement["sensitivity"]]:
-        reasons.append("SCOPE_TOO_LOW")
-    missing_evidence = sorted(set(requirement["required_evidence_kinds"]) - set(obs["evidence_kinds"]))
-    if missing_evidence:
-        reasons.append("EVIDENCE_KIND_MISSING:" + ",".join(missing_evidence))
-    return not reasons, reasons
+def _technical_fit(obs: dict[str, Any], requirement: dict[str, Any]) -> bool:
+    return (
+        obs["availability"] == "AVAILABLE"
+        and obs["authentication"] in {"AUTHENTICATED", "NOT_APPLICABLE"}
+        and ACCESS_RANK[obs["access"]] >= ACCESS_RANK[requirement["access"]]
+        and SENSITIVITY_RANK[obs["sensitivity"]] >= SENSITIVITY_RANK[requirement["sensitivity"]]
+        and set(requirement["required_evidence_kinds"]).issubset(set(obs["evidence_kinds"]))
+    )
 
 
-def _blocked_status(observations: list[dict[str, Any]], requirement: dict[str, Any], has_conflict: bool) -> tuple[str, list[str]]:
-    if has_conflict and not observations:
+def _blocked_status(
+    observations: list[dict[str, Any]], requirement: dict[str, Any], has_conflict: bool, has_stale: bool
+) -> tuple[str, list[str]]:
+    if has_conflict:
         return "CONFLICT", ["LATEST_SURFACE_OBSERVATIONS_CONFLICT"]
     if not observations:
+        if has_stale:
+            return "UNKNOWN", ["ONLY_STALE_OBSERVATIONS"]
         return "UNKNOWN", ["NO_OBSERVATION"]
     if all(item["availability"] == "UNAVAILABLE" for item in observations):
         return "UNAVAILABLE", ["ALL_OBSERVED_SURFACES_UNAVAILABLE"]
-
     available = [item for item in observations if item["availability"] == "AVAILABLE"]
     if not available:
         return "UNKNOWN", ["AVAILABILITY_NOT_PROVEN"]
@@ -297,28 +310,27 @@ def _blocked_status(observations: list[dict[str, Any]], requirement: dict[str, A
     ]
     if not evidence_fit:
         return "INSUFFICIENT_EVIDENCE", ["NO_SURFACE_CAN_OBTAIN_REQUIRED_EVIDENCE"]
-    if has_conflict:
-        return "CONFLICT", ["SURFACE_CONFLICT_PREVENTED_SELECTION"]
     return "UNKNOWN", ["NO_SELECTABLE_SURFACE"]
 
 
 def resolve(document: dict[str, Any]) -> dict[str, Any]:
     validate_document(document)
-    latest, conflicts = _latest_surfaces(document["observations"])
-    conflict_set = set(conflicts)
+    resolved_at = _parse_time(document["resolved_at"], "resolved_at")
+    latest, conflicts, stale = _latest_surfaces(
+        document["observations"], resolved_at, document["max_observation_age_seconds"]
+    )
     results: list[dict[str, Any]] = []
 
     for requirement in document["requirements"]:
-        relevant = [item for item in latest if item["capability"] == requirement["capability"]]
-        cap_conflicts = [item for item in conflicts if item.startswith(requirement["capability"] + ":")]
-        fitting = []
-        for obs in relevant:
-            fit, _ = _technical_fit(obs, requirement)
-            if fit:
-                fitting.append(obs)
+        capability = requirement["capability"]
+        relevant = [item for item in latest if item["capability"] == capability]
+        cap_conflicts = [item for item in conflicts if item.startswith(capability + ":")]
+        cap_stale = [item for item in stale if item.startswith(capability + ":")]
+        fitting = [item for item in relevant if _technical_fit(item, requirement)]
 
-        # A conflict on one surface must not block an independent, fully evidenced
-        # alternative surface. It remains reported for auditability.
+        # A conflict on one surface does not block an independent, fully evidenced
+        # alternative surface. If no usable alternative exists, conflict wins over
+        # weaker diagnoses because the disputed latest state could change the result.
         if fitting:
             selected = sorted(fitting, key=lambda item: _candidate_sort_key(item, requirement))[0]
             if selected["authorization_required"] == "REQUIRED":
@@ -332,7 +344,7 @@ def resolve(document: dict[str, Any]) -> dict[str, Any]:
                 reasons = ["TECHNICALLY_AND_AUTHORIZATION_READY"]
             result = {
                 "requirement_id": requirement["id"],
-                "capability": requirement["capability"],
+                "capability": capability,
                 "status": status,
                 "selected_surface_id": selected["surface_id"],
                 "selected_source_kind": selected["source_kind"],
@@ -345,12 +357,13 @@ def resolve(document: dict[str, Any]) -> dict[str, Any]:
                 "authorization_ref": selected["authorization_ref"],
                 "reasons": reasons,
                 "conflicting_surfaces": sorted(cap_conflicts),
+                "stale_surfaces": sorted(cap_stale),
             }
         else:
-            status, reasons = _blocked_status(relevant, requirement, bool(cap_conflicts))
+            status, reasons = _blocked_status(relevant, requirement, bool(cap_conflicts), bool(cap_stale))
             result = {
                 "requirement_id": requirement["id"],
-                "capability": requirement["capability"],
+                "capability": capability,
                 "status": status,
                 "selected_surface_id": None,
                 "selected_source_kind": None,
@@ -363,18 +376,22 @@ def resolve(document: dict[str, Any]) -> dict[str, Any]:
                 "authorization_ref": None,
                 "reasons": reasons,
                 "conflicting_surfaces": sorted(cap_conflicts),
+                "stale_surfaces": sorted(cap_stale),
             }
         results.append(result)
 
     payload = {
         "schema": REPORT_SCHEMA_ID,
+        "resolved_at": document["resolved_at"],
+        "max_observation_age_seconds": document["max_observation_age_seconds"],
         "status": "READY" if all(item["status"] == "READY" for item in results) else "ATTENTION_REQUIRED",
         "requirement_count": len(document["requirements"]),
         "resolved_count": sum(item["selected_surface_id"] is not None for item in results),
         "ready_count": sum(item["status"] == "READY" for item in results),
         "authorization_required_count": sum(item["status"] == "AUTHORIZATION_REQUIRED" for item in results),
         "authorization_unknown_count": sum(item["status"] == "AUTHORIZATION_UNKNOWN" for item in results),
-        "surface_conflicts": sorted(conflict_set),
+        "surface_conflicts": sorted(conflicts),
+        "stale_surfaces": sorted(stale),
         "results": results,
     }
     payload["content_sha256"] = _digest(payload)
