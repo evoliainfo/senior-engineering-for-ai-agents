@@ -238,6 +238,11 @@ def validate_document(document: Any) -> dict[str, Any]:
     return document
 
 
+def _observation_state(observation: dict[str, Any]) -> dict[str, Any]:
+    """Return semantic surface state without record identity."""
+    return {key: value for key, value in observation.items() if key != "id"}
+
+
 def _latest_surfaces(
     observations: list[dict[str, Any]], resolved_at: datetime, max_age_seconds: int
 ) -> tuple[list[dict[str, Any]], list[str], list[str]]:
@@ -257,7 +262,7 @@ def _latest_surfaces(
             stale.append(surface_key)
             continue
         newest = [item for item in items if _parse_time(item["observed_at"], "observed_at") == newest_time]
-        normalized = {_canonical_json(item) for item in newest}
+        normalized = {_canonical_json(_observation_state(item)) for item in newest}
         if len(normalized) > 1:
             conflicts.append(surface_key)
             continue
