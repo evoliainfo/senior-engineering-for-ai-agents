@@ -1,0 +1,82 @@
+{
+  "schema": "sef.expert-pack.v1",
+  "id": "production-evidence-operations",
+  "version": "0.1.0",
+  "status": "experimental",
+  "purpose": "Evaluate deployment, runtime identity, smoke/health, observability, recovery and post-deploy evidence without embedding provider-specific hosting instructions.",
+  "activate_when": [
+    "A mission claims that a web product or service has been deployed to preview, staging or production.",
+    "A release claim depends on proving that the deployed runtime is healthy, observable and recoverable after deployment."
+  ],
+  "tool_requirements": [
+    {
+      "capability": "hosting",
+      "access": "WRITE",
+      "sensitivity": "PRODUCTION_SENSITIVE",
+      "required": true,
+      "evidence": [
+        "Deployment result, runtime identity and recovery evidence from the resolved hosting surface."
+      ]
+    },
+    {
+      "capability": "observability",
+      "access": "READ",
+      "sensitivity": "PRODUCTION_SENSITIVE",
+      "required": true,
+      "evidence": [
+        "Health, logs/errors or other declared operational signals covering the deployed target."
+      ]
+    }
+  ],
+  "entry_points": [
+    {
+      "id": "evaluate-production-evidence",
+      "kind": "EVALUATOR",
+      "path": "evaluators/evaluate.py",
+      "purpose": "Evaluate deployment identity, smoke/health, observability, recovery and post-deploy evidence and return PASS, FAIL or INCOMPLETE."
+    }
+  ],
+  "evidence_contract": {
+    "requires": [
+      "deployment and runtime-identity evidence",
+      "health and declared smoke-check evidence",
+      "explicitly accounted operational observability controls",
+      "recovery verification evidence",
+      "post-deploy observation-window evidence"
+    ],
+    "produces": [
+      "production-evidence-operations-report"
+    ]
+  },
+  "failure_recovery": {
+    "failure_modes": [
+      "The deployment fails or the running version cannot be proven to match the intended release.",
+      "A blocking smoke check or required health check fails.",
+      "A required logging/observability signal fails or cannot be obtained.",
+      "The selected recovery strategy fails or is absent.",
+      "The post-deploy observation window reveals a material operational defect."
+    ],
+    "recovery_actions": [
+      "Stop delivery-state progression and preserve the failing operational evidence.",
+      "Correct the release or configuration and redeploy the intended artifact.",
+      "Restore health/smoke and required observability signals before reevaluation.",
+      "Exercise the selected rollback, redeploy-previous or roll-forward path on an authorized surface and recapture evidence.",
+      "Repeat post-deploy verification against the corrected running release."
+    ],
+    "stop_conditions": [
+      "Required hosting or observability capabilities are unavailable.",
+      "The running release identity cannot be established.",
+      "A blocking health/smoke defect remains unresolved.",
+      "No viable recovery strategy can be demonstrated.",
+      "Required post-deploy evidence remains unavailable or inconclusive."
+    ]
+  },
+  "tags": [
+    "deployment",
+    "production",
+    "smoke-test",
+    "observability",
+    "rollback",
+    "operations"
+  ]
+}

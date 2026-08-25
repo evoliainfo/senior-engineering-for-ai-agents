@@ -1,0 +1,52 @@
+name: Production Evidence Operations Expert Pack M3 gate
+
+on:
+  pull_request:
+    paths:
+      - "expert_packs/production-evidence-operations/**"
+      - "expert_packs/core.py"
+      - "evals/run_production_evidence_operations_pack_m3.py"
+      - "docs/PRODUCTION_EVIDENCE_OPERATIONS_M3.md"
+      - ".github/workflows/production-evidence-operations-pack-m3.yml"
+      - "sef.py"
+      - "SHA256SUMS"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  production-evidence-operations-pack-m3:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Preserve deterministic beta runtime integrity
+        run: sha256sum -c SHA256SUMS
+
+      - name: Compile pack evaluator and qualification
+        run: |
+          python3 -m py_compile \
+            expert_packs/production-evidence-operations/evaluators/evaluate.py \
+            evals/run_production_evidence_operations_pack_m3.py
+
+      - name: Validate pack metadata JSON
+        run: python3 -m json.tool expert_packs/production-evidence-operations/pack.json >/dev/null
+
+      - name: Validate pack fixtures JSON
+        run: |
+          for f in expert_packs/production-evidence-operations/fixtures/*.json; do
+            python3 -m json.tool "$f" >/dev/null
+          done
+
+      - name: Run deterministic pack qualification
+        run: python3 evals/run_production_evidence_operations_pack_m3.py
+
+      - name: Publish pack evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: production-evidence-operations-pack-m3-${{ github.run_id }}
+          path: eval-results/production-evidence-operations-pack-m3-report.json
+          if-no-files-found: error

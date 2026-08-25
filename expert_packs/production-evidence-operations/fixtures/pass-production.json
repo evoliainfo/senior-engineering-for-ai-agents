@@ -1,0 +1,51 @@
+{
+  "schema": "sef.production-evidence-operations.v1",
+  "release": {
+    "id": "REL-001",
+    "environment_kind": "PRODUCTION",
+    "target_ref": "target://production-web",
+    "planned_release_ref": "release://commit-abc123",
+    "deployed_release_ref": "release://artifact-abc123",
+    "deployment_status": "PASS",
+    "deployment_ref": "artifact://deployment-result.json",
+    "runtime_identity_status": "PASS",
+    "runtime_identity_ref": "artifact://runtime-version.json",
+    "observed_release_ref": "release://artifact-abc123"
+  },
+  "health": {
+    "status": "PASS",
+    "evidence_ref": "artifact://health-check.json"
+  },
+  "smoke_checks": [
+    {
+      "id": "home-loads",
+      "blocking": true,
+      "status": "PASS",
+      "evidence_ref": "artifact://smoke-home.json"
+    },
+    {
+      "id": "critical-submit",
+      "blocking": true,
+      "status": "PASS",
+      "evidence_ref": "artifact://smoke-submit.json"
+    }
+  ],
+  "observability": [
+    {"id": "logs", "required": true, "status": "PASS", "evidence_ref": "artifact://runtime-logs.json"},
+    {"id": "error_visibility", "required": true, "status": "PASS", "evidence_ref": "artifact://error-signal.json"},
+    {"id": "metrics", "required": false, "status": "N_A", "evidence_ref": null},
+    {"id": "alerting", "required": false, "status": "N_A", "evidence_ref": null}
+  ],
+  "recovery": {
+    "strategy": "REDEPLOY_PREVIOUS",
+    "status": "PASS",
+    "evidence_kind": "REHEARSAL",
+    "environment_kind": "STAGING",
+    "evidence_ref": "artifact://recovery-rehearsal.json"
+  },
+  "post_deploy": {
+    "status": "PASS",
+    "window_ref": "artifact://post-deploy-window.json",
+    "evidence_ref": "artifact://post-deploy-observation.json"
+  }
+}
