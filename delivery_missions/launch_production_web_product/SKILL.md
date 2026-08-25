@@ -24,25 +24,42 @@ From the user's outcome, prepare the mission spec with:
 
 Do not ask the user to choose ordinary technical implementation details when repository evidence, authoritative documentation and engineering judgment can resolve them.
 
+## Agent-native entry point
+
+When operating inside an active Codex project session, use `tools/delivery_mission.py` as the normal M5 hand-off instead of manually fabricating execution-result JSON.
+
+The CLI commands are:
+
+- `prepare`: compute the current M5 decision and, only when it is `READY_FOR_AGENT`, freeze the exact decision + execution plan into a new run workspace;
+- `register`: snapshot one real evidence file into that run workspace and let SEF compute its SHA-256 and enforce any exact M4 slot/surface binding;
+- `attach-pack`: bind a registered observation document to an Expert Pack that is active in the exact decision;
+- `finalize`: build the sealed execution-result after required slots/pack observations are present;
+- `accept`: submit the finalized result to the canonical M5 evidence gate, persist the receipt and advance Project State by at most one state on `PASS`;
+- `status`: read the integrity-checked run manifest.
+
+The active Codex session remains the executor. This CLI does not launch another Codex/model session, does not own provider credentials and does not grant new authorization.
+
+Detailed command examples and trust boundary: `docs/M5_AGENT_NATIVE_LIVE_LOOP.md`.
+
 ## Mission loop
 
 1. Initialize or validate Project State.
 2. Discover the current Codex tool inventory through the active harness and pass the explicit snapshot to M4 when the next action needs tools.
 3. Compile or refresh required JIT capsules from current authoritative evidence.
-4. Ask M5 for the next decision. Stop if it is blocked or complete.
-5. Build the Codex execution plan from that exact `READY_FOR_AGENT` decision.
+4. Call `tools/delivery_mission.py prepare` with the mission spec, current Project State, explicit M4 inventory and required capsule files. Stop if it returns blocked or complete.
+5. Read the generated `plan.json` from the new run workspace.
 6. Load only the Project State domains listed by the plan and verify their context digest.
 7. Load the exact JIT capsules listed by id and SHA-256. Do not substitute a capsule with the same id but different content.
 8. Load only the Stable Expert Packs listed by the plan and use their declared observation contracts.
 9. Use only the M4 capability/surface bindings copied into the plan. The plan does not grant new authorization and cannot replace a selected surface.
 10. Execute the action using Codex-native tools, plugins/MCP and repository tooling.
-11. Persist tool/system outputs as execution artifacts with observed hashes and exact capability/surface provenance.
-12. Build active pack observation documents under the plan's evidence namespace. The observation JSON may be assembled by the agent or harness, but evidence-bearing references must point to tool-produced artifacts.
-13. Seal an execution-result envelope using the exact result contract carried by the plan.
-14. Pass the result and artifact root to the public M5 evidence API.
+11. For every required plan slot and evidence-bearing tool output, call `tools/delivery_mission.py register` so the bytes are copied into the run workspace and hashed by SEF with exact capability/surface provenance.
+12. Build active pack observation documents under the plan's evidence namespace, register them, then call `attach-pack` once for every active pack. The observation JSON may be assembled by the agent or harness, but evidence-bearing references must point to tool-produced artifacts.
+13. Call `finalize` to seal the execution-result envelope using the exact result contract carried by the plan.
+14. Call `accept` with the current Project State file.
 15. Let SEF verify artifact bytes, M4 provenance, active Expert Pack evaluators and mission-specific observation scope.
-16. If the evidence receipt is `PASS`, persist it and advance Project State exactly one state. If it fails, keep Project State unchanged.
-17. Re-run the mission decision from the resulting state.
+16. If the evidence receipt is `PASS`, Project State advances exactly one state. If it fails, keep Project State unchanged.
+17. Start a fresh `prepare` call from the resulting Project State.
 
 Repeat until `POST_DEPLOY_VERIFIED` or until a real blocker requires user input or external access.
 
@@ -65,6 +82,14 @@ It binds:
 The plan is recomputable from the decision. Rehashing a modified plan does not make a substituted tool surface, access level, pack scope, evaluator, artifact role or JIT capsule acceptable.
 
 A tool-bound plan also has a freshness boundary. If the M4 snapshot has expired by the time the plan is generated, obtain a fresh inventory and decision instead of executing stale bindings.
+
+## Agent-native run workspace
+
+A READY `prepare` call freezes `spec.json`, `state.before.json`, `decision.json`, `plan.json` and an integrity-sealed `run.json` beneath a new run directory. Never reuse a non-empty run directory for another execution attempt.
+
+`register` copies the supplied evidence bytes into that run directory before hashing them. The original external/tool output may later change without changing the snapshotted evidence. If the snapshotted run artifact itself changes after registration/finalization, the downstream evidence gate rejects the SHA mismatch.
+
+A successful finalization is not allowed while a required plan slot or an active pack observation is missing. A finalized run may be accepted only once.
 
 ## Human questions
 
@@ -116,7 +141,7 @@ Mission scope is stricter than a generic pack result. A local visual gate requir
 
 ## Evidence semantics
 
-Use the public mission evidence API rather than manually calling `advance_delivery_state` after an action.
+Use the public mission evidence API through the agent-native CLI rather than manually calling `advance_delivery_state` after an action.
 
 An execution result must be bound to:
 
@@ -135,24 +160,25 @@ Receipts are immutable by default. A failed receipt is persisted for diagnosis a
 
 SEF can verify the artifact bytes it receives, their hashes, their binding to the M4-selected surface, the exact JIT content identity placed in the execution plan, and the result of its own pack evaluators.
 
-The execution plan itself performs no tool call, collects no evidence, advances no state and grants no authorization.
+The execution plan itself performs no tool call, collects no evidence, advances no state and grants no authorization. The agent-native CLI makes the hand-off operational but still does not execute the selected provider/browser/hosting tool itself; the active Codex harness does.
 
 Do not claim that artifact hashing alone cryptographically proves an external provider generated those bytes. Stronger provider provenance requires a signed receipt or equivalent authoritative mechanism exposed by that provider/harness.
 
 ## Current implementation boundary
 
-The mission now provides three deterministic layers:
+The mission now provides four deterministic/agent-native layers:
 
 1. pre-action orchestration: decide the next action, relevant context, JIT readiness, active packs, tool requirements and blockers;
 2. Codex execution hand-off: compile a bounded plan with exact context, JIT, M4, M3 and evidence contracts;
-3. post-action evidence acceptance: verify artifacts, recompute active pack gates, persist an evidence receipt and advance M1 exactly one state on `PASS`.
+3. agent-native run workspace/CLI: freeze the hand-off, snapshot/hash real evidence bytes, seal the result and submit it from the active Codex project session;
+4. post-action evidence acceptance: verify artifacts, recompute active pack gates, persist an evidence receipt and advance M1 exactly one state on `PASS`.
 
 The mission still does not itself:
 
-- perform live browser/source-control/hosting/database/provider actions;
+- perform live browser/source-control/hosting/database/provider actions instead of the active Codex harness;
 - discover Codex's effective tool inventory without an explicit harness snapshot;
 - fetch JIT sources without the active agent/harness;
 - create provider-authenticated provenance when the provider exposes none;
-- claim M5 end-to-end completion merely because deterministic fixture qualification passes.
+- claim M5 end-to-end completion merely because deterministic/process-boundary qualification passes.
 
-Live Codex execution must consume the plan and produce the evidence envelopes/artifacts consumed by the evidence API. End-to-end M5 completion requires real browser, preview, production/post-deploy and fresh-session evidence, not fixtures alone.
+End-to-end M5 completion requires at least one real Codex mission run with real browser evidence, real preview/staging or authorized deployment evidence, post-deploy evidence and fresh-session continuity evidence. These must come from the actual harness/tool execution, not deterministic fixtures.
