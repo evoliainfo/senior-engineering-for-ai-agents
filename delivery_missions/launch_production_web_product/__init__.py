@@ -5,6 +5,7 @@ import copy
 import hashlib
 import json
 from datetime import datetime
+from pathlib import Path
 from typing import Any, Iterable, Mapping
 
 from .core import (
@@ -20,12 +21,19 @@ from .evidence import (
     EVIDENCE_RECEIPT_SCHEMA_ID,
     EXECUTION_RESULT_SCHEMA_ID,
     MissionEvidenceError,
-    advance_from_execution,
-    evaluate_execution_result,
+    advance_from_execution as _advance_from_execution,
+    evaluate_execution_result as _evaluate_execution_result,
     seal_execution_result,
     validate_evidence_receipt,
     validate_execution_result,
 )
+
+
+_VISUAL_TARGET_BY_ACTION = {
+    "VERIFY_LOCAL_PRODUCT": "local",
+    "DEPLOY_AND_VERIFY_PREVIEW": "preview",
+    "PROVE_RELEASE_READINESS": "preview",
+}
 
 
 def _parse_time(value: str, label: str) -> datetime:
@@ -46,6 +54,84 @@ def _reseal(decision: dict[str, Any]) -> dict[str, Any]:
     value["content_sha256"] = hashlib.sha256(rendered.encode("utf-8")).hexdigest()
     validate_decision(value)
     return value
+
+
+def _pack_observation_document(
+    result: Mapping[str, Any],
+    *,
+    pack_id: str,
+    artifact_root: Path,
+) -> dict[str, Any]:
+    refs = [
+        item["artifact_ref"]
+        for item in result.get("pack_observations", [])
+        if item.get("pack_id") == pack_id
+    ]
+    if len(refs) != 1:
+        raise MissionEvidenceError(f"pack {pack_id} must have exactly one observation reference")
+    artifacts = [item for item in result.get("artifacts", []) if item.get("ref") == refs[0]]
+    if len(artifacts) != 1:
+        raise MissionEvidenceError(f"pack {pack_id} observation artifact is missing or ambiguous")
+    # The underlying evidence evaluator has already verified path containment and
+    # the artifact hash before this scope check runs. Resolve the same verified
+    # artifact only to inspect mission-specific context that generic pack
+    # evaluators intentionally do not know about.
+    root = Path(artifact_root).resolve()
+    path = (root / artifacts[0]["path"]).resolve()
+    try:
+        document = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise MissionEvidenceError(f"pack {pack_id} observation cannot be read for scope validation") from exc
+    if not isinstance(document, dict):
+        raise MissionEvidenceError(f"pack {pack_id} observation root must be an object")
+    return document
+
+
+def _validate_pack_action_scope(
+    decision: Mapping[str, Any],
+    result: Mapping[str, Any],
+    *,
+    artifact_root: Path,
+) -> None:
+    active = set(decision.get("active_packs", []))
+    action = decision.get("next_action")
+
+    if "web-experience-visual-quality" in active:
+        expected = _VISUAL_TARGET_BY_ACTION.get(action)
+        if expected is None:
+            raise MissionEvidenceError(
+                f"web visual-quality pack is not valid for mission action {action}"
+            )
+        document = _pack_observation_document(
+            result,
+            pack_id="web-experience-visual-quality",
+            artifact_root=artifact_root,
+        )
+        target = document.get("target")
+        observed = target.get("kind") if isinstance(target, dict) else None
+        if observed != expected:
+            raise MissionEvidenceError(
+                "pack web-experience-visual-quality target.kind must be "
+                f"{expected} for {action}; observed {observed!r}"
+            )
+
+    if "production-evidence-operations" in active:
+        if action != "VERIFY_PRODUCTION":
+            raise MissionEvidenceError(
+                f"production-evidence-operations pack is not valid for mission action {action}"
+            )
+        document = _pack_observation_document(
+            result,
+            pack_id="production-evidence-operations",
+            artifact_root=artifact_root,
+        )
+        release = document.get("release")
+        environment = release.get("environment_kind") if isinstance(release, dict) else None
+        if environment != "PRODUCTION":
+            raise MissionEvidenceError(
+                "pack production-evidence-operations release.environment_kind must be "
+                f"PRODUCTION for VERIFY_PRODUCTION; observed {environment!r}"
+            )
 
 
 def decide_next_action(
@@ -109,6 +195,57 @@ def decide_next_action(
     decision["status"] = "BLOCKED"
     decision["tool_bridge"] = None
     return _reseal(decision)
+
+
+def evaluate_execution_result(
+    spec: dict[str, Any],
+    state: dict[str, Any],
+    decision: dict[str, Any],
+    result: dict[str, Any],
+    *,
+    artifact_root: Path,
+) -> dict[str, Any]:
+    """Evaluate evidence and enforce mission-specific pack scope."""
+    receipt = _evaluate_execution_result(
+        spec,
+        state,
+        decision,
+        result,
+        artifact_root=Path(artifact_root),
+    )
+    _validate_pack_action_scope(
+        decision,
+        result,
+        artifact_root=Path(artifact_root),
+    )
+    return receipt
+
+
+def advance_from_execution(
+    spec: dict[str, Any],
+    state: dict[str, Any],
+    decision: dict[str, Any],
+    result: dict[str, Any],
+    *,
+    artifact_root: Path,
+    receipt_path: str,
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    """Enforce pack scope before allowing the internal evidence layer to advance M1."""
+    evaluate_execution_result(
+        spec,
+        state,
+        decision,
+        result,
+        artifact_root=Path(artifact_root),
+    )
+    return _advance_from_execution(
+        spec,
+        state,
+        decision,
+        result,
+        artifact_root=Path(artifact_root),
+        receipt_path=receipt_path,
+    )
 
 
 __all__ = [
