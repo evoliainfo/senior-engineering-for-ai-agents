@@ -62,6 +62,7 @@ def control_passing_production_release() -> dict:
     report = evaluate(_fixture("pass-production.json"))
     assert report["status"] == "PASS"
     assert report["failures"] == [] and report["incomplete"] == []
+    assert report["observed_release_ref"] == report["deployed_release_ref"]
     return {"status": report["status"], "environment": report["environment_kind"]}
 
 
@@ -318,6 +319,15 @@ def control_legacy_runtime_integrity() -> dict:
     return {"sef_sha256": observed}
 
 
+def control_observed_release_identity_required() -> dict:
+    document = _fixture("pass-production.json")
+    document["release"]["observed_release_ref"] = None
+    report = evaluate(document)
+    assert report["status"] == "INCOMPLETE"
+    assert "OBSERVED_RELEASE_IDENTITY_MISSING" in report["incomplete"]
+    return {"status": report["status"]}
+
+
 CONTROLS = [
     ("PO-01-pack-contract", control_pack_contract_loads),
     ("PO-02-manifest", control_manifest_contains_three_initial_packs),
@@ -351,6 +361,7 @@ CONTROLS = [
     ("PO-30-post-deploy-not-run", control_not_run_post_deploy_not_success),
     ("PO-31-non-claims", control_no_live_provider_claims),
     ("PO-32-runtime-integrity", control_legacy_runtime_integrity),
+    ("PO-33-observed-release-identity", control_observed_release_identity_required),
 ]
 
 
