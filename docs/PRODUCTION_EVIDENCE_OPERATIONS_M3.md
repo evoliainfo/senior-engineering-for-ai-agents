@@ -11,7 +11,8 @@ Parent contract: `STABLE_EXPERT_PACK_CONTRACT_M3.md`
 Its durable value is not generic advice such as “check production after deploy.” It provides an executable evidence evaluator that distinguishes:
 
 - a deployment command/provider event that completed;
-- the release that is actually serving;
+- the release the deployment surface says was deployed;
+- the release identity actually observed from the running runtime;
 - runtime health and critical user/service smoke behavior;
 - operational visibility;
 - recovery readiness;
@@ -38,7 +39,7 @@ Input schema identifier:
 
 The document contains:
 
-- `release`: target environment, intended/deployed release references, deployment evidence and runtime-identity evidence;
+- `release`: target environment, intended/deployed release references, deployment evidence, runtime-identity evidence and `observed_release_ref`;
 - `health`: required current-runtime health evidence;
 - `smoke_checks`: declared critical/non-critical post-deploy behaviors;
 - `observability`: explicitly accounted operational signals;
@@ -55,15 +56,19 @@ PRODUCTION
 
 ## Deployment and runtime identity
 
-`deployment_status=PASS` alone is insufficient.
+`deployment_status=PASS` alone is insufficient. `runtime_identity_status=PASS` is also insufficient by itself.
 
 A passing claim requires:
 
 1. deployment evidence reference;
 2. `runtime_identity_status=PASS`;
-3. runtime-identity evidence showing which release is actually serving.
+3. runtime-identity evidence reference;
+4. a concrete `observed_release_ref` obtained from the running target;
+5. deterministic equality between `observed_release_ref` and `deployed_release_ref`.
 
-This prevents a stale/previous version from being mistaken for the newly deployed artifact merely because the deploy API returned success.
+If the observed runtime identity is missing, the result is `INCOMPLETE`. If it differs from the deployed release identity, the result is `FAIL` with `RUNTIME_IDENTITY_MISMATCH` even when the supplied runtime status says `PASS`.
+
+This prevents a stale/previous version from being mistaken for the newly deployed artifact merely because a deployment API or agent assertion reported success.
 
 ## Health and smoke semantics
 
@@ -142,7 +147,7 @@ The pack deliberately does not hard-code one universal duration. Appropriate obs
 All blocking evidence is present and passing:
 
 - deployment;
-- runtime identity;
+- observed runtime release identity equals deployed release identity;
 - health;
 - blocking smoke checks;
 - required observability controls;
@@ -157,18 +162,19 @@ Observed evidence demonstrates a material operational problem, including deploym
 
 ### `INCOMPLETE`
 
-The evidence cannot yet support the claim because required verification is missing, not run or inconclusive.
+The evidence cannot yet support the claim because required verification is missing, not run or inconclusive. Missing observed runtime identity is explicitly `INCOMPLETE` rather than assumed from the deployment result.
 
 `INCOMPLETE` must not be promoted from source-code inspection, provider optimism or model confidence.
 
 ## Qualification
 
-The deterministic qualification covers 32 controls:
+The deterministic qualification covers 33 controls:
 
 - M3 pack contract conformance;
 - deterministic manifest inclusion of all three initial packs;
 - successful production evidence;
-- runtime identity mismatch;
+- observed runtime identity mismatch even when runtime status declares `PASS`;
+- missing observed runtime identity → `INCOMPLETE`;
 - deployment failure and missing deployment evidence;
 - health failure and missing evidence;
 - blocking/non-blocking smoke semantics;
