@@ -5,7 +5,7 @@
 > You describe the product. Your coding agent writes the code. SEF governs the engineering.
 
 **Current beta:** `v1.4.0-beta`  
-**Runtime:** [`sef.py`](sef.py)  
+**Runtime:** [`sef.py`](https://raw.githubusercontent.com/evoliainfo/senior-engineering-for-ai-agents/v1.4.0-beta/sef.py)  
 **Integrity:** [`SHA256SUMS`](SHA256SUMS)
 
 SEF (Senior Engineering Framework) is a Project Engineering OS for AI coding agents. It is designed for people who want to build serious software with Codex or Claude Code without having to know every senior-engineering requirement in advance.
@@ -14,7 +14,7 @@ SEF does **not** claim to make an AI model infallible or literally replace a sen
 
 ## Quick start
 
-1. Download [`sef.py`](sef.py) and put it at the root of your project.
+1. Download [`sef.py`](https://raw.githubusercontent.com/evoliainfo/senior-engineering-for-ai-agents/v1.4.0-beta/sef.py) and put it at the root of your project.
 2. Open the project in **Codex** or **Claude Code**.
 3. Describe the software, website or change you want to build.
 
